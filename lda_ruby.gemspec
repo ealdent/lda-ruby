@@ -29,6 +29,3 @@ Gem::Specification.new do |s|
   #s.require_path = "."
   s.has_rdoc = true
 end
-
-
-["cokus.c", "cokus.h", "extconf.rb", "lda-alpha.c", "lda-alpha.h", "lda-data.c", "lda-data.h", "lda-inference.c", "lda-inference.h", "lda-model.c", "lda-model.h", "lda.h", "lda.rb", "utils.c", "utils.h"]
