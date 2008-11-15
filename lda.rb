@@ -8,6 +8,11 @@ module Lda
   class Corpus
     attr_reader :documents, :num_docs, :num_terms
 
+    #
+    # Create a blank corpus object.  Either add documents to it
+    # using the +add_document+ method or load the data from a file
+    # using +load_from_file+.
+    #
     def initialize
       @documents = Array.new
       @all_terms = Set.new
@@ -43,7 +48,9 @@ module Lda
     end
   end
 
+  # 
   # A single document.
+  #
   class Document
     attr_accessor :words, :counts, :length, :total
     
@@ -79,11 +86,17 @@ module Lda
       end
     end
     
+    #
+    # Recompute the total and length values if the document has been
+    # altered externally.  This probably won't happen, but might be useful
+    # if you want to subclass +Document+.
+    #
     def recompute
       @total = @counts.inject(0) {|sum, i| sum + i}
       @length = @words.size
     end
   end
+  
   
   class Lda
     attr_reader :vocab, :corpus
