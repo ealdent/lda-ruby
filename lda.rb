@@ -13,11 +13,15 @@ module Lda
     # using the +add_document+ method or load the data from a file
     # using +load_from_file+.
     #
-    def initialize
+    def initialize(filename=nil)
       @documents = Array.new
       @all_terms = Set.new
       @num_terms = 0
       @num_docs  = 0
+      
+      if filename
+        self.load_from_file(filename)
+      end
     end
     
     # Add a new document to the corpus.  This can either be
