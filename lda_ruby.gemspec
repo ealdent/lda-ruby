@@ -1,6 +1,6 @@
 Gem::Specification.new do |s| 
   s.name = "lda-ruby"
-  s.version = "0.1.1"
+  s.version = "0.1.2"
   s.date = "2008-11-14"
   s.authors = ["Jason M. Adams", "David M. Blei"]
   s.email = "jasonmadams@gmail.com"
