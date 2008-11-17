@@ -56,7 +56,8 @@ module Lda
   # A single document.
   #
   class Document
-    attr_accessor :words, :counts, :length, :total
+    attr_accessor :words, :counts
+    attr_reader :length, :total
     
     # Create the Document using the svmlight-style text line:
     # 
@@ -89,6 +90,7 @@ module Lda
         @length = 0
       end
     end
+    
     
     #
     # Recompute the total and length values if the document has been
