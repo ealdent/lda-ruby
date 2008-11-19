@@ -24,6 +24,14 @@ Gem::Specification.new do |s|
               "lib/lda.h", 
               "lib/lda.rb", 
               "lib/utils.c", 
-              "lib/utils.h"]
+              "lib/utils.h",
+              "lib/cokus.o",
+              "lib/lda-alpha.o",
+              "lib/lda-data.o",
+              "lib/lda-inference.o",
+              "lib/lda-model.o",
+              "lib/utils.o",
+              "lib/lda_ext.bundle"
+            ]
   s.has_rdoc = true
 end
