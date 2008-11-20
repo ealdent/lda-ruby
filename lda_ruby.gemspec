@@ -34,4 +34,5 @@ Gem::Specification.new do |s|
               "lib/lda_ext.bundle"
             ]
   s.has_rdoc = true
+  s.spec = "lib/extconf.rb"
 end
