@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "lda.h"
+#include "lda-alpha.h"
 #include "cokus.h"
 
 #define myrand() (double) (((unsigned long) randomMT()) / 4294967296.)
