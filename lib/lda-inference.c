@@ -691,32 +691,6 @@ static VALUE wrap_set_estimate_alpha(VALUE self, VALUE est_alpha) {
 }
 
 /*
- * Set the verbosity flag (true, false)
- */
-static VALUE wrap_set_verbosity(VALUE self, VALUE verbosity) {
-    if (verbosity == Qtrue) {
-        VERBOSE = TRUE;
-    } else {
-        VERBOSE = FALSE;
-    }
-    
-    return verbosity;
-}
-
-
-/*
- * Display the verbosity setting.
- */
-static VALUE wrap_get_verbosity(VALUE self) {
-    if (VERBOSE == TRUE) {
-        return Qtrue;
-    } else {
-        return Qfalse;
-    }
-}
-
-
-/*
  * Get the verbosity setting.
  */
 static VALUE wrap_get_verbosity(VALUE self) {
