@@ -1,4 +1,6 @@
-Gem::Specification.new do |s| 
+require 'rubygems'
+
+spec = Gem::Specification.new do |s| 
   s.name = "lda-ruby"
   s.version = "0.1.3"
   s.date = "2008-11-19"
@@ -7,6 +9,7 @@ Gem::Specification.new do |s|
   s.homepage = "http://github.com/ealdent/lda-ruby"
   s.platform = Gem::Platform::RUBY
   s.summary = "Ruby port of Latent Dirichlet Allocation by David M. Blei."
+  s.extensions << "lib/extconf.rb"
   s.files = [ 
               "README",
               "license.txt",
@@ -24,7 +27,8 @@ Gem::Specification.new do |s|
               "lib/lda.h", 
               "lib/lda.rb", 
               "lib/utils.c", 
-              "lib/utils.h",
+              "lib/utils.h"
+=begin
               "lib/cokus.o",
               "lib/lda-alpha.o",
               "lib/lda-data.o",
@@ -32,7 +36,7 @@ Gem::Specification.new do |s|
               "lib/lda-model.o",
               "lib/utils.o",
               "lib/lda_ext.bundle"
+=end
             ]
   s.has_rdoc = true
-  s.spec = "lib/extconf.rb"
 end
