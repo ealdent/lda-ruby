@@ -14,8 +14,6 @@ spec = Gem::Specification.new do |s|
               "lib/cokus.c", 
               "lib/cokus.h", 
               "lib/extconf.rb", 
-              "lib/lda-alpha.c", 
-              "lib/lda-alpha.h", 
               "lib/lda-data.c", 
               "lib/lda-data.h", 
               "lib/lda-inference.c", 

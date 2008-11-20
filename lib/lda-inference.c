@@ -32,7 +32,6 @@
 #include "lda-data.h"
 #include "lda-inference.h"
 #include "lda-model.h"
-#include "lda-alpha.h"
 #include "utils.h"
 #include "cokus.h"
 
