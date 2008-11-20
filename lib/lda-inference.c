@@ -238,13 +238,22 @@ void run_em(char* start, char* directory, corpus* corpus) {
 		model = new_lda_model(corpus->num_terms, NTOPICS);
 		ss = new_lda_suffstats(model);
 		corpus_initialize_ss(ss, model, corpus);
-		lda_mle(model, ss, 0);
+		if (VERBOSE) {
+		    lda_mle(model, ss, 0);
+	    } else {
+            quiet_lda_mle(model, ss, 0);
+	    }
+		    
 		model->alpha = INITIAL_ALPHA;
 	} else if (strcmp(start, "random")==0) {
 		model = new_lda_model(corpus->num_terms, NTOPICS);
 		ss = new_lda_suffstats(model);
 		random_initialize_ss(ss, model);
-		lda_mle(model, ss, 0);
+		if (VERBOSE) {
+		    lda_mle(model, ss, 0);
+	    } else {
+	        quiet_lda_mle(model, ss, 0);
+	    }
 		model->alpha = INITIAL_ALPHA;
 	} else {
 		model = load_lda_model(start);
@@ -276,7 +285,12 @@ void run_em(char* start, char* directory, corpus* corpus) {
 
 		// m-step
 
-		lda_mle(model, ss, ESTIMATE_ALPHA);
+        if (VERBOSE) {
+            lda_mle(model, ss, ESTIMATE_ALPHA);
+        } else {
+            quiet_lda_mle(model, ss, ESTIMATE_ALPHA);
+        }
+		
 
 		// check for convergence
 
@@ -454,13 +468,21 @@ void run_quiet_em(char* start, corpus* corpus) {
 		model = new_lda_model(corpus->num_terms, NTOPICS);
 		ss = new_lda_suffstats(model);
 		corpus_initialize_ss(ss, model, corpus);
-		lda_mle(model, ss, 0);
+		if (VERBOSE) {
+		    lda_mle(model, ss, 0);
+		} else {
+		    quiet_lda_mle(model, ss, 0);
+		}
 		model->alpha = INITIAL_ALPHA;
 	} else if (strcmp(start, "random")==0) {
 		model = new_lda_model(corpus->num_terms, NTOPICS);
 		ss = new_lda_suffstats(model);
 		random_initialize_ss(ss, model);
-		lda_mle(model, ss, 0);
+		if (VERBOSE) {
+		    lda_mle(model, ss, 0);
+		} else {
+		    quiet_lda_mle(model, ss, 0);
+		}
 		model->alpha = INITIAL_ALPHA;
 	} else {
 		model = load_lda_model(start);
@@ -491,7 +513,11 @@ void run_quiet_em(char* start, corpus* corpus) {
 
 		// m-step
 
-		lda_mle(model, ss, ESTIMATE_ALPHA);
+        if (VERBOSE) {
+            lda_mle(model, ss, ESTIMATE_ALPHA);
+        } else {
+            quiet_lda_mle(model, ss, ESTIMATE_ALPHA);
+        }
 
 		// check for convergence
 
@@ -662,6 +688,32 @@ static VALUE wrap_set_estimate_alpha(VALUE self, VALUE est_alpha) {
 }
 
 
+/*
+ * Get the verbosity setting.
+ */
+static VALUE wrap_get_verbosity(VALUE self) {
+    if (VERBOSE) {
+        return Qtrue;
+    } else {
+        return Qfalse;
+    }
+}
+
+
+/*
+ * Set the verbosity level (true, false).
+ */
+static VALUE wrap_set_verbosity(VALUE self, VALUE verbosity) {
+    if (verbosity == Qtrue) {
+        VERBOSE = TRUE;
+    } else {
+        VERBOSE = FALSE;
+    }
+    
+    return verbosity;
+}
+
+
 
 /*
  * Run the EM algorithm with the loaded corpus and using the current
@@ -812,6 +864,7 @@ static VALUE wrap_get_model_settings(VALUE self) {
 void Init_lda_ext() {
 	corpus_loaded = FALSE;
 	model_loaded = FALSE;
+    VERBOSE = TRUE;
 	
 	rb_require("lda");
 	
@@ -865,6 +918,8 @@ void Init_lda_ext() {
 	rb_define_method(rb_cLda, "est_alpha", wrap_get_estimate_alpha, 0);
 	rb_define_method(rb_cLda, "num_topics", wrap_get_num_topics, 0);
 	rb_define_method(rb_cLda, "num_topics=", wrap_set_num_topics, 1);
+    rb_define_method(rb_cLda, "verbose", wrap_get_verbosity, 0);
+    rb_define_method(rb_cLda, "verbose=", wrap_set_verbosity, 1);
 	
 	// retrieve model and gamma
 	rb_define_method(rb_cLda, "beta", wrap_get_model_beta, 0);

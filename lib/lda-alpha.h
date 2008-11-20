@@ -15,6 +15,7 @@ double alhood(double a, double ss, int D, int K);
 double d_alhood(double a, double ss, int D, int K);
 double d2_alhood(double a, int D, int K);
 double opt_alpha(double ss, int D, int K);
-void maximize_alpha(double** gamma, lda_model* model, int num_docs);
+double quiet_opt_alpha(double ss, int D, int K);
+//void maximize_alpha(double** gamma, lda_model* model, int num_docs);
 
 #endif

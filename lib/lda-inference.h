@@ -22,7 +22,7 @@ corpus *last_corpus;
 lda_model *last_model;
 double **last_gamma;
 
-enum BOOL { FALSE, TRUE } corpus_loaded, model_loaded;
+enum BOOL { FALSE, TRUE } corpus_loaded, model_loaded, VERBOSE;
 #endif
 
 double lda_inference(document*, lda_model*, double*, double**);
