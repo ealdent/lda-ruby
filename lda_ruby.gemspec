@@ -15,7 +15,7 @@ spec = Gem::Specification.new do |s|
               "license.txt",
               "lib/cokus.c", 
               "lib/cokus.h", 
-              "lib/extconf.rb", 
+#              "lib/extconf.rb", 
               "lib/lda-alpha.c", 
               "lib/lda-alpha.h", 
               "lib/lda-data.c", 
@@ -28,15 +28,6 @@ spec = Gem::Specification.new do |s|
               "lib/lda.rb", 
               "lib/utils.c", 
               "lib/utils.h"
-=begin
-              "lib/cokus.o",
-              "lib/lda-alpha.o",
-              "lib/lda-data.o",
-              "lib/lda-inference.o",
-              "lib/lda-model.o",
-              "lib/utils.o",
-              "lib/lda_ext.bundle"
-=end
             ]
   s.has_rdoc = true
 end
