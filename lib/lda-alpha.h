@@ -1,6 +1,7 @@
 #ifndef LDA_ALPHA_H
 #define LDA_ALPHA_H
 
+
 #include <stdlib.h>
 #include <math.h>
 #include <float.h>

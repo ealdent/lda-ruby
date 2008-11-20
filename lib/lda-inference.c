@@ -109,6 +109,59 @@ double lda_inference(document* doc, lda_model* model, double* var_gamma, double*
 }
 
 
+
+/*
+ * objective function and its derivatives
+ *
+ */
+
+double alhood(double a, double ss, int D, int K)
+{ return(D * (lgamma(K * a) - K * lgamma(a)) + (a - 1) * ss); }
+
+double d_alhood(double a, double ss, int D, int K)
+{ return(D * (K * digamma(K * a) - K * digamma(a)) + ss); }
+
+double d2_alhood(double a, int D, int K)
+{ return(D * (K * K * trigamma(K * a) - K * trigamma(a))); }
+
+
+/*
+ * newtons method
+ *
+ */
+
+double opt_alpha(double ss, int D, int K)
+{
+    double a, log_a, init_a = 100;
+    double f, df, d2f;
+    int iter = 0;
+
+    log_a = log(init_a);
+    do
+    {
+        iter++;
+        a = exp(log_a);
+        if (isnan(a))
+        {
+            init_a = init_a * 10;
+            if (VERBOSE)
+                printf("warning : alpha is nan; new init = %5.5f\n", init_a);
+            a = init_a;
+            log_a = log(a);
+        }
+        f = alhood(a, ss, D, K);
+        df = d_alhood(a, ss, D, K);
+        d2f = d2_alhood(a, D, K);
+        log_a = log_a - df/(d2f * a + df);
+        if (VERBOSE)
+            printf("alpha maximization : %5.5f   %5.5f\n", f, df);
+    }
+    while ((fabs(df) > NEWTON_THRESH) && (iter < MAX_ALPHA_ITER));
+    return(exp(log_a));
+}
+
+
+
 /*
  * compute likelihood bound
  */
@@ -263,14 +316,15 @@ void run_em(char* start, char* directory, corpus* corpus) {
 
 	while (((converged < 0) || (converged > EM_CONVERGED) || (i <= 2)) && (i <= EM_MAX_ITER)) {
 		i++;
-		printf("**** em iteration %d ****\n", i);
+		if (VERBOSE)
+		    printf("**** em iteration %d ****\n", i);
 		likelihood = 0;
 		zero_initialize_ss(ss, model);
 
 		// e-step
 
 		for (d = 0; d < corpus->num_docs; d++) {
-			if ((d % 1000) == 0) printf("document %d\n",d);
+			if ((d % 1000) == 0 && VERBOSE) printf("document %d\n",d);
 			likelihood += doc_e_step(&(corpus->docs[d]), var_gamma[d], phi, model, ss);
 		}
 
@@ -310,7 +364,7 @@ void run_em(char* start, char* directory, corpus* corpus) {
 	FILE* w_asgn_file = fopen(filename, "w");
 	for (d = 0; d < corpus->num_docs; d++)
 	{
-		if ((d % 100) == 0) printf("final e step document %d\n",d);
+		if ((d % 100) == 0 && VERBOSE) printf("final e step document %d\n",d);
 		likelihood += lda_inference(&(corpus->docs[d]), model, var_gamma[d], phi);
 		write_word_assignment(w_asgn_file, &(corpus->docs[d]), phi, model);
 	}
@@ -366,7 +420,7 @@ void infer(char* model_root, char* save, corpus* corpus) {
 	sprintf(filename, "%s-lda-lhood.dat", save);
 	fileptr = fopen(filename, "w");
 	for (d = 0; d < corpus->num_docs; d++) {
-		if (((d % 100) == 0) && (d>0)) printf("document %d\n",d);
+		if (((d % 100) == 0) && (d>0) && VERBOSE) printf("document %d\n",d);
 
 		doc = &(corpus->docs[d]);
 		phi = (double**) malloc(sizeof(double*) * doc->length);
@@ -478,14 +532,15 @@ void run_quiet_em(char* start, corpus* corpus) {
 
 	while (((converged < 0) || (converged > EM_CONVERGED) || (i <= 2)) && (i <= EM_MAX_ITER)) {
 		i++;
-		printf("**** em iteration %d ****\n", i);
+		if (VERBOSE)
+		    printf("**** em iteration %d ****\n", i);
 		likelihood = 0;
 		zero_initialize_ss(ss, model);
 
 		// e-step
 
 		for (d = 0; d < corpus->num_docs; d++) {
-			if ((d % 1000) == 0) printf("document %d\n",d);
+			if ((d % 1000) == 0 && VERBOSE) printf("document %d\n",d);
 			likelihood += doc_e_step(&(corpus->docs[d]), var_gamma[d], phi, model, ss);
 		}
 
@@ -661,6 +716,31 @@ static VALUE wrap_set_estimate_alpha(VALUE self, VALUE est_alpha) {
 	return est_alpha;
 }
 
+/*
+ * Set the verbosity flag (true, false)
+ */
+static VALUE wrap_set_verbosity(VALUE self, VALUE verbosity) {
+    if (verbosity == Qtrue) {
+        VERBOSE = TRUE;
+    } else {
+        VERBOSE = FALSE;
+    }
+    
+    return verbosity;
+}
+
+
+/*
+ * Display the verbosity setting.
+ */
+static VALUE wrap_get_verbosity(VALUE self) {
+    if (VERBOSE == TRUE) {
+        return Qtrue;
+    } else {
+        return Qfalse;
+    }
+}
+
 
 
 /*
@@ -812,6 +892,7 @@ static VALUE wrap_get_model_settings(VALUE self) {
 void Init_lda_ext() {
 	corpus_loaded = FALSE;
 	model_loaded = FALSE;
+    VERBOSE = TRUE;
 	
 	rb_require("lda");
 	
