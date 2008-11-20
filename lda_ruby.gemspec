@@ -1,5 +1,3 @@
-require 'rubygems'
-
 spec = Gem::Specification.new do |s| 
   s.name = "lda-ruby"
   s.version = "0.1.3"
@@ -15,7 +13,7 @@ spec = Gem::Specification.new do |s|
               "license.txt",
               "lib/cokus.c", 
               "lib/cokus.h", 
-#              "lib/extconf.rb", 
+              "lib/extconf.rb", 
               "lib/lda-alpha.c", 
               "lib/lda-alpha.h", 
               "lib/lda-data.c", 
