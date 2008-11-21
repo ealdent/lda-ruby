@@ -70,7 +70,7 @@ void quiet_lda_mle(lda_model* model, lda_suffstats* ss, int estimate_alpha) {
 	}
 	if (estimate_alpha == 1)
 	{
-		model->alpha = opt_alpha(ss->alpha_suffstats,
+		model->alpha = quiet_opt_alpha(ss->alpha_suffstats,
 			ss->num_docs,
 			model->num_topics);
 
