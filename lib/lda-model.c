@@ -19,6 +19,7 @@
 
 #include "lda-model.h"
 
+
 /*
 * compute MLE lda model from sufficient statistics
 	*
@@ -166,6 +167,52 @@ void corpus_initialize_ss(lda_suffstats* ss, lda_model* model, corpus* c)
 			ss->class_total[k] = ss->class_total[k] + ss->class_word[k][n];
 		}
 	}
+}
+
+void quiet_corpus_initialize_ss(lda_suffstats* ss, lda_model* model, corpus* c)
+{
+	int num_topics = model->num_topics;
+	int i, k, d, n;
+	document* doc;
+
+	for (k = 0; k < num_topics; k++)
+	{
+		for (i = 0; i < NUM_INIT; i++)
+		{
+			d = floor(myrand() * c->num_docs);
+			doc = &(c->docs[d]);
+			for (n = 0; n < doc->length; n++)
+			{
+				ss->class_word[k][doc->words[n]] += doc->counts[n];
+			}
+		}
+		for (n = 0; n < model->num_terms; n++)
+		{
+			ss->class_word[k][n] += 1.0;
+			ss->class_total[k] = ss->class_total[k] + ss->class_word[k][n];
+		}
+	}
+}
+
+
+/*
+ * Use the first num_topics documents of the corpus as the seeds.  If num_topics > num_docs, results might be hairy.
+ */
+void corpus_initialize_fixed_ss(lda_suffstats* ss, lda_model* model, corpus* c) {
+    int num_topics = MIN(model->num_topics, c->num_docs);
+    int k, n;
+    document* doc;
+    
+    for (k = 0; k < num_topics; k++) {
+        doc = &(c->docs[k]);
+        for (n = 0; n < doc->length; n++) {
+            ss->class_word[k][doc->words[n]] += doc->counts[n];
+        }
+        for (n = 0; n < model->num_terms; n++) {
+            ss->class_word[k][n] += 1.0;
+            ss->class_total[k] = ss->class_total[k] + ss->class_word[k][n];
+        }
+    }
 }
 
 /*

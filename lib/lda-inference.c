@@ -469,7 +469,21 @@ void run_quiet_em(char* start, corpus* corpus) {
 	if (strcmp(start, "seeded")==0) {
 		model = new_lda_model(corpus->num_terms, NTOPICS);
 		ss = new_lda_suffstats(model);
-		corpus_initialize_ss(ss, model, corpus);
+		if (VERBOSE) {
+		    corpus_initialize_ss(ss, model, corpus);
+	    } else {
+            quiet_corpus_initialize_ss(ss, model, corpus);
+	    }
+		if (VERBOSE) {
+		    lda_mle(model, ss, 0);
+		} else {
+		    quiet_lda_mle(model, ss, 0);
+		}
+		model->alpha = INITIAL_ALPHA;
+	} else if (strcmp(start, "fixed")==0) {
+	    model = new_lda_model(corpus->num_terms, NTOPICS);
+		ss = new_lda_suffstats(model);
+		corpus_initialize_fixed_ss(ss, model, corpus);
 		if (VERBOSE) {
 		    lda_mle(model, ss, 0);
 		} else {
