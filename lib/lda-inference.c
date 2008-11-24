@@ -842,17 +842,17 @@ static VALUE wrap_get_phi(VALUE self) {
         return Qnil;
     
     VALUE arr;
-    int i = 0; j = 0;
+    int i = 0, j = 0;
     int max_length = max_corpus_length(last_corpus);
     
     
     arr = rb_ary_new2(max_length);
-    for (i = 0; i < maxlength; i++) {
+    for (i = 0; i < max_length; i++) {
         VALUE arr2 = rb_ary_new2(last_model->num_topics);
         for (j = 0; j < last_model->num_topics; j++) {
-            rb_ary_store(arr2, rb_float_new(last_phi[i][j]));
+            rb_ary_store(arr2, j, rb_float_new(last_phi[i][j]));
         }
-        rb_ary_store(arr, i, arr2)
+        rb_ary_store(arr, i, arr2);
     }
     
     return arr;
