@@ -250,8 +250,16 @@ module Lda
     end
     
     
-    def phi
-      unless @phi
+    #
+    # Get the phi matrix which can be used to assign probabilities to words
+    # belonging to a specific topic in each document.  The return value is a
+    # 3D matrix:  num_docs x doc_length x num_topics.  The value is cached
+    # after the first call, so if it needs to be recomputed, set the +recompute+
+    # value to true.
+    #
+    def phi(recompute=false)
+      if not @phi or recompute
+        # either the phi variable has not been instantiated or the recompute flag has been set
         @phi = self.compute_phi
       end
       @phi
