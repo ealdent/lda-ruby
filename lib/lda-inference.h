@@ -24,6 +24,7 @@ int VAR_MAX_ITER;
 corpus *last_corpus;
 lda_model *last_model;
 double **last_gamma;
+double **last_phi;
 
 enum BOOL { FALSE, TRUE } corpus_loaded, model_loaded, VERBOSE;
 #endif

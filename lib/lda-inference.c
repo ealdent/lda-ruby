@@ -546,12 +546,14 @@ void run_quiet_em(char* start, corpus* corpus) {
 
 		last_model = model;
 		last_gamma = var_gamma;
+        last_phi = phi;
 	}
 
 	// output the final model
 
 	last_model = model;
 	last_gamma = var_gamma;
+    last_phi = phi;
 
 	// output the word assignments (for visualization)
 	/*
@@ -835,6 +837,27 @@ static VALUE wrap_get_gamma(VALUE self) {
 	return arr;
 }
 
+static VALUE wrap_get_phi(VALUE self) {
+    if (!model_loaded)
+        return Qnil;
+    
+    VALUE arr;
+    int i = 0; j = 0;
+    int max_length = max_corpus_length(last_corpus);
+    
+    
+    arr = rb_ary_new2(max_length);
+    for (i = 0; i < maxlength; i++) {
+        VALUE arr2 = rb_ary_new2(last_model->num_topics);
+        for (j = 0; j < last_model->num_topics; j++) {
+            rb_ary_store(arr2, rb_float_new(last_phi[i][j]));
+        }
+        rb_ary_store(arr, i, arr2)
+    }
+    
+    return arr;
+}
+
 /*
  * Get the beta matrix after the model has been run.
  */
@@ -940,6 +963,7 @@ void Init_lda_ext() {
 	// retrieve model and gamma
 	rb_define_method(rb_cLda, "beta", wrap_get_model_beta, 0);
 	rb_define_method(rb_cLda, "gamma", wrap_get_gamma, 0);
+    rb_define_method(rb_cLda, "phi", wrap_get_phi, 0);
 	rb_define_method(rb_cLda, "model", wrap_get_model_settings, 0);
 }
 
