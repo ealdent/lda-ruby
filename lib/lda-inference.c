@@ -837,6 +837,10 @@ static VALUE wrap_get_gamma(VALUE self) {
 	return arr;
 }
 
+
+/*
+ * Get the phi values after the model has been run.
+ */
 static VALUE wrap_get_phi(VALUE self) {
     if (!model_loaded)
         return Qnil;
