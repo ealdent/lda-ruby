@@ -839,7 +839,8 @@ static VALUE wrap_get_gamma(VALUE self) {
 
 
 /*
- * Get the phi values after the model has been run.
+ * Compute the phi values by running inference after the initial EM run has been completed.
+ *
  * Returns a 3D matrix:  <tt>num_docs x length x num_topics</tt>.
  */
 static VALUE wrap_get_phi(VALUE self) {
@@ -870,25 +871,6 @@ static VALUE wrap_get_phi(VALUE self) {
     }
     
     return arr;
-}
-
-
-
-static VALUE wrap_word_assignments(VALUE self) {
-    if (!model_loaded)
-        return Qnil;
-    
-    VALUE arr;
-    int i = 0; j = 0;
-    
-    arr = rb_ary_new2(last_corpus->num_docs);
-    for (i = 0; i < last_corpus->num_docs; i++) {
-        VALUE arr2 = rb_ary_new2(last_corpus->docs[i]->length);
-        for (j = 0; j < last_corpus->docs[i]->length; j++) {
-            rb_ary_store(arr2, j, argmax(phi[j], model->num_topics))
-        }
-        
-    }
 }
 
 
@@ -998,7 +980,7 @@ void Init_lda_ext() {
 	// retrieve model and gamma
 	rb_define_method(rb_cLda, "beta", wrap_get_model_beta, 0);
 	rb_define_method(rb_cLda, "gamma", wrap_get_gamma, 0);
-    rb_define_method(rb_cLda, "phi", wrap_get_phi, 0);
+    rb_define_method(rb_cLda, "compute_phi", wrap_get_phi, 0);
 	rb_define_method(rb_cLda, "model", wrap_get_model_settings, 0);
 }
 

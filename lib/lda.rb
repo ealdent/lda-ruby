@@ -114,6 +114,7 @@ module Lda
       self.load_default_settings
       @corpus = nil
       @vocab = nil
+      @phi = nil
     end
     
     # 
@@ -247,6 +248,16 @@ module Lda
       
       topics
     end
+    
+    
+    def phi
+      unless @phi
+        @phi = self.compute_phi
+      end
+      @phi
+    end
+    
+    
     
     #
     # String representation displaying current settings.
