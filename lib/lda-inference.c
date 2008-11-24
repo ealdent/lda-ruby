@@ -840,27 +840,58 @@ static VALUE wrap_get_gamma(VALUE self) {
 
 /*
  * Get the phi values after the model has been run.
+ * Returns a 3D matrix:  <tt>num_docs x length x num_topics</tt>.
  */
 static VALUE wrap_get_phi(VALUE self) {
     if (!model_loaded)
         return Qnil;
     
-    VALUE arr;
-    int i = 0, j = 0;
+    VALUE arr = rb_ary_new2(last_corpus->num_docs);
+    int i = 0, j = 0, k = 0;
+    
     int max_length = max_corpus_length(last_corpus);
     
-    
-    arr = rb_ary_new2(max_length);
-    for (i = 0; i < max_length; i++) {
-        VALUE arr2 = rb_ary_new2(last_model->num_topics);
-        for (j = 0; j < last_model->num_topics; j++) {
-            rb_ary_store(arr2, j, rb_float_new(last_phi[i][j]));
+    for (i = 0; i < last_corpus->num_docs; i++) {
+        VALUE arr1 = rb_ary_new2(last_corpus->docs[i]->length);
+        
+        lda_inference(&(last_corpus->docs[i]), last_model, last_gamma[d], last_phi);
+        
+        for (j = 0; j < last_corpus->docs[i]->length; j++) {
+            VALUE arr2 = rb_ary_new2(last_model->num_topics);
+            
+            for (k = 0; k < last_model->num_topics; k++) {
+                rb_ary_store(arr2, k, rb_float_new(last_phi[j][k]));
+            }
+            
+            rb_ary_store(arr1, j, arr2);
         }
-        rb_ary_store(arr, i, arr2);
+        
+        rb_ary_store(arr, i, arr1);
     }
     
     return arr;
 }
+
+
+
+static VALUE wrap_word_assignments(VALUE self) {
+    if (!model_loaded)
+        return Qnil;
+    
+    VALUE arr;
+    int i = 0; j = 0;
+    
+    arr = rb_ary_new2(last_corpus->num_docs);
+    for (i = 0; i < last_corpus->num_docs; i++) {
+        VALUE arr2 = rb_ary_new2(last_corpus->docs[i]->length);
+        for (j = 0; j < last_corpus->docs[i]->length; j++) {
+            rb_ary_store(arr2, j, argmax(phi[j], model->num_topics))
+        }
+        
+    }
+}
+
+
 
 /*
  * Get the beta matrix after the model has been run.
