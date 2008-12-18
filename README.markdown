@@ -4,21 +4,24 @@
 
 This wrapper is based on C-code by David M. Blei. In a nutshell, it can be used to automatically cluster documents into topics. The number of topics are chosen beforehand and the topics found are usually fairly intuitive. Details of the implementation can be found in the paper by Blei, Ng, and Jordan.
 
-The original C code relied on files for the input and output. We felt it was necessary to depart from that model and use Ruby objects for these steps instead. The only file necessary will be the data file (in a format similar to that used by SVMlight). Optionally you may need a vocabulary file to be able to extract the words belonging to topics.
+The original C code relied on files for the input and output. We felt it was necessary to depart from that model and use Ruby objects for these steps instead. The only file necessary will be the data file (in a format similar to that used by [SVMlight][svmlight]). Optionally you may need a vocabulary file to be able to extract the words belonging to topics.
 
 ### Example usage:
 
-``require 'lda'
-lda = Lda::Lda.new      # create an Lda object for training
-corpus = Lda::Corpus.new("data/data_file.dat")
-lda.corpus = corpus
-lda.em("random")        # run EM algorithm using random starting points
-lda.load_vocabulary("data/vocab.txt")
-lda.print_topics(20)    # print the topic 20 words per topic``
+``require 'lda'``
+``lda = Lda::Lda.new      # create an Lda object for training``
+``corpus = Lda::Corpus.new("data/data_file.dat")``
+``lda.corpus = corpus``
+``lda.em("random")        # run EM algorithm using random starting points``
+``lda.load_vocabulary("data/vocab.txt")``
+``lda.print_topics(20)    # print the topic 20 words per topic``
 
 See the rdocs for further information. You can also check out the mailing list for this project if you have any questions or mail lda-ruby@groups.google.com [email link]. If you have general questions about Latent Dirichlet Allocation, I urge you to use the topic models mailing list, since the people who monitor that are very knowledgeable.
 
 
 ## References
 
-Blei, David M., Ng, Andrew Y., and Jordan, Michael I. 2003. Latent dirichlet allocation. Journal of Machine Learning Research. 3 (Mar. 2003), 993-1022. 
+Blei, David M., Ng, Andrew Y., and Jordan, Michael I. 2003. Latent dirichlet allocation. Journal of Machine Learning Research. 3 (Mar. 2003), 993-1022 [[pdf][pdf]]. 
+
+[svmlight]: http://svmlight.joachims.org
+[pdf]: http://www.cs.princeton.edu/picasso/mats/BleiNgJordan2003_blei.pdf
