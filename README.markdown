@@ -18,10 +18,22 @@ The original C code relied on files for the input and output. We felt it was nec
 
 See the rdocs for further information. You can also check out the mailing list for this project if you have any questions or mail lda-ruby@groups.google.com [email link]. If you have general questions about Latent Dirichlet Allocation, I urge you to use the topic models mailing list, since the people who monitor that are very knowledgeable.
 
+## Resources
+
+
++ [Blog post about LDA-Ruby][lda-ruby]
++ [David Blei's lda-c code][blei]
++ [Wikipedia article on LDA][wikipedia]
++ [Sample AP data][ap-data]
+
 
 ## References
 
 Blei, David M., Ng, Andrew Y., and Jordan, Michael I. 2003. Latent dirichlet allocation. Journal of Machine Learning Research. 3 (Mar. 2003), 993-1022 [[pdf][pdf]]. 
 
 [svmlight]: http://svmlight.joachims.org
+[lda-ruby]: http://mendicantbug.com/2008/11/17/lda-in-ruby/
+[blei]: http://www.cs.princeton.edu/~blei/lda-c/
+[wikipedia]: http://en.wikipedia.org/wiki/Latent_Dirichlet_allocation
+[ap-data]: http://www.cs.princeton.edu/~blei/lda-c/ap.tgz
 [pdf]: http://www.cs.princeton.edu/picasso/mats/BleiNgJordan2003_blei.pdf
