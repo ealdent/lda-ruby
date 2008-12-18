@@ -1,6 +1,6 @@
 Latent Dirichlet Allocation – Ruby Wrapper
 
-This wrapper is based on C-code by David M. Blei. In a nutshell, it can be used to automatic cluster documents into topics. The number of topics are chosen beforehand and the topics found are usually fairly intuitive. Details of the implementation can be found in the paper by Blei, Ng, and Jordan.
+This wrapper is based on C-code by David M. Blei. In a nutshell, it can be used to automatically cluster documents into topics. The number of topics are chosen beforehand and the topics found are usually fairly intuitive. Details of the implementation can be found in the paper by Blei, Ng, and Jordan.
 
 The original C code relied on files for the input and output. We felt it was necessary to depart from that model and use Ruby objects for these steps instead. The only file necessary will be the data file (in a format similar to that used by SVMlight). Optionally you may need a vocabulary file to be able to extract the words belonging to topics.
 
