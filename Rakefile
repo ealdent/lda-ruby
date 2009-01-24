@@ -26,7 +26,8 @@ begin
                 "lib/lda.h", 
                 "lib/lda.rb", 
                 "lib/utils.c", 
-                "lib/utils.h"
+                "lib/utils.h",
+                "VERSION.yml"
               ]
     s.has_rdoc = true
   end
