@@ -150,10 +150,8 @@ module Lda
     # following it, though this isn't strictly enforced in this method.
     # 
     def load_corpus(filename)
-      c = Corpus.new
-      c.load_from_file(filename)
-      self.corpus = c
-      @corpus = c
+      @corpus = Corpus.new
+      @corpus.load_from_file(filename)
       
       true
     end
@@ -168,14 +166,12 @@ module Lda
     # array itself.
     #
     def load_vocabulary(vocab)
-      @vocab = Array.new
-      
-      File.open(filename, 'r') do |f|
-        f.each do |line|
-          @vocab << line.strip
-        end
+      if vocab.is_a?(Array)
+        @vocab = Marshal::load(Marshal::dump(vocab))      # deep clone array
+      else
+        @vocab = File.open(vocab, 'r') { |f| f.read.split(/[\n\r]+/) }
       end
-      
+
       true
     end
     

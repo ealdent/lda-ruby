@@ -918,70 +918,54 @@ static VALUE wrap_get_model_settings(VALUE self) {
 
 
 void Init_lda_ext() {
-	corpus_loaded = FALSE;
-	model_loaded = FALSE;
-    VERBOSE = TRUE;
-	
-	rb_require("lda");
-	
-	/*
-	 * The Latent Dirichlet Allocation algorithm by Blei et al (2003).  Ruby wrapper based on 
-	 * lda-c code by David Blei (available at http://www.cs.princeton.edu/~blei/lda-c).
-	 */
-	rb_mLda = rb_define_module("Lda");
-	
-	/*
-	 * Class that handles most of the functionality of LDA.
-	 */
-	rb_cLda = rb_define_class_under(rb_mLda, "Lda", rb_cObject);
-	
-	/*
-	 * Class that represents a corpus.
-	 */
-	rb_cLdaCorpus = rb_define_class_under(rb_mLda, "Corpus", rb_cObject);
-	
-	/*
-	 * Class that represents a single document.
-	 */
-	rb_cLdaDocument = rb_define_class_under(rb_mLda, "Document", rb_cObject);
-	
-	
-	// method to load the corpus
-	rb_define_method(rb_cLda, "fast_load_corpus_from_file", wrap_load_corpus, 1);
-	rb_define_method(rb_cLda, "corpus=", wrap_ruby_corpus, 1);
-	
-	// method to run em
-	rb_define_method(rb_cLda, "em", wrap_em, 1);
+  corpus_loaded = FALSE;
+  model_loaded = FALSE;
+  VERBOSE = TRUE;
 
-	// method to load settings from file
-	rb_define_method(rb_cLda, "load_settings", wrap_load_settings, 1);
+  rb_require("lda");
 
-	// method to set all the config options at once
-	rb_define_method(rb_cLda, "set_config", wrap_set_config, 5);
+  rb_mLda = rb_define_module("Lda");
+  rb_cLda = rb_define_class_under(rb_mLda, "Lda", rb_cObject);
+  rb_cLdaCorpus = rb_define_class_under(rb_mLda, "Corpus", rb_cObject);
+  rb_cLdaDocument = rb_define_class_under(rb_mLda, "Document", rb_cObject);
 
-	// accessor stuff for main settings
-	rb_define_method(rb_cLda, "max_iter", wrap_get_max_iter, 0);
-	rb_define_method(rb_cLda, "max_iter=", wrap_set_max_iter, 1);
-	rb_define_method(rb_cLda, "convergence", wrap_get_converged, 0);
-	rb_define_method(rb_cLda, "convergence=", wrap_set_converged, 1);
-	rb_define_method(rb_cLda, "em_max_iter", wrap_get_em_max_iter, 0);
-	rb_define_method(rb_cLda, "em_max_iter=", wrap_set_em_max_iter, 1);
-	rb_define_method(rb_cLda, "em_convergence", wrap_get_em_converged, 0);
-	rb_define_method(rb_cLda, "em_convergence=", wrap_set_em_converged, 1);	
-	rb_define_method(rb_cLda, "init_alpha=", wrap_set_initial_alpha, 1);
-	rb_define_method(rb_cLda, "init_alpha", wrap_get_initial_alpha, 0);
-	rb_define_method(rb_cLda, "est_alpha=", wrap_set_estimate_alpha, 1);
-	rb_define_method(rb_cLda, "est_alpha", wrap_get_estimate_alpha, 0);
-	rb_define_method(rb_cLda, "num_topics", wrap_get_num_topics, 0);
-	rb_define_method(rb_cLda, "num_topics=", wrap_set_num_topics, 1);
-    rb_define_method(rb_cLda, "verbose", wrap_get_verbosity, 0);
-    rb_define_method(rb_cLda, "verbose=", wrap_set_verbosity, 1);
-	
-	// retrieve model and gamma
-	rb_define_method(rb_cLda, "beta", wrap_get_model_beta, 0);
-	rb_define_method(rb_cLda, "gamma", wrap_get_gamma, 0);
-    rb_define_method(rb_cLda, "compute_phi", wrap_get_phi, 0);
-	rb_define_method(rb_cLda, "model", wrap_get_model_settings, 0);
+
+  // method to load the corpus
+  rb_define_method(rb_cLda, "fast_load_corpus_from_file", wrap_load_corpus, 1);
+  rb_define_method(rb_cLda, "corpus=", wrap_ruby_corpus, 1);
+
+  // method to run em
+  rb_define_method(rb_cLda, "em", wrap_em, 1);
+
+  // method to load settings from file
+  rb_define_method(rb_cLda, "load_settings", wrap_load_settings, 1);
+
+  // method to set all the config options at once
+  rb_define_method(rb_cLda, "set_config", wrap_set_config, 5);
+
+  // accessor stuff for main settings
+  rb_define_method(rb_cLda, "max_iter", wrap_get_max_iter, 0);
+  rb_define_method(rb_cLda, "max_iter=", wrap_set_max_iter, 1);
+  rb_define_method(rb_cLda, "convergence", wrap_get_converged, 0);
+  rb_define_method(rb_cLda, "convergence=", wrap_set_converged, 1);
+  rb_define_method(rb_cLda, "em_max_iter", wrap_get_em_max_iter, 0);
+  rb_define_method(rb_cLda, "em_max_iter=", wrap_set_em_max_iter, 1);
+  rb_define_method(rb_cLda, "em_convergence", wrap_get_em_converged, 0);
+  rb_define_method(rb_cLda, "em_convergence=", wrap_set_em_converged, 1);	
+  rb_define_method(rb_cLda, "init_alpha=", wrap_set_initial_alpha, 1);
+  rb_define_method(rb_cLda, "init_alpha", wrap_get_initial_alpha, 0);
+  rb_define_method(rb_cLda, "est_alpha=", wrap_set_estimate_alpha, 1);
+  rb_define_method(rb_cLda, "est_alpha", wrap_get_estimate_alpha, 0);
+  rb_define_method(rb_cLda, "num_topics", wrap_get_num_topics, 0);
+  rb_define_method(rb_cLda, "num_topics=", wrap_set_num_topics, 1);
+  rb_define_method(rb_cLda, "verbose", wrap_get_verbosity, 0);
+  rb_define_method(rb_cLda, "verbose=", wrap_set_verbosity, 1);
+
+  // retrieve model and gamma
+  rb_define_method(rb_cLda, "beta", wrap_get_model_beta, 0);
+  rb_define_method(rb_cLda, "gamma", wrap_get_gamma, 0);
+  rb_define_method(rb_cLda, "compute_phi", wrap_get_phi, 0);
+  rb_define_method(rb_cLda, "model", wrap_get_model_settings, 0);
 }
 
 #endif
