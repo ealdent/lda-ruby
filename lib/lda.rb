@@ -32,7 +32,7 @@ module Lda
         @documents << doc
         @all_terms = @all_terms + doc.words
       elsif doc.is_a?(String)
-        d = Document.new(doc)
+        d = NumericDocument.new(doc)
         @all_terms = @all_terms + d.words
         @documents << d
       end
@@ -51,11 +51,25 @@ module Lda
       true
     end
   end
+  
+  class Document
+    def words
+      raise NotSupportedError
+    end
+    
+    def length
+      raise NotSupportedError
+    end
+    
+    def total
+      raise NotSupportedError
+    end
+  end
 
   # 
   # A single document.
   #
-  class Document
+  class NumericDocument < Document
     attr_accessor :words, :counts
     attr_reader :length, :total
     
@@ -222,26 +236,20 @@ module Lda
         return nil
       end
       
-      # Load the model
-      beta = self.beta
-      unless beta
-        puts "Model has not been run."
-        return nil
-      end
-      
       # find the highest scoring words per topic
       topics = Hash.new
-      indices = (0..(@vocab.size - 1)).to_a
-      topic_num = 0
-      beta.each do |topic|
-        topics[topic_num] = Array.new
-        indices.sort! {|x, y| -(topic[x] <=> topic[y])}
-        words_per_topic.times do |i|
-          topics[topic_num] << @vocab[indices[i]]
-        end
-        topic_num += 1
-      end
+      indices = (0...@vocab.size).to_a
       
+      begin
+        beta.each_with_index do |topic, topic_idx|
+          indices.sort! {|x, y| -(topic[x] <=> topic[y])}
+          topics[topic_idx] = indices.first(words_per_topic).map { |i| @vocab[i] }
+        end
+      rescue NoMethodError
+        puts "Error:  model has not been run."
+        topics = nil
+      end
+
       topics
     end
     
