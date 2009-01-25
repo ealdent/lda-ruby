@@ -30,6 +30,7 @@ begin
                 "VERSION.yml"
               ]
     s.has_rdoc = true
+    s.add_dependency(%q<stemmer>, [">= 0"])
   end
 rescue LoadError
   puts "Jeweler, or one of its dependencies, is not available."

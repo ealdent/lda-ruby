@@ -32,7 +32,7 @@ module Lda
         @documents << doc
         @all_terms = @all_terms + doc.words
       elsif doc.is_a?(String)
-        d = NumericDocument.new(doc)
+        d = Document.new(doc)
         @all_terms = @all_terms + d.words
         @documents << d
       end
@@ -52,7 +52,7 @@ module Lda
     end
   end
   
-  class Document
+  class BaseDocument
     def words
       raise NotSupportedError
     end
@@ -69,7 +69,7 @@ module Lda
   # 
   # A single document.
   #
-  class NumericDocument < Document
+  class Document < BaseDocument
     attr_accessor :words, :counts
     attr_reader :length, :total
     
