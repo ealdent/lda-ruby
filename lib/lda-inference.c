@@ -50,7 +50,7 @@ VALUE rb_cLdaDocument;
  * variational inference
  */
 
-double lda_inference(document* doc, lda_model* model, double* var_gamma, double** phi) {
+double lda_inference(document* doc, lda_model* model, double* var_gamma, double** phi, short* errors) {
 	double converged = 1;
 	double phisum = 0, likelihood = 0;
 	double likelihood_old = 0, oldphi[model->num_topics];
@@ -100,7 +100,8 @@ double lda_inference(document* doc, lda_model* model, double* var_gamma, double*
 		}
 
 		likelihood = compute_likelihood(doc, model, phi, var_gamma);
-		assert(!isnan(likelihood));
+		//assert(!isnan(likelihood));
+    if( isnan(likelihood) ) { *errors = 1; }
 		converged = (likelihood_old - likelihood) / likelihood_old;
 		likelihood_old = likelihood;
 
@@ -148,10 +149,12 @@ double compute_likelihood(document* doc, lda_model* model, double** phi, double*
 double doc_e_step(document* doc, double* gamma, double** phi, lda_model* model, lda_suffstats* ss) {
 	double likelihood;
 	int n, k;
+  short error = 0;
 
 		// posterior inference
 
-	likelihood = lda_inference(doc, model, gamma, phi);
+	likelihood = lda_inference(doc, model, gamma, phi, &error);
+  if (error) { likelihood = 0.0; }
 
 		// update sufficient statistics
 
@@ -324,10 +327,15 @@ void run_em(char* start, char* directory, corpus* corpus) {
 
 	sprintf(filename, "%s/word-assignments.dat", directory);
 	FILE* w_asgn_file = fopen(filename, "w");
+  short error = 0;
+  double tl = 0.0;
 	for (d = 0; d < corpus->num_docs; d++)
 	{
 		if ((d % 100) == 0 && VERBOSE) printf("final e step document %d\n",d);
-		likelihood += lda_inference(&(corpus->docs[d]), model, var_gamma[d], phi);
+    error = 0;
+    tl = lda_inference(&(corpus->docs[d]), model, var_gamma[d], phi,&error);
+    if( error ) { continue; }
+		likelihood += tl;
 		write_word_assignment(w_asgn_file, &(corpus->docs[d]), phi, model);
 	}
 	fclose(w_asgn_file);
@@ -388,7 +396,8 @@ void infer(char* model_root, char* save, corpus* corpus) {
 		phi = (double**) malloc(sizeof(double*) * doc->length);
 		for (n = 0; n < doc->length; n++)
 			phi[n] = (double*) malloc(sizeof(double) * model->num_topics);
-		likelihood = lda_inference(doc, model, var_gamma[d], phi);
+    short error = 0;
+		likelihood = lda_inference(doc, model, var_gamma[d], phi, &error);
 
 		fprintf(fileptr, "%5.5f\n", likelihood);
 	}
@@ -850,12 +859,13 @@ static VALUE wrap_get_phi(VALUE self) {
     VALUE arr = rb_ary_new2(last_corpus->num_docs);
     int i = 0, j = 0, k = 0;
     
-    int max_length = max_corpus_length(last_corpus);
+    //int max_length = max_corpus_length(last_corpus);
+    short error = 0;
     
     for (i = 0; i < last_corpus->num_docs; i++) {
         VALUE arr1 = rb_ary_new2(last_corpus->docs[i].length);
         
-        lda_inference(&(last_corpus->docs[i]), last_model, last_gamma[i], last_phi);
+        lda_inference(&(last_corpus->docs[i]), last_model, last_gamma[i], last_phi, &error);
         
         for (j = 0; j < last_corpus->docs[i].length; j++) {
             VALUE arr2 = rb_ary_new2(last_model->num_topics);

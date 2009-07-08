@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include <float.h>
-#include <assert.h>
 #include "lda.h"
 #include "utils.h"
 
@@ -31,7 +30,7 @@ enum BOOL { FALSE, TRUE } corpus_loaded, model_loaded, VERBOSE;
 
 
 
-double lda_inference(document*, lda_model*, double*, double**);
+double lda_inference(document*, lda_model*, double*, double**, short*);
 double compute_likelihood(document*, lda_model*, double**, double*);
 
 
