@@ -235,7 +235,7 @@ module Lda
       topic_num = 0
       beta.each do |topic|
         topics[topic_num] = Array.new
-        indices.sort! {|x, y| -(topic[x] <=> topic[y])}
+#        indices.sort! {|x, y| -(topic[x] <=> topic[y])}
         words_per_topic.times do |i|
           topics[topic_num] << @vocab[indices[i]]
         end
