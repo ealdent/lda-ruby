@@ -17,10 +17,6 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 // USA
 
-#ifndef USE_RUBY
-#define USE_RUBY
-#endif
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -54,8 +50,12 @@ double lda_inference(document* doc, lda_model* model, double* var_gamma, double*
 	double converged = 1;
 	double phisum = 0, likelihood = 0;
 	double likelihood_old = 0, oldphi[model->num_topics];
-	int k, n, var_iter;
+	int k = 0, n = 0, var_iter = 0, index = 0;
 	double digamma_gam[model->num_topics];
+
+  /* zero'em out */
+  memset(digamma_gam,0.0,sizeof(digamma_gam));
+  memset(oldphi,0.0,sizeof(oldphi));
 
 		// compute posterior dirichlet
 
@@ -78,9 +78,10 @@ double lda_inference(document* doc, lda_model* model, double* var_gamma, double*
 			for (k = 0; k < model->num_topics; k++)
 			{
 				oldphi[k] = phi[n][k];
+        index = doc->words[n];
 				phi[n][k] =
 					digamma_gam[k] +
-					model->log_prob_w[k][doc->words[n]];
+					model->log_prob_w[k][index];
 
 				if (k > 0)
 					phisum = log_sum(phisum, phi[n][k]);
@@ -117,7 +118,8 @@ double lda_inference(document* doc, lda_model* model, double* var_gamma, double*
 
 double compute_likelihood(document* doc, lda_model* model, double** phi, double* var_gamma) {
 	double likelihood = 0, digsum = 0, var_gamma_sum = 0, dig[model->num_topics];
-	int k, n;
+	int k = 0, n = 0, index = 0;
+  memset(dig,0.0,sizeof(dig));
 
 	for (k = 0; k < model->num_topics; k++)
 	{
@@ -126,7 +128,10 @@ double compute_likelihood(document* doc, lda_model* model, double** phi, double*
 	}
 	digsum = digamma(var_gamma_sum);
 
-	likelihood = lgamma(model->alpha * model -> num_topics) - model -> num_topics * lgamma(model->alpha) - (lgamma(var_gamma_sum));
+	likelihood = lgamma(model->alpha * model->num_topics) -
+               model->num_topics *
+               lgamma(model->alpha) -
+               lgamma(var_gamma_sum);
 
 	for (k = 0; k < model->num_topics; k++)
 	{
@@ -136,9 +141,10 @@ double compute_likelihood(document* doc, lda_model* model, double** phi, double*
 		{
 			if (phi[n][k] > 0)
 			{
+        index = doc->words[n];
 				likelihood += doc->counts[n]*
 					(phi[n][k]*((dig[k] - digsum) - log(phi[n][k])
-					+ model->log_prob_w[k][doc->words[n]]));
+					+ model->log_prob_w[k][index]));
 			}
 		}
 	}
@@ -151,10 +157,11 @@ double doc_e_step(document* doc, double* gamma, double** phi, lda_model* model, 
 	int n, k;
   short error = 0;
 
-		// posterior inference
+  // posterior inference
 
 	likelihood = lda_inference(doc, model, gamma, phi, &error);
   if (error) { likelihood = 0.0; }
+  fprintf(stderr,"likelihood(estep): %.2f\n", likelihood);
 
 		// update sufficient statistics
 
@@ -223,6 +230,7 @@ void run_em(char* start, char* directory, corpus* corpus) {
 	double **var_gamma, **phi;
 
 	// allocate variational parameters
+  fprintf(stderr,"allocate variational parameters: %s\n", start);
 
 	var_gamma = malloc(sizeof(double*)*(corpus->num_docs));
 	for (d = 0; d < corpus->num_docs; d++)
@@ -282,23 +290,22 @@ void run_em(char* start, char* directory, corpus* corpus) {
 		zero_initialize_ss(ss, model);
 
 		// e-step
+    printf("e-step\n");
 
 		for (d = 0; d < corpus->num_docs; d++) {
 			if ((d % 1000) == 0 && VERBOSE) printf("document %d\n",d);
 			likelihood += doc_e_step(&(corpus->docs[d]), var_gamma[d], phi, model, ss);
 		}
+    printf("m-step\n");
 
 		// m-step
-
-        if (VERBOSE) {
-            lda_mle(model, ss, ESTIMATE_ALPHA);
-        } else {
-            quiet_lda_mle(model, ss, ESTIMATE_ALPHA);
-        }
-		
+    if (VERBOSE) {
+      lda_mle(model, ss, ESTIMATE_ALPHA);
+    } else {
+      quiet_lda_mle(model, ss, ESTIMATE_ALPHA);
+    }
 
 		// check for convergence
-
 		converged = (likelihood_old - likelihood) / (likelihood_old);
 		if (converged < 0) VAR_MAX_ITER = VAR_MAX_ITER * 2;
 		likelihood_old = likelihood;
@@ -457,58 +464,71 @@ int main(int argc, char* argv[]) {
 
 /* */
 void run_quiet_em(char* start, corpus* corpus) {
-	int d, n;
+	int d = 0, n = 0;
 	lda_model *model = NULL;
-	double **var_gamma, **phi;
+	double **var_gamma = NULL, **phi = NULL;
+	// last_gamma is a double[num_docs][num_topics]
 
 	// allocate variational parameters
+  fprintf(stderr, "allocate variational parameters with corpus-> %d docs\n", corpus->num_docs);
 
-	var_gamma = malloc(sizeof(double*)*(corpus->num_docs));
-	for (d = 0; d < corpus->num_docs; d++)
-		var_gamma[d] = malloc(sizeof(double) * NTOPICS);
+	var_gamma = (double**)malloc(sizeof(double*)*(corpus->num_docs));
+  memset(var_gamma, 0.0, corpus->num_docs);
+
+	for (d = 0; d < corpus->num_docs; ++d) {
+		var_gamma[d] = (double*)malloc(sizeof(double) * NTOPICS);
+    memset(var_gamma[d], 0.0, sizeof(double)*NTOPICS);
+  }
+  fprintf(stderr, "var gamma created with %d docs by %d topics\n", corpus->num_docs, NTOPICS);
 
 	int max_length = max_corpus_length(corpus);
-	phi = malloc(sizeof(double*)*max_length);
-	for (n = 0; n < max_length; n++)
-		phi[n] = malloc(sizeof(double) * NTOPICS);
+  fprintf(stderr, "phi max_length: %d\n", max_length);
+
+	phi = (double**)malloc(sizeof(double*)*max_length);
+  memset(phi, 0.0, max_length);
+	for (n = 0; n < max_length; ++n) {
+		phi[n] = (double*)malloc(sizeof(double) * NTOPICS);
+    memset(phi[n], 0.0, sizeof(double)*NTOPICS);
+  }
 
 	// initialize model
+  fprintf(stderr,"initialize model with: '%s':%lu\n", start, strlen(start));
 
 	lda_suffstats* ss = NULL;
-	if (strcmp(start, "seeded")==0) {
+	if (strncmp(start, "seeded",6)==0) {
 		model = new_lda_model(corpus->num_terms, NTOPICS);
+		model->alpha = INITIAL_ALPHA;
 		ss = new_lda_suffstats(model);
 		if (VERBOSE) {
-		    corpus_initialize_ss(ss, model, corpus);
-	    } else {
-            quiet_corpus_initialize_ss(ss, model, corpus);
-	    }
+      corpus_initialize_ss(ss, model, corpus);
+    } else {
+      quiet_corpus_initialize_ss(ss, model, corpus);
+    }
 		if (VERBOSE) {
-		    lda_mle(model, ss, 0);
+      lda_mle(model, ss, 0);
 		} else {
-		    quiet_lda_mle(model, ss, 0);
+      quiet_lda_mle(model, ss, 0);
 		}
-		model->alpha = INITIAL_ALPHA;
-	} else if (strcmp(start, "fixed")==0) {
-	    model = new_lda_model(corpus->num_terms, NTOPICS);
-		ss = new_lda_suffstats(model);
-		corpus_initialize_fixed_ss(ss, model, corpus);
-		if (VERBOSE) {
-		    lda_mle(model, ss, 0);
-		} else {
-		    quiet_lda_mle(model, ss, 0);
-		}
-		model->alpha = INITIAL_ALPHA;
-	} else if (strcmp(start, "random")==0) {
+	} else if (strncmp(start, "fixed",5)==0) {
+	  model = new_lda_model(corpus->num_terms, NTOPICS);
+    model->alpha = INITIAL_ALPHA;
+	  ss = new_lda_suffstats(model);
+	  corpus_initialize_fixed_ss(ss, model, corpus);
+    if (VERBOSE) {
+      lda_mle(model, ss, 0);
+    } else {
+      quiet_lda_mle(model, ss, 0);
+    }
+	} else if (strncmp(start, "random",6)==0) {
 		model = new_lda_model(corpus->num_terms, NTOPICS);
+		model->alpha = INITIAL_ALPHA;
 		ss = new_lda_suffstats(model);
 		random_initialize_ss(ss, model);
 		if (VERBOSE) {
-		    lda_mle(model, ss, 0);
+      lda_mle(model, ss, 0);
 		} else {
-		    quiet_lda_mle(model, ss, 0);
+      quiet_lda_mle(model, ss, 0);
 		}
-		model->alpha = INITIAL_ALPHA;
 	} else {
 		model = load_lda_model(start);
 		ss = new_lda_suffstats(model);
@@ -521,16 +541,16 @@ void run_quiet_em(char* start, corpus* corpus) {
 	// run expectation maximization
 
 	int i = 0;
-	double likelihood, likelihood_old = 0, converged = 1;
+	double likelihood = 0.0, likelihood_old = 0, converged = 1;
 
 	while (((converged < 0) || (converged > EM_CONVERGED) || (i <= 2)) && (i <= EM_MAX_ITER)) {
 		i++;
-		if (VERBOSE)
-		    printf("**** em iteration %d ****\n", i);
+		if (VERBOSE) printf("**** em iteration %d ****\n", i);
 		likelihood = 0;
 		zero_initialize_ss(ss, model);
 
 		// e-step
+    fprintf(stderr,"e-step\n");
 
 		for (d = 0; d < corpus->num_docs; d++) {
 			if ((d % 1000) == 0 && VERBOSE) printf("document %d\n",d);
@@ -538,12 +558,12 @@ void run_quiet_em(char* start, corpus* corpus) {
 		}
 
 		// m-step
-
-        if (VERBOSE) {
-            lda_mle(model, ss, ESTIMATE_ALPHA);
-        } else {
-            quiet_lda_mle(model, ss, ESTIMATE_ALPHA);
-        }
+    fprintf(stderr,"m-step\n");
+    if (VERBOSE) {
+      lda_mle(model, ss, ESTIMATE_ALPHA);
+    } else {
+      quiet_lda_mle(model, ss, ESTIMATE_ALPHA);
+    }
 
 		// check for convergence
 
@@ -555,14 +575,14 @@ void run_quiet_em(char* start, corpus* corpus) {
 
 		last_model = model;
 		last_gamma = var_gamma;
-        last_phi = phi;
+    last_phi = phi;
 	}
 
 	// output the final model
 
 	last_model = model;
 	last_gamma = var_gamma;
-    last_phi = phi;
+  last_phi = phi;
 
 	// output the word assignments (for visualization)
 	/*
@@ -594,6 +614,7 @@ void run_quiet_em(char* start, corpus* corpus) {
 static VALUE wrap_set_config(VALUE self, VALUE init_alpha, VALUE num_topics, VALUE max_iter, VALUE convergence, VALUE em_max_iter, VALUE em_convergence, VALUE est_alpha) {
 	INITIAL_ALPHA = NUM2DBL(init_alpha);
 	NTOPICS = NUM2INT(num_topics);
+  if( NTOPICS < 0 ) { rb_raise(rb_eRuntimeError, "NTOPICS must be greater than 0 - %d", NTOPICS); }
 	VAR_MAX_ITER = NUM2INT(max_iter);
 	VAR_CONVERGED = (float)NUM2DBL(convergence);
 	EM_MAX_ITER = NUM2INT(em_max_iter);

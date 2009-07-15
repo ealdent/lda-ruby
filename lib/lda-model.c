@@ -18,6 +18,7 @@
 // USA
 
 #include "lda-model.h"
+#include <string.h>
 
 
 /*
@@ -88,22 +89,22 @@ void quiet_lda_mle(lda_model* model, lda_suffstats* ss, int estimate_alpha) {
 */
 
 lda_suffstats* new_lda_suffstats(lda_model* model) {
+	register int i;
 	int num_topics = model->num_topics;
 	int num_terms = model->num_terms;
-	int i,j;
+  fprintf(stderr,"create suffstats with: %d topics x %d terms\n", num_topics, num_terms);
 
-	lda_suffstats* ss = malloc(sizeof(lda_suffstats));
-	ss->class_total = malloc(sizeof(double)*num_topics);
-	ss->class_word = malloc(sizeof(double*)*num_topics);
-	for (i = 0; i < num_topics; i++)
-	{
+	lda_suffstats* ss = (lda_suffstats*)malloc(sizeof(lda_suffstats));
+  memset(ss,0,sizeof(lda_suffstats));
+	ss->class_total = (double*)malloc(sizeof(double)*num_topics);
+	ss->class_word = (double**)malloc(sizeof(double*)*num_topics);
+
+	for (i = 0; i < num_topics; ++i) {
 		ss->class_total[i] = 0;
-		ss->class_word[i] = malloc(sizeof(double)*num_terms);
-		for (j = 0; j < num_terms; j++)
-		{
-			ss->class_word[i][j] = 0;
-		}
+		ss->class_word[i] = (double*)malloc(sizeof(double)*num_terms);
+    memset(ss->class_word[i],0.0,sizeof(double)*num_terms);
 	}
+
 	return(ss);
 }
 
@@ -132,6 +133,7 @@ void random_initialize_ss(lda_suffstats* ss, lda_model* model) {
 	int num_topics = model->num_topics;
 	int num_terms = model->num_terms;
 	int k, n;
+  fprintf(stderr, "random initialize %d topics by %d terms\n", num_topics, num_terms);
 	for (k = 0; k < num_topics; k++)
 	{
 		for (n = 0; n < num_terms; n++)
