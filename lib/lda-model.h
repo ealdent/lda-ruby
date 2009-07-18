@@ -16,6 +16,7 @@ void free_lda_model(lda_model*);
 void save_lda_model(lda_model*, char*);
 lda_model* new_lda_model(int, int);
 lda_suffstats* new_lda_suffstats(lda_model* model);
+void free_lda_suffstats(lda_model* model, lda_suffstats* ss);
 void corpus_initialize_ss(lda_suffstats* ss, lda_model* model, corpus* c);
 void quiet_corpus_initialize_ss(lda_suffstats* ss, lda_model* model, corpus* c);
 void corpus_initialize_fixed_ss(lda_suffstats* ss, lda_model* model, corpus* c);

@@ -79,9 +79,15 @@ double lda_inference(document* doc, lda_model* model, double* var_gamma, double*
 			{
 				oldphi[k] = phi[n][k];
         index = doc->words[n];
-				phi[n][k] =
-					digamma_gam[k] +
-					model->log_prob_w[k][index];
+        if( index < 0 || index > model->num_terms ) {
+          printf("phi for term: %d of %d\n", index, model->num_terms);
+				  phi[n][k] = 0.0;
+        }
+        else { 
+				  phi[n][k] =
+				  	digamma_gam[k] +
+				  	model->log_prob_w[k][index];
+        }
 
 				if (k > 0)
 					phisum = log_sum(phisum, phi[n][k]);
@@ -161,7 +167,7 @@ double doc_e_step(document* doc, double* gamma, double** phi, lda_model* model, 
 
 	likelihood = lda_inference(doc, model, gamma, phi, &error);
   if (error) { likelihood = 0.0; }
-  fprintf(stderr,"likelihood(estep): %.2f\n", likelihood);
+
 
 		// update sufficient statistics
 
@@ -230,7 +236,7 @@ void run_em(char* start, char* directory, corpus* corpus) {
 	double **var_gamma, **phi;
 
 	// allocate variational parameters
-  fprintf(stderr,"allocate variational parameters: %s\n", start);
+
 
 	var_gamma = malloc(sizeof(double*)*(corpus->num_docs));
 	for (d = 0; d < corpus->num_docs; d++)
@@ -470,7 +476,7 @@ void run_quiet_em(char* start, corpus* corpus) {
 	// last_gamma is a double[num_docs][num_topics]
 
 	// allocate variational parameters
-  fprintf(stderr, "allocate variational parameters with corpus-> %d docs\n", corpus->num_docs);
+
 
 	var_gamma = (double**)malloc(sizeof(double*)*(corpus->num_docs));
   memset(var_gamma, 0.0, corpus->num_docs);
@@ -479,10 +485,8 @@ void run_quiet_em(char* start, corpus* corpus) {
 		var_gamma[d] = (double*)malloc(sizeof(double) * NTOPICS);
     memset(var_gamma[d], 0.0, sizeof(double)*NTOPICS);
   }
-  fprintf(stderr, "var gamma created with %d docs by %d topics\n", corpus->num_docs, NTOPICS);
 
 	int max_length = max_corpus_length(corpus);
-  fprintf(stderr, "phi max_length: %d\n", max_length);
 
 	phi = (double**)malloc(sizeof(double*)*max_length);
   memset(phi, 0.0, max_length);
@@ -492,7 +496,6 @@ void run_quiet_em(char* start, corpus* corpus) {
   }
 
 	// initialize model
-  fprintf(stderr,"initialize model with: '%s':%lu\n", start, strlen(start));
 
 	lda_suffstats* ss = NULL;
 	if (strncmp(start, "seeded",6)==0) {
@@ -550,7 +553,6 @@ void run_quiet_em(char* start, corpus* corpus) {
 		zero_initialize_ss(ss, model);
 
 		// e-step
-    fprintf(stderr,"e-step\n");
 
 		for (d = 0; d < corpus->num_docs; d++) {
 			if ((d % 1000) == 0 && VERBOSE) printf("document %d\n",d);
@@ -558,7 +560,6 @@ void run_quiet_em(char* start, corpus* corpus) {
 		}
 
 		// m-step
-    fprintf(stderr,"m-step\n");
     if (VERBOSE) {
       lda_mle(model, ss, ESTIMATE_ALPHA);
     } else {
@@ -583,6 +584,8 @@ void run_quiet_em(char* start, corpus* corpus) {
 	last_model = model;
 	last_gamma = var_gamma;
   last_phi = phi;
+
+  free_lda_suffstats(model,ss);
 
 	// output the word assignments (for visualization)
 	/*
@@ -828,8 +831,11 @@ static VALUE wrap_ruby_corpus(VALUE self, VALUE rcorpus) {
 		c->docs[i].words = malloc(sizeof(int) * c->docs[i].length);
 		c->docs[i].counts = malloc(sizeof(int) * c->docs[i].length);
 		for (j = 0; j < c->docs[i].length; j++) {
-			VALUE one_word = NUM2INT(rb_ary_entry(words, j));
-			VALUE one_count = NUM2INT(rb_ary_entry(counts, j));
+			int one_word = NUM2INT(rb_ary_entry(words, j));
+			int one_count = NUM2INT(rb_ary_entry(counts, j));
+      if( one_word > c->num_terms ) {
+        rb_raise(rb_eRuntimeError, "error term count(%d) less then word index(%d)", c->num_terms, one_word);
+      }
 			c->docs[i].words[j] = one_word;
 			c->docs[i].counts[j] = one_count;
 		}

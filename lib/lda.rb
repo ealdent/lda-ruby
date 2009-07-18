@@ -30,10 +30,10 @@ module Lda
     def add_document(doc)
       if doc.is_a?(Document)
         @documents << doc
-        @all_terms = @all_terms + doc.words
+        @all_terms += doc.words
       elsif doc.is_a?(String)
         d = Document.new(doc)
-        @all_terms = @all_terms + d.words
+        @all_terms += d.words
         @documents << d
       end
       @num_docs += 1
@@ -235,7 +235,7 @@ module Lda
       topic_num = 0
       beta.each do |topic|
         topics[topic_num] = Array.new
-#        indices.sort! {|x, y| -(topic[x] <=> topic[y])}
+        indices.sort! {|x, y| -(topic[x] <=> topic[y])}
         words_per_topic.times do |i|
           topics[topic_num] << @vocab[indices[i]]
         end
