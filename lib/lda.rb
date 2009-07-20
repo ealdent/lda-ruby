@@ -30,10 +30,10 @@ module Lda
     def add_document(doc)
       if doc.is_a?(Document)
         @documents << doc
-        @all_terms = @all_terms + doc.words
+        @all_terms += doc.words
       elsif doc.is_a?(String)
         d = Document.new(doc)
-        @all_terms = @all_terms + d.words
+        @all_terms += d.words
         @documents << d
       end
       @num_docs += 1

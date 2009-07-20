@@ -18,6 +18,7 @@
 // USA
 
 #include "lda-model.h"
+#include <string.h>
 
 
 /*
@@ -88,25 +89,38 @@ void quiet_lda_mle(lda_model* model, lda_suffstats* ss, int estimate_alpha) {
 */
 
 lda_suffstats* new_lda_suffstats(lda_model* model) {
+	register int i;
 	int num_topics = model->num_topics;
 	int num_terms = model->num_terms;
-	int i,j;
 
-	lda_suffstats* ss = malloc(sizeof(lda_suffstats));
-	ss->class_total = malloc(sizeof(double)*num_topics);
-	ss->class_word = malloc(sizeof(double*)*num_topics);
-	for (i = 0; i < num_topics; i++)
-	{
+	lda_suffstats* ss = (lda_suffstats*)malloc(sizeof(lda_suffstats));
+  memset(ss,0,sizeof(lda_suffstats));
+	ss->class_total = (double*)malloc(sizeof(double)*num_topics);
+	ss->class_word = (double**)malloc(sizeof(double*)*num_topics);
+
+	for (i = 0; i < num_topics; ++i) {
 		ss->class_total[i] = 0;
-		ss->class_word[i] = malloc(sizeof(double)*num_terms);
-		for (j = 0; j < num_terms; j++)
-		{
-			ss->class_word[i][j] = 0;
-		}
+		ss->class_word[i] = (double*)malloc(sizeof(double)*num_terms);
+    memset(ss->class_word[i],0.0,sizeof(double)*num_terms);
 	}
+
 	return(ss);
 }
+/*
+ * deallocate new lda suffstats
+ *
+ */
+void free_lda_suffstats(lda_model* model, lda_suffstats* ss) {
+  int i;
+	int num_topics = model->num_topics;
 
+  free(ss->class_total);
+	for (i = 0; i < num_topics; ++i) {
+    free(ss->class_word[i]);
+  }
+  free(ss->class_word);
+  free(ss);
+}
 
 /*
 * various intializations for the sufficient statistics
@@ -132,6 +146,7 @@ void random_initialize_ss(lda_suffstats* ss, lda_model* model) {
 	int num_topics = model->num_topics;
 	int num_terms = model->num_terms;
 	int k, n;
+
 	for (k = 0; k < num_topics; k++)
 	{
 		for (n = 0; n < num_terms; n++)
@@ -221,7 +236,7 @@ void corpus_initialize_fixed_ss(lda_suffstats* ss, lda_model* model, corpus* c) 
 */
 
 lda_model* new_lda_model(int num_terms, int num_topics) {
-	int i,j;
+	int i;
 	lda_model* model;
 
 	model = malloc(sizeof(lda_model));
@@ -229,11 +244,11 @@ lda_model* new_lda_model(int num_terms, int num_topics) {
 	model->num_terms = num_terms;
 	model->alpha = 1.0;
 	model->log_prob_w = malloc(sizeof(double*)*num_topics);
+  printf("new model with: %d topics and %d terms\n", num_topics, num_terms);
 	for (i = 0; i < num_topics; i++)
 	{
 		model->log_prob_w[i] = malloc(sizeof(double)*num_terms);
-		for (j = 0; j < num_terms; j++)
-			model->log_prob_w[i][j] = 0;
+    memset(model->log_prob_w[i],0,sizeof(double)*num_terms);
 	}
 	return(model);
 }
