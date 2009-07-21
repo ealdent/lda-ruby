@@ -36,6 +36,8 @@ module Lda
       true
     end
 
+    protected
+
     # Populate this corpus from the data in the file.
     def load_from_file(filename)
       File.open(filename, 'r') do |f|
