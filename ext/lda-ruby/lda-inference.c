@@ -34,7 +34,7 @@
 #ifdef USE_RUBY
 #include "ruby.h"
 
-VALUE rb_mLda;
+VALUE rb_cLdaModule;
 VALUE rb_cLda;
 VALUE rb_cLdaCorpus;
 VALUE rb_cLdaDocument;
@@ -961,10 +961,10 @@ void Init_lda() {
 
   rb_require("lda-ruby");
 
-  rb_mLda = rb_define_module("Lda");
-  rb_cLda = rb_define_class_under(rb_mLda, "Lda", rb_cObject);
-  rb_cLdaCorpus = rb_define_class_under(rb_mLda, "Corpus", rb_cObject);
-  rb_cLdaDocument = rb_define_class_under(rb_mLda, "BaseDocument", rb_cObject);
+  rb_cLdaModule   = rb_define_module("Lda");
+  rb_cLda         = rb_define_class_under(rb_cLdaModule, "Lda", rb_cObject);
+  rb_cLdaCorpus   = rb_define_class_under(rb_cLdaModule, "Corpus", rb_cObject);
+  rb_cLdaDocument = rb_define_class_under(rb_cLdaModule, "BaseDocument", rb_cObject);
 
   // method to load the corpus
   rb_define_method(rb_cLda, "fast_load_corpus_from_file", wrap_load_corpus, 1);

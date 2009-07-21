@@ -1,11 +1,12 @@
 $LOAD_PATH.unshift(File.dirname(__FILE__)) unless $LOAD_PATH.include?(File.dirname(__FILE__))
 
+require 'lda-ruby/lda'
 require 'lda-ruby/document/base_document'
 require 'lda-ruby/document/document'
 require 'lda-ruby/document/text_document'
 require 'lda-ruby/corpus/corpus'
 require 'lda-ruby/corpus/text_corpus'
-require 'lda-ruby/lda'
+require 'lda-ruby/vocabulary'
 
 module Lda
   class Lda
@@ -14,10 +15,14 @@ module Lda
     #
     # Create a new LDA instance with the default settings.
     #
-    def initialize
-      self.load_default_settings
-      @corpus = nil
-      @vocab = nil
+    def initialize(corpus = nil)
+      load_default_settings
+      self.corpus = corpus
+      if corpus && corpus.respond_to?(:vocabulary)
+        load_vocabulary(corpus.vocabulary)
+      else
+        @vocab = nil
+      end
       @phi = nil
     end
 
@@ -29,7 +34,8 @@ module Lda
       self.num_topics = 20
       self.init_alpha = 0.3
       self.est_alpha = 1
-      nil
+
+      [20, 1e-6, 100, 1e-4, 20, 0.3, 1]
     end
 
     #
@@ -60,8 +66,10 @@ module Lda
     def load_vocabulary(vocab)
       if vocab.is_a?(Array)
         @vocab = Marshal::load(Marshal::dump(vocab))      # deep clone array
+      elsif vocab.is_a?(Vocabulary)
+        @vocab = vocab.to_a
       else
-        @vocab = File.open(vocab, 'r') { |f| f.read.split(/[\n\r]+/) }
+        @vocab = File.open(vocab, 'r') { |f| f.read.split(/\s+/) }
       end
 
       true
@@ -79,19 +87,13 @@ module Lda
         return nil
       end
 
-      beta = self.beta
-      indices = (0..(@vocab.size - 1)).to_a
-      topic_num = 0
-      beta.each do |topic|
-        indices.sort! {|x, y| -(topic[x] <=> topic[y])}
-        outp = []
+      self.beta.each_with_index do |topic, topic_num|
+        # Sort the topic array and return the sorted indices of the best scores
+        indices = (topic.zip((0...@vocab.size).to_a).sort { |i, j| i[0] <=> j[0] }.map { |i, j| j }.reverse)[0...words_per_topic]
+
         puts "Topic #{topic_num}"
-        words_per_topic.times do |i|
-          outp << @vocab[indices[i]]
-        end
-        puts "\t" + outp.join("\n\t")
+        puts "\t#{indices.map {|i| @vocab[i]}.join("\n\t")}"
         puts ""
-        topic_num += 1
       end
 
       nil

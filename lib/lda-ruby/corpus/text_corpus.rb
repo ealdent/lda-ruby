@@ -5,34 +5,31 @@ module Lda
     def initialize(path, extension = nil)
       @path = path.dup.freeze
       @extension = extension
+      @vocabulary = Vocabulary.new
 
       super(nil)
 
       load_from_directory
-      generate_vocabulary
     end
 
-    def generate_vocabulary
-      @vocabulary = Array.new
-      @documents.each do |doc|
-        @vocabulary << doc.words
-      end
-
-      @vocabulary.flatten!
-      @vocabulary.uniq!
-      @vocabulary.reject! { |w| w.nil? }
-
-      @vocabulary
+    def add_document(doc)
+      super(doc)
+      doc.tokens.each { |w| @vocabulary.check_word(w) } if @vocabulary
     end
 
     protected
+
+    def regenerate_vocabulary
+      @vocabulary = Vocabulary.new
+      @documents.map { |d| d.words }.flatten.uniq.each { |w| @vocabulary.check_word(w) }
+    end
 
     def load_from_directory
       dir_glob = File.join(@path, (@extension ? "*.#{@extension}" : "*"))
 
       Dir.glob(dir_glob).each do |filename|
         puts "[debug] Loading document #{filename}."
-        add_document(TextDocument.build_from_file(filename))
+        add_document(TextDocument.build_from_file(self, filename))
       end
     end
   end

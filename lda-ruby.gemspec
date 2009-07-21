@@ -42,6 +42,7 @@ Gem::Specification.new do |s|
      "lib/lda-ruby/document/base_document.rb",
      "lib/lda-ruby/document/document.rb",
      "lib/lda-ruby/document/text_document.rb",
+     "lib/lda-ruby/vocabulary.rb",
      "license.txt",
      "test/docs.yml",
      "test/test.rb",
