@@ -83,7 +83,7 @@ double lda_inference(document* doc, lda_model* model, double* var_gamma, double*
           printf("phi for term: %d of %d\n", index, model->num_terms);
 				  phi[n][k] = 0.0;
         }
-        else { 
+        else {
 				  phi[n][k] =
 				  	digamma_gam[k] +
 				  	model->log_prob_w[k][index];
@@ -142,7 +142,7 @@ double compute_likelihood(document* doc, lda_model* model, double** phi, double*
 	for (k = 0; k < model->num_topics; k++)
 	{
 		likelihood += (model->alpha - 1)*(dig[k] - digsum) + lgamma(var_gamma[k]) - (var_gamma[k] - 1)*(dig[k] - digsum);
-		
+
 		for (n = 0; n < doc->length; n++)
 		{
 			if (phi[n][k] > 0)
@@ -261,7 +261,7 @@ void run_em(char* start, char* directory, corpus* corpus) {
 	    } else {
             quiet_lda_mle(model, ss, 0);
 	    }
-		    
+
 		model->alpha = INITIAL_ALPHA;
 	} else if (strcmp(start, "random")==0) {
 		model = new_lda_model(corpus->num_terms, NTOPICS);
@@ -605,7 +605,7 @@ void run_quiet_em(char* start, corpus* corpus) {
 
 /*
  * Set all of the settings in one command:
- * 
+ *
  *  * init_alpha
  *  * num_topics
  *  * max_iter
@@ -710,7 +710,7 @@ static VALUE wrap_get_num_topics(VALUE self) {
  */
 static VALUE wrap_set_initial_alpha(VALUE self, VALUE initial_alpha) {
 	INITIAL_ALPHA = (float)NUM2DBL(initial_alpha);
-	
+
 	return initial_alpha;
 }
 
@@ -719,7 +719,7 @@ static VALUE wrap_set_initial_alpha(VALUE self, VALUE initial_alpha) {
  */
 static VALUE wrap_set_num_topics(VALUE self, VALUE ntopics) {
 	NTOPICS = NUM2INT(ntopics);
-	
+
 	return ntopics;
 }
 
@@ -735,7 +735,7 @@ static VALUE wrap_get_estimate_alpha(VALUE self) {
  */
 static VALUE wrap_set_estimate_alpha(VALUE self, VALUE est_alpha) {
 	ESTIMATE_ALPHA = NUM2INT(est_alpha);
-	
+
 	return est_alpha;
 }
 
@@ -760,7 +760,7 @@ static VALUE wrap_set_verbosity(VALUE self, VALUE verbosity) {
     } else {
         VERBOSE = FALSE;
     }
-    
+
     return verbosity;
 }
 
@@ -777,7 +777,7 @@ static VALUE wrap_set_verbosity(VALUE self, VALUE verbosity) {
 static VALUE wrap_em(VALUE self, VALUE start) {
 	if (!corpus_loaded)
 		return Qnil;
-	
+
 	run_quiet_em(STR2CSTR(start), last_corpus);
 
 	return Qnil;
@@ -815,7 +815,7 @@ static VALUE wrap_ruby_corpus(VALUE self, VALUE rcorpus) {
 	corpus* c;
 	int i = 0;
 	int j = 0;
-	
+
 	c = malloc(sizeof(corpus));
 	c->num_terms = NUM2INT(rb_iv_get(rcorpus, "@num_terms"));
 	c->num_docs = NUM2INT(rb_iv_get(rcorpus, "@num_docs"));
@@ -825,7 +825,7 @@ static VALUE wrap_ruby_corpus(VALUE self, VALUE rcorpus) {
 		VALUE one_doc = rb_ary_entry(doc_ary, i);
 		VALUE words = rb_iv_get(one_doc, "@words");
 		VALUE counts = rb_iv_get(one_doc, "@counts");
-		
+
 		c->docs[i].length = NUM2INT(rb_iv_get(one_doc, "@length"));
 		c->docs[i].total = NUM2INT(rb_iv_get(one_doc, "@total"));
 		c->docs[i].words = malloc(sizeof(int) * c->docs[i].length);
@@ -840,12 +840,12 @@ static VALUE wrap_ruby_corpus(VALUE self, VALUE rcorpus) {
 			c->docs[i].counts[j] = one_count;
 		}
 	}
-	
+
 	last_corpus = c;
 	corpus_loaded = TRUE;
-	
+
 	rb_iv_set(self, "@corpus", rcorpus);
-	
+
 	return Qtrue;
 }
 
@@ -856,11 +856,11 @@ static VALUE wrap_ruby_corpus(VALUE self, VALUE rcorpus) {
 static VALUE wrap_get_gamma(VALUE self) {
 	if (!model_loaded)
 		return Qnil;
-	
+
 	// last_gamma is a double[num_docs][num_topics]
 	VALUE arr;
 	int i = 0, j = 0;
-	
+
 	arr = rb_ary_new2(last_corpus->num_docs);
 	for (i = 0; i < last_corpus->num_docs; i++) {
 		VALUE arr2 = rb_ary_new2(last_model->num_topics);
@@ -869,7 +869,7 @@ static VALUE wrap_get_gamma(VALUE self) {
 		}
 		rb_ary_store(arr, i, arr2);
 	}
-	
+
 	return arr;
 }
 
@@ -882,31 +882,31 @@ static VALUE wrap_get_gamma(VALUE self) {
 static VALUE wrap_get_phi(VALUE self) {
     if (!model_loaded)
         return Qnil;
-    
+
     VALUE arr = rb_ary_new2(last_corpus->num_docs);
     int i = 0, j = 0, k = 0;
-    
+
     //int max_length = max_corpus_length(last_corpus);
     short error = 0;
-    
+
     for (i = 0; i < last_corpus->num_docs; i++) {
         VALUE arr1 = rb_ary_new2(last_corpus->docs[i].length);
-        
+
         lda_inference(&(last_corpus->docs[i]), last_model, last_gamma[i], last_phi, &error);
-        
+
         for (j = 0; j < last_corpus->docs[i].length; j++) {
             VALUE arr2 = rb_ary_new2(last_model->num_topics);
-            
+
             for (k = 0; k < last_model->num_topics; k++) {
                 rb_ary_store(arr2, k, rb_float_new(last_phi[j][k]));
             }
-            
+
             rb_ary_store(arr1, j, arr2);
         }
-        
+
         rb_ary_store(arr, i, arr1);
     }
-    
+
     return arr;
 }
 
@@ -918,11 +918,11 @@ static VALUE wrap_get_phi(VALUE self) {
 static VALUE wrap_get_model_beta(VALUE self) {
 	if (!model_loaded)
 		return Qnil;
-		
+
 	// beta is a double[num_topics][num_terms]
 	VALUE arr;
 	int i = 0, j = 0;
-	
+
 	arr = rb_ary_new2(last_model->num_topics);
 	for (i = 0; i < last_model->num_topics; i++) {
 		VALUE arr2 = rb_ary_new2(last_model->num_terms);
@@ -931,7 +931,7 @@ static VALUE wrap_get_model_beta(VALUE self) {
 		}
 		rb_ary_store(arr, i, arr2);
 	}
-	
+
 	return arr;
 }
 
@@ -944,17 +944,17 @@ static VALUE wrap_get_model_settings(VALUE self) {
 		return Qnil;
 
 	VALUE arr;
-	
+
 	arr = rb_ary_new();
 	rb_ary_push(arr, rb_int_new(last_model->num_topics));
 	rb_ary_push(arr, rb_int_new(last_model->num_terms));
 	rb_ary_push(arr, rb_float_new(last_model->alpha));
-	
+
 	return arr;		//	[num_topics, num_terms, alpha]
 }
 
 
-void Init_lda_ext() {
+void Init_lda() {
   corpus_loaded = FALSE;
   model_loaded = FALSE;
   VERBOSE = TRUE;
@@ -988,7 +988,7 @@ void Init_lda_ext() {
   rb_define_method(rb_cLda, "em_max_iter", wrap_get_em_max_iter, 0);
   rb_define_method(rb_cLda, "em_max_iter=", wrap_set_em_max_iter, 1);
   rb_define_method(rb_cLda, "em_convergence", wrap_get_em_converged, 0);
-  rb_define_method(rb_cLda, "em_convergence=", wrap_set_em_converged, 1);	
+  rb_define_method(rb_cLda, "em_convergence=", wrap_set_em_converged, 1);
   rb_define_method(rb_cLda, "init_alpha=", wrap_set_initial_alpha, 1);
   rb_define_method(rb_cLda, "init_alpha", wrap_get_initial_alpha, 0);
   rb_define_method(rb_cLda, "est_alpha=", wrap_set_estimate_alpha, 1);
