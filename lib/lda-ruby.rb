@@ -17,11 +17,12 @@ module Lda
     #
     def initialize(corpus = nil)
       load_default_settings
-      self.corpus = corpus
-      if corpus && corpus.respond_to?(:vocabulary)
-        load_vocabulary(corpus.vocabulary)
-      else
-        @vocab = nil
+      @vocab = nil
+      if corpus
+        self.corpus = corpus
+        if corpus.respond_to?(:vocabulary)
+          load_vocabulary(corpus.vocabulary)
+        end
       end
       @phi = nil
     end
@@ -176,14 +177,14 @@ module Lda
       outp = []
       outp << "LDA Settings:"
       outp << "    Initial alpha: %0.6f" % self.init_alpha
-    	outp << "      # of topics: %d" % self.num_topics
-    	outp << "   Max iterations: %d" % self.max_iter
-    	outp << "      Convergence: %0.6f" % self.convergence
-    	outp << "EM max iterations: %d" % self.em_max_iter
-    	outp << "   EM convergence: %0.6f" % self.em_convergence
-    	outp << "   Estimate alpha: %d" % self.est_alpha
+      outp << "      # of topics: %d" % self.num_topics
+      outp << "   Max iterations: %d" % self.max_iter
+      outp << "      Convergence: %0.6f" % self.convergence
+      outp << "EM max iterations: %d" % self.em_max_iter
+      outp << "   EM convergence: %0.6f" % self.em_convergence
+      outp << "   Estimate alpha: %d" % self.est_alpha
 
-    	return outp.join("\n")
+      return outp.join("\n")
     end
   end
 end

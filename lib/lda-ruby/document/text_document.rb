@@ -21,7 +21,7 @@ module Lda
         vocab = Hash.new(0)
         tokens.each { |t| vocab[t] = vocab[t] + 1 }
 
-        d = TextDocument.new(tokens)
+        d = self.new(tokens)
 
         vocab.each_pair do |word, count|
           d.words << corpus.vocabulary.check_word(word)
@@ -33,7 +33,7 @@ module Lda
       end
 
       def tokenize(txt)
-        clean_text = txt.gsub(/[^A-Za-z'0-9\s]+/, ' ').gsub(/\s+/, ' ')        # remove everythign but letters, numbers, ' and leave only single spaces
+        clean_text = txt.gsub(/[^A-Za-z'\s]+/, ' ').gsub(/\s+/, ' ')        # remove everything but letters and ' and leave only single spaces
         handle(clean_text.split(' '))
       end
 
