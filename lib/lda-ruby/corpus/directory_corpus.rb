@@ -1,5 +1,5 @@
 module Lda
-  class TextCorpus < Corpus
+  class DirectoryCorpus < Corpus
     attr_reader :path, :extension, :vocabulary
 
     def initialize(path, extension = nil)
