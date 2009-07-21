@@ -18,7 +18,7 @@ module Lda
       end
 
       def build_from_tokens(tokens)
-        vocab = Hash.new
+        vocab = Hash.new(0)
         tokens.each { |t| vocab[t] = vocab[t] + 1 }
 
         d = TextDocument.new(tokens)

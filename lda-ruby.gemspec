@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["David Blei", "Jason Adams"]
   s.date = %q{2009-07-21}
-  s.description = %q{Ruby port by Jason Adams of LDA-c (Latent Dirichlet Allocation) by David M. Blei. See http://www.cs.princeton.edu/~blei/lda-c/.}
+  s.description = %q{Ruby port of Latent Dirichlet Allocation by David M. Blei. See http://www.cs.princeton.edu/~blei/lda-c/.}
   s.email = %q{jasonmadams@gmail.com}
   s.extensions = ["ext/lda-ruby/extconf.rb"]
   s.extra_rdoc_files = [
@@ -37,10 +37,11 @@ Gem::Specification.new do |s|
      "ext/lda-ruby/utils.h",
      "lda-ruby.gemspec",
      "lib/lda-ruby.rb",
-     "lib/lda-ruby/base_document.rb",
-     "lib/lda-ruby/corpus.rb",
-     "lib/lda-ruby/document.rb",
-     "lib/lda-ruby/text_document.rb",
+     "lib/lda-ruby/corpus/corpus.rb",
+     "lib/lda-ruby/corpus/text_corpus.rb",
+     "lib/lda-ruby/document/base_document.rb",
+     "lib/lda-ruby/document/document.rb",
+     "lib/lda-ruby/document/text_document.rb",
      "license.txt",
      "test/docs.yml",
      "test/test.rb",

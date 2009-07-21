@@ -3,7 +3,8 @@ $LOAD_PATH.unshift(File.dirname(__FILE__)) unless $LOAD_PATH.include?(File.dirna
 require 'lda-ruby/document/base_document'
 require 'lda-ruby/document/document'
 require 'lda-ruby/document/text_document'
-require 'lda-ruby/corpus'
+require 'lda-ruby/corpus/corpus'
+require 'lda-ruby/corpus/text_corpus'
 require 'lda-ruby/lda'
 
 module Lda
