@@ -1,8 +1,8 @@
 $LOAD_PATH.unshift(File.dirname(__FILE__)) unless $LOAD_PATH.include?(File.dirname(__FILE__))
 
-require 'lda-ruby/base_document'
-require 'lda-ruby/document'
-require 'lda-ruby/text_document'
+require 'lda-ruby/document/base_document'
+require 'lda-ruby/document/document'
+require 'lda-ruby/document/text_document'
 require 'lda-ruby/corpus'
 require 'lda-ruby/lda'
 require 'set'
@@ -67,7 +67,6 @@ module Lda
       true
     end
 
-
     #
     # Visualization method for printing out the top +words_per_topic+ words
     # for each topic.
@@ -131,7 +130,6 @@ module Lda
       topics
     end
 
-
     #
     # Get the phi matrix which can be used to assign probabilities to words
     # belonging to a specific topic in each document.  The return value is a
@@ -146,8 +144,6 @@ module Lda
       end
       @phi
     end
-
-
 
     #
     # Compute the average log probability for each topic for each document in the corpus.
@@ -170,9 +166,6 @@ module Lda
 
       outp
     end
-
-
-
 
     #
     # String representation displaying current settings.
