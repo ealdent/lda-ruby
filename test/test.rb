@@ -1,6 +1,7 @@
 require 'lda'
 require 'test/unit'
 require 'yaml'
+
 $vocab_set = YAML.load_file('vocab_set.yml')
 $vocab_vec = YAML.load_file('vocab_vec.yml')
 $docs      = YAML.load_file('docs.yml')
