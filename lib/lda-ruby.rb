@@ -4,7 +4,7 @@ require 'lda-ruby/base_document'
 require 'lda-ruby/document'
 require 'lda-ruby/text_document'
 require 'lda-ruby/corpus'
-require 'lda-ruby'
+require 'lda-ruby/lda'
 require 'set'
 
 module Lda

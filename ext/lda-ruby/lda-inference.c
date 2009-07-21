@@ -834,7 +834,7 @@ static VALUE wrap_ruby_corpus(VALUE self, VALUE rcorpus) {
 			int one_word = NUM2INT(rb_ary_entry(words, j));
 			int one_count = NUM2INT(rb_ary_entry(counts, j));
       if( one_word > c->num_terms ) {
-        rb_raise(rb_eRuntimeError, "error term count(%d) less then word index(%d)", c->num_terms, one_word);
+        rb_raise(rb_eRuntimeError, "error term count(%d) less than word index(%d)", c->num_terms, one_word);
       }
 			c->docs[i].words[j] = one_word;
 			c->docs[i].counts[j] = one_count;
@@ -959,13 +959,12 @@ void Init_lda() {
   model_loaded = FALSE;
   VERBOSE = TRUE;
 
-  rb_require("lda");
+  rb_require("lda-ruby");
 
   rb_mLda = rb_define_module("Lda");
   rb_cLda = rb_define_class_under(rb_mLda, "Lda", rb_cObject);
   rb_cLdaCorpus = rb_define_class_under(rb_mLda, "Corpus", rb_cObject);
-  rb_cLdaDocument = rb_define_class_under(rb_mLda, "Document", rb_cObject);
-
+  rb_cLdaDocument = rb_define_class_under(rb_mLda, "BaseDocument", rb_cObject);
 
   // method to load the corpus
   rb_define_method(rb_cLda, "fast_load_corpus_from_file", wrap_load_corpus, 1);
