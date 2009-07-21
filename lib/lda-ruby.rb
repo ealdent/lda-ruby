@@ -5,7 +5,6 @@ require 'lda-ruby/document/document'
 require 'lda-ruby/document/text_document'
 require 'lda-ruby/corpus'
 require 'lda-ruby/lda'
-require 'set'
 
 module Lda
   class Lda

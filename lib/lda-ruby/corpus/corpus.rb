@@ -1,3 +1,5 @@
+require 'set'
+
 module Lda
   class Corpus
     attr_reader :documents, :num_docs, :num_terms
@@ -7,31 +9,30 @@ module Lda
     # using the +add_document+ method or load the data from a file
     # using +load_from_file+.
     #
-    def initialize(filename=nil)
+    def initialize(filename = nil)
       @documents = Array.new
       @all_terms = Set.new
-      @num_terms = 0
-      @num_docs  = 0
+      @num_terms = @num_docs  = 0
 
-      if filename
-        self.load_from_file(filename)
-      end
+      load_from_file(filename) if filename
     end
 
     # Add a new document to the corpus.  This can either be
     # an svmlight-style formatted line with the first element
     # being the number of words, or it can be a Document object.
     def add_document(doc)
-      if doc.is_a?(Document)
-        @documents << doc
-        @all_terms += doc.words
+      @documents << if doc.kind_of?(BaseDocument)
+        doc
       elsif doc.is_a?(String)
-        d = Document.new(doc)
-        @all_terms += d.words
-        @documents << d
+        Document.new(doc)
+      else
+        raise 'Unrecognized document format.'
       end
+
+      @all_terms += doc.words
       @num_docs += 1
       @num_terms = @all_terms.size
+
       true
     end
 
