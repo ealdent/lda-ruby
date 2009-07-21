@@ -10,6 +10,8 @@ begin
     gem.email = "jasonmadams@gmail.com"
     gem.homepage = "http://github.com/ealdent/lda-ruby"
     gem.authors = ['David Blei', 'Jason Adams']
+    gem.extensions = ['ext/lda-ruby/extconf.rb']
+    gem.require_paths = ['lib', 'ext']
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
 

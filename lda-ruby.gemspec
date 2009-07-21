@@ -2,13 +2,14 @@
 
 Gem::Specification.new do |s|
   s.name = %q{lda-ruby}
-  s.version = "0.2.3"
+  s.version = "0.3.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["David Blei", "Jason Adams"]
   s.date = %q{2009-07-21}
   s.description = %q{Ruby port of Latent Dirichlet Allocation by David M. Blei. See http://www.cs.princeton.edu/~blei/lda-c/.}
   s.email = %q{jasonmadams@gmail.com}
+  s.extensions = ["ext/lda-ruby/extconf.rb"]
   s.extra_rdoc_files = [
     "README",
      "README.markdown"
@@ -48,7 +49,7 @@ Gem::Specification.new do |s|
   ]
   s.homepage = %q{http://github.com/ealdent/lda-ruby}
   s.rdoc_options = ["--charset=UTF-8"]
-  s.require_paths = ["lib"]
+  s.require_paths = ["lib", "ext"]
   s.rubygems_version = %q{1.3.4}
   s.summary = %q{Ruby port of Latent Dirichlet Allocation by David M. Blei.}
   s.test_files = [

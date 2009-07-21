@@ -2,6 +2,7 @@ require 'lda-ruby/base_document'
 require 'lda-ruby/document'
 require 'lda-ruby/text_document'
 require 'lda-ruby/corpus'
+require 'ext/lda-ruby'
 require 'set'
 
 module Lda
@@ -189,6 +190,3 @@ module Lda
     end
   end
 end
-
-# load the c-side stuff
-require 'lda_ext'
