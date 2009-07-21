@@ -1,37 +1,56 @@
+require 'rubygems'
 require 'rake'
 
 begin
   require 'jeweler'
-  Jeweler::Tasks.new do |s|
-    s.name = "lda-ruby"
-    s.authors = ["Jason M. Adams", "David M. Blei"]
-    s.email = "jasonmadams@gmail.com"
-    s.homepage = "http://github.com/ealdent/lda-ruby"
-    s.summary = "Ruby port of Latent Dirichlet Allocation by David M. Blei."
-    s.extensions << "lib/extconf.rb"
-    s.files = [ 
-                "README",
-                "license.txt",
-                "lib/cokus.c", 
-                "lib/cokus.h", 
-                "lib/extconf.rb", 
-                "lib/lda-alpha.c",
-                "lib/lda-alpha.h",
-                "lib/lda-data.c", 
-                "lib/lda-data.h", 
-                "lib/lda-inference.c", 
-                "lib/lda-inference.h", 
-                "lib/lda-model.c", 
-                "lib/lda-model.h", 
-                "lib/lda.h", 
-                "lib/lda.rb", 
-                "lib/utils.c", 
-                "lib/utils.h",
-                "VERSION.yml"
-              ]
-    s.has_rdoc = true
-    s.add_dependency(%q<stemmer>, [">= 0"])
+  Jeweler::Tasks.new do |gem|
+    gem.name = "lda-ruby"
+    gem.summary = %Q{Ruby port of Latent Dirichlet Allocation by David M. Blei.}
+    gem.description = %Q{Ruby port of Latent Dirichlet Allocation by David M. Blei. See http://www.cs.princeton.edu/~blei/lda-c/.}
+    gem.email = "jasonmadams@gmail.com"
+    gem.homepage = "http://github.com/ealdent/lda-ruby"
+    gem.authors = ['David Blei', 'Jason Adams']
+    # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
+  end
+
+rescue LoadError
+  puts "Jeweler (or a dependency) not available. Install it with: sudo gem install jeweler"
+end
+
+require 'rake/testtask'
+Rake::TestTask.new(:test) do |test|
+  test.libs << 'lib' << 'test'
+  test.pattern = 'test/**/*_test.rb'
+  test.verbose = true
+end
+
+begin
+  require 'rcov/rcovtask'
+  Rcov::RcovTask.new do |test|
+    test.libs << 'test'
+    test.pattern = 'test/**/*_test.rb'
+    test.verbose = true
   end
 rescue LoadError
-  puts "Jeweler, or one of its dependencies, is not available."
+  task :rcov do
+    abort "RCov is not available. In order to run rcov, you must: sudo gem install spicycode-rcov"
+  end
 end
+
+task :default => :test
+
+require 'rake/rdoctask'
+Rake::RDocTask.new do |rdoc|
+  if File.exist?('VERSION.yml')
+    config = YAML.load(File.read('VERSION.yml'))
+    version = "#{config[:major]}.#{config[:minor]}.#{config[:patch]}"
+  else
+    version = ""
+  end
+
+  rdoc.rdoc_dir = 'rdoc'
+  rdoc.title = "lda-ruby #{version}"
+  rdoc.rdoc_files.include('README*')
+  rdoc.rdoc_files.include('lib/**/*.rb')
+end
+
