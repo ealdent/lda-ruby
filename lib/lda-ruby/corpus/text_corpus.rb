@@ -1,10 +1,7 @@
 module Lda
   class TextCorpus < Corpus
-    attr_reader :vocabulary
-
     # Load text documents from YAML file if filename is given.
     def initialize(filename = nil)
-      @vocabulary = Vocabulary.new
       super(nil)
 
       load_from_file(filename) if filename

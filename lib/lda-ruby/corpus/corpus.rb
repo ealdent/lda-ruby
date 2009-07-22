@@ -2,7 +2,7 @@ require 'set'
 
 module Lda
   class Corpus
-    attr_reader :documents, :num_docs, :num_terms
+    attr_reader :documents, :num_docs, :num_terms, :vocabulary
 
     #
     # Create a blank corpus object.  Either add documents to it
@@ -13,6 +13,7 @@ module Lda
       @documents = Array.new
       @all_terms = Set.new
       @num_terms = @num_docs  = 0
+      @vocabulary = Vocabulary.new
 
       load_from_file(filename) if filename
     end

@@ -1,4 +1,4 @@
-require 'lda'
+require 'lib/lda-ruby'
 require 'test/unit'
 require 'yaml'
 

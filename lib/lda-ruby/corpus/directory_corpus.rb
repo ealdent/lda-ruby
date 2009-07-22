@@ -2,6 +2,7 @@ module Lda
   class DirectoryCorpus < TextCorpus
     attr_reader :path, :extension
 
+    # load documents from a directory
     def initialize(path, extension = nil)
       @path = path.dup.freeze
       @extension = extension
