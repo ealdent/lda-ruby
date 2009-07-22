@@ -964,7 +964,7 @@ void Init_lda() {
   rb_cLdaModule   = rb_define_module("Lda");
   rb_cLda         = rb_define_class_under(rb_cLdaModule, "Lda", rb_cObject);
   rb_cLdaCorpus   = rb_define_class_under(rb_cLdaModule, "Corpus", rb_cObject);
-  rb_cLdaDocument = rb_define_class_under(rb_cLdaModule, "BaseDocument", rb_cObject);
+  rb_cLdaDocument = rb_define_class_under(rb_cLdaModule, "Document", rb_cObject);
 
   // method to load the corpus
   rb_define_method(rb_cLda, "fast_load_corpus_from_file", wrap_load_corpus, 1);

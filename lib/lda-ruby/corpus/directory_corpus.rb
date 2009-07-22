@@ -1,13 +1,13 @@
 module Lda
-  class DirectoryCorpus < TextCorpus
+  class DirectoryCorpus < Corpus
     attr_reader :path, :extension
 
     # load documents from a directory
     def initialize(path, extension = nil)
-      @path = path.dup.freeze
-      @extension = extension
+      super
 
-      super(nil)
+      @path = path.dup.freeze
+      @extension = extension ? extension.dup.freeze : nil
 
       load_from_directory
     end
@@ -18,7 +18,6 @@ module Lda
       dir_glob = File.join(@path, (@extension ? "*.#{@extension}" : "*"))
 
       Dir.glob(dir_glob).each do |filename|
-        puts "[debug] Loading document #{filename}."
         add_document(TextDocument.build_from_file(self, filename))
       end
     end

@@ -1,46 +1,32 @@
 module Lda
   class TextDocument < Document
-    attr_reader :tokens
-
-    def initialize(tokens)
-      @tokens = tokens
-      super(nil)
+    def initialize(corpus, text)
+      super(corpus)
+      tokenize(text)
+      build_from_tokens
     end
 
-    class << self
-      def build_from_file(corpus, filename)
-        txt = File.open(filename, 'r') { |f| f.read }
-        build_from_tokens(corpus, tokenize(txt))
+    def has_text?
+      true
+    end
+
+    def self.build_from_file(corpus, filename)
+      text = File.open(filename, 'r') { |f| f.read }
+      self.new(corpus, text)
+    end
+
+    protected
+
+    def build_from_tokens
+      vocab = Hash.new(0)
+      @tokens.each { |t| vocab[t] = vocab[t] + 1 }
+
+      vocab.each_pair do |word, count|
+        @words << @corpus.vocabulary.check_word(word)
+        @counts << count
       end
 
-      def build(corpus, text)
-        build_from_tokens(corpus, tokenize(text))
-      end
-
-      def build_from_tokens(corpus, tokens)
-        vocab = Hash.new(0)
-        tokens.each { |t| vocab[t] = vocab[t] + 1 }
-
-        d = self.new(tokens)
-
-        vocab.each_pair do |word, count|
-          d.words << corpus.vocabulary.check_word(word)
-          d.counts << count
-        end
-        d.recompute
-
-        d
-      end
-
-      def tokenize(txt)
-        clean_text = txt.gsub(/[^A-Za-z'\s]+/, ' ').gsub(/\s+/, ' ')        # remove everything but letters and ' and leave only single spaces
-        handle(clean_text.split(' '))
-      end
-
-      # Override this method to add things like stemming, removal of stop words, etc
-      def handle(tokens)
-        tokens
-      end
+      recompute
     end
   end
 end
