@@ -4,7 +4,7 @@ module Lda
 
     # Load text documents from YAML file if filename is given.
     def initialize(filename)
-      super
+      super()
 
       @filename = filename
       load_from_file

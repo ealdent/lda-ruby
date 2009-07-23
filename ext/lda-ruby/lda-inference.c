@@ -499,7 +499,7 @@ void run_quiet_em(char* start, corpus* corpus) {
 
 	lda_suffstats* ss = NULL;
 	if (strncmp(start, "seeded",6)==0) {
-		model = new_lda_model(corpus->num_terms, NTOPICS);
+		model = quiet_new_lda_model(corpus->num_terms, NTOPICS);
 		model->alpha = INITIAL_ALPHA;
 		ss = new_lda_suffstats(model);
 		if (VERBOSE) {
@@ -513,7 +513,7 @@ void run_quiet_em(char* start, corpus* corpus) {
       quiet_lda_mle(model, ss, 0);
 		}
 	} else if (strncmp(start, "fixed",5)==0) {
-	  model = new_lda_model(corpus->num_terms, NTOPICS);
+	  model = quiet_new_lda_model(corpus->num_terms, NTOPICS);
     model->alpha = INITIAL_ALPHA;
 	  ss = new_lda_suffstats(model);
 	  corpus_initialize_fixed_ss(ss, model, corpus);
@@ -523,7 +523,7 @@ void run_quiet_em(char* start, corpus* corpus) {
       quiet_lda_mle(model, ss, 0);
     }
 	} else if (strncmp(start, "random",6)==0) {
-		model = new_lda_model(corpus->num_terms, NTOPICS);
+		model = quiet_new_lda_model(corpus->num_terms, NTOPICS);
 		model->alpha = INITIAL_ALPHA;
 		ss = new_lda_suffstats(model);
 		random_initialize_ss(ss, model);

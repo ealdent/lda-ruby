@@ -4,7 +4,7 @@ module Lda
 
     # load documents from a directory
     def initialize(path, extension = nil)
-      super
+      super()
 
       @path = path.dup.freeze
       @extension = extension ? extension.dup.freeze : nil

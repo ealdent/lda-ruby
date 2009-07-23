@@ -75,8 +75,6 @@ void quiet_lda_mle(lda_model* model, lda_suffstats* ss, int estimate_alpha) {
 		model->alpha = quiet_opt_alpha(ss->alpha_suffstats,
 			ss->num_docs,
 			model->num_topics);
-
-		printf("new alpha = %5.5f\n", model->alpha);
 	}
 }
 
@@ -217,7 +215,7 @@ void corpus_initialize_fixed_ss(lda_suffstats* ss, lda_model* model, corpus* c) 
     int num_topics = MIN(model->num_topics, c->num_docs);
     int k, n;
     document* doc;
-    
+
     for (k = 0; k < num_topics; k++) {
         doc = &(c->docs[k]);
         for (n = 0; n < doc->length; n++) {
@@ -245,6 +243,23 @@ lda_model* new_lda_model(int num_terms, int num_topics) {
 	model->alpha = 1.0;
 	model->log_prob_w = malloc(sizeof(double*)*num_topics);
   printf("new model with: %d topics and %d terms\n", num_topics, num_terms);
+	for (i = 0; i < num_topics; i++)
+	{
+		model->log_prob_w[i] = malloc(sizeof(double)*num_terms);
+    memset(model->log_prob_w[i],0,sizeof(double)*num_terms);
+	}
+	return(model);
+}
+
+lda_model* quiet_new_lda_model(int num_terms, int num_topics) {
+	int i;
+	lda_model* model;
+
+	model = malloc(sizeof(lda_model));
+	model->num_topics = num_topics;
+	model->num_terms = num_terms;
+	model->alpha = 1.0;
+	model->log_prob_w = malloc(sizeof(double*)*num_topics);
 	for (i = 0; i < num_topics; i++)
 	{
 		model->log_prob_w[i] = malloc(sizeof(double)*num_terms);

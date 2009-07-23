@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["David Blei", "Jason Adams"]
-  s.date = %q{2009-07-21}
+  s.date = %q{2009-07-24}
   s.description = %q{Ruby port of Latent Dirichlet Allocation by David M. Blei. See http://www.cs.princeton.edu/~blei/lda-c/.}
   s.email = %q{jasonmadams@gmail.com}
   s.extensions = ["ext/lda-ruby/extconf.rb"]
@@ -38,16 +38,22 @@ Gem::Specification.new do |s|
      "lda-ruby.gemspec",
      "lib/lda-ruby.rb",
      "lib/lda-ruby/corpus/corpus.rb",
+     "lib/lda-ruby/corpus/data_corpus.rb",
+     "lib/lda-ruby/corpus/directory_corpus.rb",
      "lib/lda-ruby/corpus/text_corpus.rb",
-     "lib/lda-ruby/document/base_document.rb",
+     "lib/lda-ruby/document/data_document.rb",
      "lib/lda-ruby/document/document.rb",
      "lib/lda-ruby/document/text_document.rb",
      "lib/lda-ruby/vocabulary.rb",
      "license.txt",
+     "test/data/.gitignore",
+     "test/data/databuilder.rb",
+     "test/data/docs.dat",
+     "test/data/wiki-test-docs.yml",
      "test/docs.yml",
+     "test/lda_ruby_test.rb",
      "test/test.rb",
-     "test/vocab_set.yml",
-     "test/vocab_vec.yml"
+     "test/test_helper.rb"
   ]
   s.homepage = %q{http://github.com/ealdent/lda-ruby}
   s.rdoc_options = ["--charset=UTF-8"]
@@ -55,7 +61,10 @@ Gem::Specification.new do |s|
   s.rubygems_version = %q{1.3.4}
   s.summary = %q{Ruby port of Latent Dirichlet Allocation by David M. Blei.}
   s.test_files = [
-    "test/test.rb"
+    "test/data/databuilder.rb",
+     "test/lda_ruby_test.rb",
+     "test/test.rb",
+     "test/test_helper.rb"
   ]
 
   if s.respond_to? :specification_version then

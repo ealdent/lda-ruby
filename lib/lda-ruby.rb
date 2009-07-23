@@ -14,18 +14,13 @@ module Lda
   class Lda
     attr_reader :vocab, :corpus
 
-    #
-    # Create a new LDA instance with the default settings.
-    #
-    def initialize(corpus = nil)
+    def initialize(corpus)
       load_default_settings
+
       @vocab = nil
-      if corpus
-        self.corpus = corpus
-        if corpus.respond_to?(:vocabulary)
-          load_vocabulary(corpus.vocabulary)
-        end
-      end
+      self.corpus = corpus
+      @vocab = corpus.vocabulary.to_a if corpus.vocabulary
+
       @phi = nil
     end
 
@@ -41,16 +36,6 @@ module Lda
       [20, 1e-6, 100, 1e-4, 20, 0.3, 1]
     end
 
-    #
-    # Load the corpus from file.  The corpus is in svmlight-style where the
-    # first element of each line is the number of words in the document and
-    # then each element is the pair word_idx:weight.
-    #
-    #   num_words word1:wgt1 word2:wgt2 ... word_n:wgt_n
-    #
-    # The value for the number of words should equal the number of pairs
-    # following it, though this isn't strictly enforced in this method.
-    #
     def load_corpus(filename)
       @corpus = Corpus.new
       @corpus.load_from_file(filename)
@@ -58,14 +43,6 @@ module Lda
       true
     end
 
-    #
-    # Load the vocabulary file which is a list of words, one per line
-    # where the line number corresponds the word list index.  This allows
-    # the words to be extracted for topics later.
-    #
-    # +vocab+ can either be the filename of the vocabulary file or the
-    # array itself.
-    #
     def load_vocabulary(vocab)
       if vocab.is_a?(Array)
         @vocab = Marshal::load(Marshal::dump(vocab))      # deep clone array
@@ -143,10 +120,10 @@ module Lda
     # value to true.
     #
     def phi(recompute=false)
-      if not @phi or recompute
-        # either the phi variable has not been instantiated or the recompute flag has been set
+      if @phi.nil? || recompute
         @phi = self.compute_phi
       end
+
       @phi
     end
 
@@ -157,6 +134,7 @@ module Lda
     #
     def compute_topic_document_probability
       outp = Array.new
+
       @corpus.documents.each_with_index do |doc, idx|
         tops = [0.0] * self.num_topics
         ttl  = doc.counts.inject(0.0) {|sum, i| sum + i}
@@ -176,8 +154,7 @@ module Lda
     # String representation displaying current settings.
     #
     def to_s
-      outp = []
-      outp << "LDA Settings:"
+      outp = ["LDA Settings:"]
       outp << "    Initial alpha: %0.6f" % self.init_alpha
       outp << "      # of topics: %d" % self.num_topics
       outp << "   Max iterations: %d" % self.max_iter
@@ -186,7 +163,7 @@ module Lda
       outp << "   EM convergence: %0.6f" % self.em_convergence
       outp << "   Estimate alpha: %d" % self.est_alpha
 
-      return outp.join("\n")
+      outp.join("\n")
     end
   end
 end
