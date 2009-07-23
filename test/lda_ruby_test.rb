@@ -5,7 +5,7 @@ class LdaRubyTest < Test::Unit::TestCase
     context "A typical Lda::Corpus instance" do
       setup do
         @corpus = Lda::Corpus.new
-        @document = Lda::TextDocument.build(@corpus, 'This is the document that never ends.  Oh wait yeah it does.')
+        @document = Lda::TextDocument.new(@corpus, 'This is the document that never ends.  Oh wait yeah it does.')
       end
 
       should "be able to add new documents" do
@@ -15,11 +15,11 @@ class LdaRubyTest < Test::Unit::TestCase
       end
     end
 
-    context "An Lda::Corpus instance loaded from a file" do
+    context "An Lda::DataCorpus instance loaded from a file" do
       setup do
         @filename = 'data/docs.dat'
         @filetext = File.open(@filename, 'r') { |f| f.read }
-        @corpus = Lda::Corpus.new(@filename)
+        @corpus = Lda::DataCorpus.new(@filename)
       end
 
       should "contain the number of documents equivalent to the number of lines in the file" do
@@ -34,13 +34,10 @@ class LdaRubyTest < Test::Unit::TestCase
     end
 
     context "An Lda::TextCorpus instance loaded from a file" do
-      @document = Lda::TextDocument.build(@corpus, 'This is the document that never ends.  Oh wait yeah it does.')
+      setup do
+        @corpus = Lda::TextCorpus.new
+        @document = Lda::TextDocument.new(@corpus, 'This is the document that never ends.  Oh wait yeah it does.')
+      end
     end
-  end
-
-  context ""
-
-  context "Lda::Lda" do
-
   end
 end

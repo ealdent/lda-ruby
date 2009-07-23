@@ -3,7 +3,7 @@ module Lda
     attr_reader :filename
 
     def initialize(filename)
-      super
+      super()
 
       @filename = filename
       load_from_file

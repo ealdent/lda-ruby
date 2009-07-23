@@ -5,11 +5,11 @@ module Lda
     def initialize(corpus)
       @corpus = corpus
 
-      @words = Array.new
+      @words  = Array.new
       @counts = Array.new
       @tokens = Array.new
       @length = 0
-      @tokens = 0
+      @total  = 0
     end
 
     #
@@ -29,7 +29,7 @@ module Lda
     end
 
     def tokenize(text)
-      clean_text = txt.gsub(/[^A-Za-z'\s]+/, ' ').gsub(/\s+/, ' ')        # remove everything but letters and ' and leave only single spaces
+      clean_text = text.gsub(/[^A-Za-z'\s]+/, ' ').gsub(/\s+/, ' ')        # remove everything but letters and ' and leave only single spaces
       @tokens = handle(clean_text.split(' '))
     end
   end

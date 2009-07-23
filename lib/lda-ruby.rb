@@ -1,11 +1,13 @@
 $LOAD_PATH.unshift(File.dirname(__FILE__)) unless $LOAD_PATH.include?(File.dirname(__FILE__))
 
 require 'lda-ruby/lda'
-require 'lda-ruby/document/base_document'
 require 'lda-ruby/document/document'
+require 'lda-ruby/document/data_document'
 require 'lda-ruby/document/text_document'
 require 'lda-ruby/corpus/corpus'
+require 'lda-ruby/corpus/data_corpus'
 require 'lda-ruby/corpus/text_corpus'
+require 'lda-ruby/corpus/directory_corpus'
 require 'lda-ruby/vocabulary'
 
 module Lda
