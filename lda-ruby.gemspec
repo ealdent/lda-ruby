@@ -47,12 +47,9 @@ Gem::Specification.new do |s|
      "lib/lda-ruby/vocabulary.rb",
      "license.txt",
      "test/data/.gitignore",
-     "test/data/databuilder.rb",
      "test/data/docs.dat",
      "test/data/wiki-test-docs.yml",
-     "test/docs.yml",
      "test/lda_ruby_test.rb",
-     "test/test.rb",
      "test/test_helper.rb"
   ]
   s.homepage = %q{http://github.com/ealdent/lda-ruby}
@@ -61,9 +58,7 @@ Gem::Specification.new do |s|
   s.rubygems_version = %q{1.3.4}
   s.summary = %q{Ruby port of Latent Dirichlet Allocation by David M. Blei.}
   s.test_files = [
-    "test/data/databuilder.rb",
-     "test/lda_ruby_test.rb",
-     "test/test.rb",
+    "test/lda_ruby_test.rb",
      "test/test_helper.rb"
   ]
 

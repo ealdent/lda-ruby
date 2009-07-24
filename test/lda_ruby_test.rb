@@ -1,6 +1,93 @@
 require 'test_helper'
 
 class LdaRubyTest < Test::Unit::TestCase
+  context "A Document instance" do
+    setup do
+      @corpus = Lda::Corpus.new
+    end
+
+    context "A typical Document" do
+      setup do
+        @document = Lda::Document.new(@corpus)
+      end
+
+      should "not have text" do
+        assert !@document.has_text?
+      end
+
+      should "be empty" do
+        assert_equal @document.total, 0
+        assert_equal @document.length, 0
+      end
+
+      context "after adding words" do
+        setup do
+          @document.words << 1 << 2 << 3 << 4 << 5
+          @document.counts << 2 << 1 << 1 << 1 << 3
+          @document.recompute
+        end
+
+        should "have word count equal to what was added" do
+          assert_equal @document.length, 5
+        end
+
+        should "have total words equal to the sum of the counts" do
+          assert_equal @document.total, 8
+        end
+      end
+    end
+
+    context "A typical DataDocument" do
+      setup do
+        @data = '5 1:2 2:1 3:1 4:1 5:3'
+        @document = Lda::DataDocument.new(@corpus, @data)
+      end
+
+      should "not have text" do
+        assert !@document.has_text?
+      end
+
+      should "have word count equal to what was added" do
+        assert_equal @document.length, 5
+      end
+
+      should "have total words equal to the sum of the counts" do
+        assert_equal @document.total, 8
+      end
+
+      should "have words equal to the order they were entered" do
+        assert_equal @document.words, [1, 2, 3, 4, 5]
+      end
+
+      should "have counts equal to the order they were entered" do
+        assert_equal @document.counts, [2, 1, 1, 1, 3]
+      end
+    end
+
+    context "A typical TextDocument" do
+      setup do
+        @text = 'what is that which is what is else what is'
+        @document = Lda::TextDocument.new(@corpus, @text)
+      end
+
+      should "have text" do
+        assert @document.has_text?
+      end
+
+      should "have word count equal to what was added" do
+        assert_equal @document.length, 5
+      end
+
+      should "have total words equal to the sum of the counts" do
+        assert_equal @document.total, @text.split(/ /).size
+      end
+
+      should "have tokens in the order they were entered" do
+        assert_equal @document.tokens, @text.split(/ /)
+      end
+    end
+  end
+
   context "A Corpus instance" do
     context "A typical Lda::Corpus instance" do
       setup do
