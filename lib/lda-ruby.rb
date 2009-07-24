@@ -61,11 +61,8 @@ module Lda
     #
     # See also +top_words+.
     #
-    def print_topics(words_per_topic=10)
-      unless @vocab
-        puts "No vocabulary loaded."
-        return nil
-      end
+    def print_topics(words_per_topic = 10)
+      raise 'No vocabulary loaded.' unless @vocab
 
       self.beta.each_with_index do |topic, topic_num|
         # Sort the topic array and return the sorted indices of the best scores
@@ -89,24 +86,15 @@ module Lda
     #
     # See also +print_topics+.
     #
-    def top_words(words_per_topic=10)
-      unless @vocab
-        puts "No vocabulary loaded."
-        return nil
-      end
+    def top_words(words_per_topic = 10)
+      raise 'No vocabulary loaded.' unless @vocab
 
       # find the highest scoring words per topic
       topics = Hash.new
       indices = (0...@vocab.size).to_a
 
-      begin
-        beta.each_with_index do |topic, topic_idx|
-          indices.sort! {|x, y| -(topic[x] <=> topic[y])}
-          topics[topic_idx] = indices.first(words_per_topic).map { |i| @vocab[i] }
-        end
-      rescue NoMethodError
-        puts "Error:  model has not been run."
-        topics = nil
+      self.beta.each_with_index do |topic, topic_num|
+        topics[topic_num] = (topic.zip((0...@vocab.size).to_a).sort { |i, j| i[0] <=> j[0] }.map { |i, j| j }.reverse)[0...words_per_topic]
       end
 
       topics
