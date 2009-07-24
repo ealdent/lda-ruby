@@ -8,18 +8,16 @@ The original C code relied on files for the input and output. We felt it was nec
 
 ### Example usage:
 
-    require 'lda'
-    lda = Lda::Lda.new      # create an Lda object for training
+    require 'lda-ruby'
     corpus = Lda::Corpus.new("data/data_file.dat")
-    lda.corpus = corpus
-    lda.em("random")        # run EM algorithm using random starting points
+    lda = Lda::Lda.new(corpus)    # create an Lda object for training
+    lda.em("random")              # run EM algorithm using random starting points
     lda.load_vocabulary("data/vocab.txt")
-    lda.print_topics(20)    # print the topic 20 words per topic
+    lda.print_topics(20)          # print the topic 20 words per topic
 
-See the rdocs for further information. You can also check out the mailing list for this project if you have any questions or mail lda-ruby@groups.google.com [email link]. If you have general questions about Latent Dirichlet Allocation, I urge you to use the topic models mailing list, since the people who monitor that are very knowledgeable.
+You can check out the mailing list for this project if you have any questions or mail lda-ruby@groups.google.com [email link]. If you have general questions about Latent Dirichlet Allocation, I urge you to use the [topic models mailing list][topic-models], since the people who monitor that are very knowledgeable.
 
 ## Resources
-
 
 + [Blog post about LDA-Ruby][lda-ruby]
 + [David Blei's lda-c code][blei]
@@ -29,7 +27,7 @@ See the rdocs for further information. You can also check out the mailing list f
 
 ## References
 
-Blei, David M., Ng, Andrew Y., and Jordan, Michael I. 2003. Latent dirichlet allocation. Journal of Machine Learning Research. 3 (Mar. 2003), 993-1022 [[pdf][pdf]]. 
+Blei, David M., Ng, Andrew Y., and Jordan, Michael I. 2003. Latent dirichlet allocation. Journal of Machine Learning Research. 3 (Mar. 2003), 993-1022 [[pdf][pdf]].
 
 [svmlight]: http://svmlight.joachims.org
 [lda-ruby]: http://mendicantbug.com/2008/11/17/lda-in-ruby/
@@ -37,3 +35,4 @@ Blei, David M., Ng, Andrew Y., and Jordan, Michael I. 2003. Latent dirichlet all
 [wikipedia]: http://en.wikipedia.org/wiki/Latent_Dirichlet_allocation
 [ap-data]: http://www.cs.princeton.edu/~blei/lda-c/ap.tgz
 [pdf]: http://www.cs.princeton.edu/picasso/mats/BleiNgJordan2003_blei.pdf
+[topic-models]: https://lists.cs.princeton.edu/mailman/listinfo/topic-models
