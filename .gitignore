@@ -2,3 +2,4 @@
 *.bundle
 *.tmproj
 pkg
+test/blei
