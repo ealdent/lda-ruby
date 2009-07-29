@@ -1,0 +1,17 @@
+Version 0.3.0
+=============
+
+- Completely broke backwards compatibility
+- Reworked many classes to make functionality more reasonable
+- Added ability to load documents from text files
+
+Version 0.2.3
+=============
+
+- Bug fixes by Todd Foster
+
+
+Version 0.2.2
+=============
+
+- First stable release
