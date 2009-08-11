@@ -1,6 +1,6 @@
 module Lda
   class Vocabulary
-    attr_reader :words
+    attr_reader :words, :indexes
 
     def initialize(words = nil)
       @words = Hash.new do |hash, key|
@@ -13,10 +13,17 @@ module Lda
       end
 
       words.each { |w| @words[w] } if words
+      @indexes = Hash.new
+
+      @words.each_pair do |w, i|
+        @indexes[i] = w
+      end
     end
 
     def check_word(word)
-      @words[word.dup]
+      w = @words[word.dup]
+      @indexes[w] = word.dup
+      w
     end
 
     def load_file(filename)

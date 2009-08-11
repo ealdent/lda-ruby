@@ -86,7 +86,7 @@ module Lda
     #
     # See also +print_topics+.
     #
-    def top_words(words_per_topic = 10)
+    def top_word_indices(words_per_topic = 10)
       raise 'No vocabulary loaded.' unless @vocab
 
       # find the highest scoring words per topic
@@ -98,6 +98,17 @@ module Lda
       end
 
       topics
+    end
+
+    def top_words(words_per_topic = 10)
+      output = Hash.new
+
+      topics = top_word_indices(words_per_topic)
+      topics.each_pair do |topic_num, words|
+        output[topic_num] = words.map { |w| @vocab[w] }
+      end
+
+      output
     end
 
     #
