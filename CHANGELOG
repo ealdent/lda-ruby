@@ -1,3 +1,8 @@
+Version 0.3.1
+=============
+
+- top_words method now returns actual words if they exist in the vocabulary
+
 Version 0.3.0
 =============
 
