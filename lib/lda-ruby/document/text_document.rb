@@ -1,7 +1,11 @@
 module Lda
   class TextDocument < Document
+    attr_reader :filename
+
     def initialize(corpus, text)
       super(corpus)
+      @filename = nil
+
       tokenize(text)
       build_from_tokens
     end
@@ -11,7 +15,8 @@ module Lda
     end
 
     def self.build_from_file(corpus, filename)
-      text = File.open(filename, 'r') { |f| f.read }
+      @filename = filename.dup.freeze
+      text = File.open(@filename, 'r') { |f| f.read }
       self.new(corpus, text)
     end
 
