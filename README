@@ -7,7 +7,7 @@ The original C code relied on files for the input and output. We felt it was nec
 Example usage:
 
 require 'lda'
-corpus = Lda::Corpus.new("data/data_file.dat")
+corpus = Lda::DataCorpus.new("data/data_file.dat")
 lda = Lda::Lda.new(corpus)      # create an Lda object for training
 lda.em("random")                # run EM algorithm using random starting points
 lda.load_vocabulary("data/vocab.txt")
