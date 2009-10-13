@@ -110,7 +110,7 @@ class LdaRubyTest < Test::Unit::TestCase
 
     context "An Lda::DataCorpus instance loaded from a file" do
       setup do
-        @filename = 'data/docs.dat'
+        @filename = File.join(File.dirname(__FILE__), 'data', 'docs.dat')
         @filetext = File.open(@filename, 'r') { |f| f.read }
         @corpus = Lda::DataCorpus.new(@filename)
       end
@@ -126,7 +126,7 @@ class LdaRubyTest < Test::Unit::TestCase
 
     context "An Lda::TextCorpus instance loaded from a file" do
       setup do
-        @filename = 'data/wiki-test-docs.yml'
+        @filename = File.join(File.dirname(__FILE__), 'data', 'wiki-test-docs.yml')
         @filedocs = YAML::load_file(@filename)
         @corpus = Lda::TextCorpus.new(@filename)
       end
@@ -142,13 +142,13 @@ class LdaRubyTest < Test::Unit::TestCase
 
     context "An Lda::DirectoryCorpus instance loaded from a directory" do
       setup do
-        @path = 'data/tmp'
+        @path = File.join(File.dirname(__FILE__), 'data', 'tmp')
         @extension = 'txt'
         Dir.mkdir(@path)
-        @original_filename = 'data/wiki-test-docs.yml'
+        @original_filename = File.join(File.dirname(__FILE__), 'data', 'wiki-test-docs.yml')
         @filedocs = YAML::load_file(@original_filename)
         @filedocs.each_with_index do |doc, idx|
-          File.open("data/tmp/doc_#{idx + 1}.txt", 'w') { |f| f.write(doc) }
+          File.open(File.join(@path, "doc_#{idx + 1}.txt"), 'w') { |f| f.write(doc) }
         end
 
         @corpus = Lda::DirectoryCorpus.new(@path, @extension)
@@ -173,11 +173,11 @@ class LdaRubyTest < Test::Unit::TestCase
     setup do
       @vocab = Lda::Vocabulary.new
       @words = ['word1', 'word2', 'word3', 'word4', 'word5', 'word6']
-      @filename1 = 'data/tmp_file.txt'
+      @filename1 = File.join(File.dirname(__FILE__), 'data', 'tmp_file.txt')
       File.open(@filename1, 'w') do |f|
         @words.each { |w| f.write("#{w}\n") }
       end
-      @filename2 = 'data/tmp_file.yml'
+      @filename2 = File.join(File.dirname(__FILE__), 'data', 'tmp_file.yml')
       File.open(@filename2, 'w') { |f| YAML::dump(@words, f) }
     end
 
@@ -208,7 +208,7 @@ class LdaRubyTest < Test::Unit::TestCase
 
   context "An Lda::Lda instance" do
     setup do
-      @filename = 'data/wiki-test-docs.yml'
+      @filename = File.join(File.dirname(__FILE__), 'data', 'wiki-test-docs.yml')
       @filedocs = YAML::load_file(@filename)
       @corpus = Lda::TextCorpus.new(@filename)
 
