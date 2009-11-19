@@ -15,7 +15,7 @@ The original C code relied on files for the input and output. We felt it was nec
     lda.load_vocabulary("data/vocab.txt")
     lda.print_topics(20)          # print the topic 20 words per topic
 
-You can check out the mailing list for this project if you have any questions or mail lda-ruby@groups.google.com [email link]. If you have general questions about Latent Dirichlet Allocation, I urge you to use the [topic models mailing list][topic-models], since the people who monitor that are very knowledgeable.
+If you have general questions about Latent Dirichlet Allocation, I urge you to use the [topic models mailing list][topic-models], since the people who monitor that are very knowledgeable.  If you encounter bugs specific to lda-ruby, please post an issue on the Github project.
 
 ## Resources
 
@@ -23,7 +23,6 @@ You can check out the mailing list for this project if you have any questions or
 + [David Blei's lda-c code][blei]
 + [Wikipedia article on LDA][wikipedia]
 + [Sample AP data][ap-data]
-
 
 ## References
 
