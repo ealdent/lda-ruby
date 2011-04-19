@@ -778,7 +778,7 @@ static VALUE wrap_em(VALUE self, VALUE start) {
 	if (!corpus_loaded)
 		return Qnil;
 
-	run_quiet_em(STR2CSTR(start), last_corpus);
+	run_quiet_em(StringValuePtr(start), last_corpus);
 
 	return Qnil;
 }
@@ -788,7 +788,7 @@ static VALUE wrap_em(VALUE self, VALUE start) {
  * Load settings from the given file.
  */
 static VALUE wrap_load_settings(VALUE self, VALUE settings_file) {
-	read_settings(STR2CSTR(settings_file));
+	read_settings(StringValuePtr(settings_file));
 
 	return Qtrue;
 }
@@ -800,7 +800,7 @@ static VALUE wrap_load_settings(VALUE self, VALUE settings_file) {
  */
 static VALUE wrap_load_corpus(VALUE self, VALUE filename) {
 	if (!corpus_loaded) {
-		last_corpus = read_data(STR2CSTR(filename));
+		last_corpus = read_data(StringValuePtr(filename));
 		corpus_loaded = TRUE;
 		return Qtrue;
 	} else {
