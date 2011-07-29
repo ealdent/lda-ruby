@@ -10,7 +10,7 @@ begin
     gem.description = %Q{Ruby port of Latent Dirichlet Allocation by David M. Blei. See http://www.cs.princeton.edu/~blei/lda-c/.}
     gem.email = "jasonmadams@gmail.com"
     gem.homepage = "http://github.com/ealdent/lda-ruby"
-    gem.authors = ['David Blei', 'Jason Adams']
+    gem.authors = ['David Blei', 'Jason Adams', 'Rio Akasaka']
     gem.extensions = ['ext/lda-ruby/extconf.rb']
     gem.require_paths = ['lib', 'ext']
     gem.add_dependency 'shoulda'
