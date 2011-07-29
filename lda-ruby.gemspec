@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{lda-ruby}
-  s.version = "0.3.2"
+  s.version = "0.3.4"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
-  s.authors = ["David Blei", "Jason Adams"]
-  s.date = %q{2011-04-19}
+  s.authors = ["David Blei", "Jason Adams", "Rio Akasaka"]
+  s.date = %q{2011-07-29}
   s.description = %q{Ruby port of Latent Dirichlet Allocation by David M. Blei. See http://www.cs.princeton.edu/~blei/lda-c/.}
   s.email = %q{jasonmadams@gmail.com}
   s.extensions = ["ext/lda-ruby/extconf.rb"]
@@ -58,13 +58,8 @@ Gem::Specification.new do |s|
   ]
   s.homepage = %q{http://github.com/ealdent/lda-ruby}
   s.require_paths = ["lib", "ext"]
-  s.rubygems_version = %q{1.7.2}
+  s.rubygems_version = %q{1.6.2}
   s.summary = %q{Ruby port of Latent Dirichlet Allocation by David M. Blei.}
-  s.test_files = [
-    "test/data/sample.rb",
-    "test/lda_ruby_test.rb",
-    "test/test_helper.rb"
-  ]
 
   if s.respond_to? :specification_version then
     s.specification_version = 3
