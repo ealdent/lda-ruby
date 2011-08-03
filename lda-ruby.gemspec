@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{lda-ruby}
-  s.version = "0.3.4"
+  s.version = "0.3.5"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["David Blei", "Jason Adams", "Rio Akasaka"]
-  s.date = %q{2011-07-29}
+  s.date = %q{2011-08-03}
   s.description = %q{Ruby port of Latent Dirichlet Allocation by David M. Blei. See http://www.cs.princeton.edu/~blei/lda-c/.}
   s.email = %q{jasonmadams@gmail.com}
   s.extensions = ["ext/lda-ruby/extconf.rb"]
