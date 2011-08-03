@@ -27,7 +27,7 @@ module Lda
       @tokens.each { |t| vocab[t] = vocab[t] + 1 }
 
       vocab.each_pair do |word, count|
-        @words << @corpus.vocabulary.check_word(word)
+        @words << @corpus.vocabulary.check_word(word) - 1
         @counts << count
       end
 
