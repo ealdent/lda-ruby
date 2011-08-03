@@ -12,6 +12,7 @@ begin
     gem.homepage = "http://github.com/ealdent/lda-ruby"
     gem.authors = ['David Blei', 'Jason Adams', 'Rio Akasaka']
     gem.extensions = ['ext/lda-ruby/extconf.rb']
+    gem.files.include 'stopwords.txt'
     gem.require_paths = ['lib', 'ext']
     gem.add_dependency 'shoulda'
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings

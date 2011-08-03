@@ -1,4 +1,11 @@
-require 'test_helper'
+require 'rubygems'
+require 'test/unit'
+require 'shoulda'
+require 'yaml'
+
+$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
+$LOAD_PATH.unshift(File.dirname(__FILE__))
+require 'lda-ruby'
 
 class LdaRubyTest < Test::Unit::TestCase
   context "A Document instance" do
