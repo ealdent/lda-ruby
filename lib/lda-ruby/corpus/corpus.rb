@@ -2,13 +2,15 @@ require 'set'
 
 module Lda
   class Corpus
-    attr_reader :documents, :num_docs, :num_terms, :vocabulary
+    attr_reader :documents, :num_docs, :num_terms, :vocabulary, :stopwords
 
     def initialize
       @documents = Array.new
       @all_terms = Set.new
       @num_terms = @num_docs = 0
       @vocabulary = Vocabulary.new
+      @stopwords = YAML.load_file(File.join(File.dirname(__FILE__), '..', 'config', 'stopwords.yml'))
+      @stopwords.map! { |w| w.strip }
     end
 
     def add_document(doc)

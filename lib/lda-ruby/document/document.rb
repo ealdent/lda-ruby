@@ -1,3 +1,5 @@
+require 'yaml'
+
 module Lda
   class Document
     attr_reader :corpus, :words, :counts, :length, :total, :tokens
@@ -31,17 +33,7 @@ module Lda
     def tokenize(text)
       clean_text = text.gsub(/[^A-Za-z'\s]+/, ' ').gsub(/\s+/, ' ').downcase        # remove everything but letters and ' and leave only single spaces
       @tokens = handle(clean_text.split(' '))
-	  @root ="#{File.expand_path('../..',__FILE__)}"
-	  @filename = File.join(@root, "stopwords.txt")
-	  file = File.new(@filename, "r")
-	  stopwords = Array.new
-	  
-	  while (line = file.gets)
-		stopwords.push line.strip
-	  end
-	  stopwords.each do |word|
-		@tokens.delete word
-	  end
+      nil
     end
   end
 end

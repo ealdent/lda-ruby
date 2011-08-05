@@ -73,7 +73,7 @@ class LdaRubyTest < Test::Unit::TestCase
 
     context "A typical TextDocument" do
       setup do
-        @text = 'what is that which is what is else what is'
+        @text = 'stop words stop stop masterful stoppage buffalo buffalo buffalo'
         @document = Lda::TextDocument.new(@corpus, @text)
       end
 
@@ -111,7 +111,7 @@ class LdaRubyTest < Test::Unit::TestCase
 
       should "update vocabulary with words in the document" do
         @corpus.add_document(@document2)
-        assert_equal @corpus.vocabulary.words.member?('second'), true
+        assert_equal @corpus.vocabulary.words.member?('lame'), true
       end
     end
 
