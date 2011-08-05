@@ -21,10 +21,13 @@ module Lda
       @num_terms = @all_terms.size
 
       update_vocabulary(doc)
-
       nil
     end
-
+	
+	def remove_word(word)
+		@vocabulary.words.delete word
+	end
+	
     protected
 
     def update_vocabulary(doc)

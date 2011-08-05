@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["David Blei", "Jason Adams", "Rio Akasaka"]
-  s.date = %q{2011-08-03}
+  s.date = %q{2011-08-05}
   s.description = %q{Ruby port of Latent Dirichlet Allocation by David M. Blei. See http://www.cs.princeton.edu/~blei/lda-c/.}
   s.email = %q{jasonmadams@gmail.com}
   s.extensions = ["ext/lda-ruby/extconf.rb"]
@@ -49,11 +49,14 @@ Gem::Specification.new do |s|
     "lib/lda-ruby/document/text_document.rb",
     "lib/lda-ruby/vocabulary.rb",
     "license.txt",
+    "stopwords.txt",
     "test/data/.gitignore",
     "test/data/docs.dat",
     "test/data/sample.rb",
     "test/data/wiki-test-docs.yml",
     "test/lda_ruby_test.rb",
+    "test/simple_test.rb",
+    "test/simple_yaml.rb",
     "test/test_helper.rb"
   ]
   s.homepage = %q{http://github.com/ealdent/lda-ruby}
