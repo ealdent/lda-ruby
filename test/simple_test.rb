@@ -14,7 +14,7 @@ class Test::Unit::TestCase
 	
 	@corpus.add_document(@document1)
 	@corpus.add_document(@document2)
-	
+	@corpus.remove_word("cobb")
 	@lda = Lda::Lda.new(@corpus)
 	
 	@lda.verbose = false
