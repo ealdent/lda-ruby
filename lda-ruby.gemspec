@@ -5,7 +5,7 @@
 
 Gem::Specification.new do |s|
   s.name = %q{lda-ruby}
-  s.version = "0.3.5"
+  s.version = "0.3.6"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["David Blei", "Jason Adams", "Rio Akasaka"]
@@ -40,6 +40,7 @@ Gem::Specification.new do |s|
     "ext/lda-ruby/utils.h",
     "lda-ruby.gemspec",
     "lib/lda-ruby.rb",
+    "lib/lda-ruby/config/stopwords.yml",
     "lib/lda-ruby/corpus/corpus.rb",
     "lib/lda-ruby/corpus/data_corpus.rb",
     "lib/lda-ruby/corpus/directory_corpus.rb",
@@ -49,7 +50,6 @@ Gem::Specification.new do |s|
     "lib/lda-ruby/document/text_document.rb",
     "lib/lda-ruby/vocabulary.rb",
     "license.txt",
-    "stopwords.txt",
     "test/data/.gitignore",
     "test/data/docs.dat",
     "test/data/sample.rb",
