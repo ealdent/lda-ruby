@@ -7,7 +7,7 @@ module Lda
       @filename = nil
 
       tokenize(text)
-      @tokens.reject! { |w| @corpus.stopwords.include?(w) }
+      @corpus.stopwords.each { |w| @tokens.delete(w) }
       build_from_tokens
     end
 
