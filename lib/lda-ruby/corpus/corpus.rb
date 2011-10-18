@@ -4,15 +4,19 @@ module Lda
   class Corpus
     attr_reader :documents, :num_docs, :num_terms, :vocabulary, :stopwords
 
-    def initialize
+    def initialize(stop_word_list = nil)
       @documents = Array.new
       @all_terms = Set.new
       @num_terms = @num_docs = 0
       @vocabulary = Vocabulary.new
-      @stopwords = YAML.load_file(File.join(File.dirname(__FILE__), '..', 'config', 'stopwords.yml'))
+      if stop_word_list.nil?
+        @stopwords = YAML.load_file(File.join(File.dirname(__FILE__), '..', 'config', 'stopwords.yml'))
+      else
+        @stopwords = YAML.load_file(stop_word_list)
+      end
       @stopwords.map! { |w| w.strip }
     end
-
+    
     def add_document(doc)
       raise 'Parameter +doc+ must be of type Document' unless doc.kind_of?(Document)
 
