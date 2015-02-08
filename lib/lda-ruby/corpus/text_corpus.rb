@@ -5,17 +5,24 @@ module Lda
     # Load text documents from YAML file if filename is given.
     def initialize(filename)
       super()
-
-      @filename = filename
+      @filename = filename      
       load_from_file
     end
 
     protected
-
+    
     def load_from_file
-      docs = YAML.load_file(@filename)
-      docs.each do |doc|
-        add_document(TextDocument.new(self, doc))
+      begin
+        docs = YAML.load_file(@filename)
+      rescue
+        puts "File not available, adding this as text"
+      end
+      if(!docs.nil?)
+        docs.each do |doc|
+          add_document(TextDocument.new(self, doc))
+        end
+      else
+        add_document(TextDocument.new(self, @filename))
       end
     end
   end
