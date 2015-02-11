@@ -1,3 +1,15 @@
+version 0.3.9
+=============
+
+- merge pull request from @rishabh-tripathi allowing text corpus objects to also be built with an array of strings
+- couple minor code refinements
+
+version 0.3.8
+=============
+
+- tokenization changes to support German (courtesy of @LeFnord)
+- user defined stop word list (also via @LeFnord)
+
 version 0.3.7
 =============
 

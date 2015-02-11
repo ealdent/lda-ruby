@@ -13,7 +13,7 @@ The original C code relied on files for the input and output. We felt it was nec
     lda = Lda::Lda.new(corpus)    # create an Lda object for training
     lda.em("random")              # run EM algorithm using random starting points
     lda.load_vocabulary("data/vocab.txt")
-    lda.print_topics(20)          # print the topic 20 words per topic
+    lda.print_topics(20)          # print all topics with up to 20 words per topic
 
 If you have general questions about Latent Dirichlet Allocation, I urge you to use the [topic models mailing list][topic-models], since the people who monitor that are very knowledgeable.  If you encounter bugs specific to lda-ruby, please post an issue on the Github project.
 

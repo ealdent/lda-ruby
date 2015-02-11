@@ -32,9 +32,7 @@ module Lda
     end
 
     def tokenize(text)
-      # now respects Umlaute
       clean_text = text.gsub(/[^a-zäöüß'-]+/i, ' ').gsub(/\s+/, ' ').downcase  # remove everything but letters and ' and leave only single spaces
-      # clean_text = text.gsub(/[^A-Za-z'\s]+/, ' ').gsub(/\s+/, ' ').downcase        # remove everything but letters and ' and leave only single spaces
       @tokens = handle(clean_text.split(' '))
       nil
     end
