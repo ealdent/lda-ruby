@@ -29,9 +29,9 @@ If you have general questions about Latent Dirichlet Allocation, I urge you to u
 Blei, David M., Ng, Andrew Y., and Jordan, Michael I. 2003. Latent dirichlet allocation. Journal of Machine Learning Research. 3 (Mar. 2003), 993-1022 [[pdf][pdf]].
 
 [svmlight]: http://svmlight.joachims.org
-[lda-ruby]: http://mendicantbug.com/2008/11/17/lda-in-ruby/
-[blei]: http://www.cs.princeton.edu/~blei/lda-c/
+[lda-ruby]: http://web.archive.org/web/20120616115448/http://mendicantbug.com/2008/11/17/lda-in-ruby/
+[blei]: http://web.archive.org/web/20161126004857/http://www.cs.princeton.edu/~blei/lda-c/
 [wikipedia]: http://en.wikipedia.org/wiki/Latent_Dirichlet_allocation
-[ap-data]: http://www.cs.princeton.edu/~blei/lda-c/ap.tgz
+[ap-data]: http://web.archive.org/web/20160507090044/http://www.cs.princeton.edu/~blei/lda-c/ap.tgz
 [pdf]: http://www.cs.princeton.edu/picasso/mats/BleiNgJordan2003_blei.pdf
 [topic-models]: https://lists.cs.princeton.edu/mailman/listinfo/topic-models
