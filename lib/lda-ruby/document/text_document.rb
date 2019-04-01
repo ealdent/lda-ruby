@@ -11,14 +11,14 @@ module Lda
       build_from_tokens
     end
 
-    def has_text?
+    def text?
       true
     end
 
     def self.build_from_file(corpus, filename)
       @filename = filename.dup.freeze
-      text = File.open(@filename, 'r') { |f| f.read }
-      self.new(corpus, text)
+      text = File.open(@filename, 'r', &:read)
+      new(corpus, text)
     end
 
     protected

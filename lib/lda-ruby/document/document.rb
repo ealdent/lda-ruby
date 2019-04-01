@@ -1,4 +1,3 @@
-# coding: utf-8
 require 'yaml'
 
 module Lda
@@ -8,9 +7,9 @@ module Lda
     def initialize(corpus)
       @corpus = corpus
 
-      @words  = Array.new
-      @counts = Array.new
-      @tokens = Array.new
+      @words  = []
+      @counts = []
+      @tokens = []
       @length = 0
       @total  = 0
     end
@@ -23,7 +22,7 @@ module Lda
       @length = @words.size
     end
 
-    def has_text?
+    def text?
       false
     end
 
@@ -32,7 +31,8 @@ module Lda
     end
 
     def tokenize(text)
-      clean_text = text.gsub(/[^a-zäöüß'-]+/i, ' ').gsub(/\s+/, ' ').downcase  # remove everything but letters and ' and leave only single spaces
+      # remove everything but letters and ' and leave only single spaces
+      clean_text = text.gsub(/[^a-zäöüß'-]+/i, ' ').gsub(/\s+/, ' ').downcase
       @tokens = handle(clean_text.split(' '))
       nil
     end

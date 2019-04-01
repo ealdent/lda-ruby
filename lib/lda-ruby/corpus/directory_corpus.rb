@@ -15,7 +15,7 @@ module Lda
     protected
 
     def load_from_directory
-      dir_glob = File.join(@path, (@extension ? "*.#{@extension}" : "*"))
+      dir_glob = File.join(@path, (@extension ? "*.#{@extension}" : '*'))
 
       Dir.glob(dir_glob).each do |filename|
         add_document(TextDocument.build_from_file(self, filename))
