@@ -19,7 +19,7 @@ class LdaRubyTest < Test::Unit::TestCase
       end
 
       should "not have text" do
-        assert !@document.has_text?
+        assert !@document.text?
       end
 
       should "be empty" do
@@ -51,7 +51,7 @@ class LdaRubyTest < Test::Unit::TestCase
       end
 
       should "not have text" do
-        assert !@document.has_text?
+        assert !@document.text?
       end
 
       should "have word count equal to what was added" do
@@ -78,7 +78,7 @@ class LdaRubyTest < Test::Unit::TestCase
       end
 
       should "have text" do
-        assert @document.has_text?
+        assert @document.text?
       end
 
       should "have word count equal to what was added" do

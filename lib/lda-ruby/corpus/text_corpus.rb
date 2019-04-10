@@ -6,7 +6,7 @@ module Lda
     def initialize(input_data)
       super()
 
-      docs = if input_data.is_a?(String) && File.exists?(input_data)
+      docs = if input_data.is_a?(String) && File.exist?(input_data)
         # yaml file containing an array of strings representing each document
         YAML.load_file(input_data)
       elsif input_data.is_a?(Array)
@@ -16,7 +16,7 @@ module Lda
         # a single string representing one document
         [input_data]
       else
-        raise "Unknown input type: please pass in a valid filename or an array of strings."
+        raise 'Unknown input type: please pass in a valid filename or an array of strings.'
       end
 
       docs.each do |doc|

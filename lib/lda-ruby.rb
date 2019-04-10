@@ -45,7 +45,7 @@ module Lda
 
     def load_vocabulary(vocab)
       if vocab.is_a?(Array)
-        @vocab = Marshal::load(Marshal::dump(vocab))      # deep clone array
+        @vocab = Marshal::load(Marshal::dump(vocab)) # deep clone array
       elsif vocab.is_a?(Vocabulary)
         @vocab = vocab.to_a
       else
@@ -64,13 +64,13 @@ module Lda
     def print_topics(words_per_topic = 10)
       raise 'No vocabulary loaded.' unless @vocab
 
-      self.beta.each_with_index do |topic, topic_num|
+      beta.each_with_index do |topic, topic_num|
         # Sort the topic array and return the sorted indices of the best scores
-        indices = (topic.zip((0...@vocab.size).to_a).sort { |i, j| i[0] <=> j[0] }.map { |i, j| j }.reverse)[0...words_per_topic]
+        indices = topic.zip((0...@vocab.size).to_a).sort { |x| x[0] }.map { |_i, j| j }.reverse[0...words_per_topic]
 
         puts "Topic #{topic_num}"
-        puts "\t#{indices.map {|i| @vocab[i]}.join("\n\t")}"
-        puts ""
+        puts "\t#{indices.map { |i| @vocab[i] }.join("\n\t")}"
+        puts ''
       end
 
       nil
@@ -90,18 +90,17 @@ module Lda
       raise 'No vocabulary loaded.' unless @vocab
 
       # find the highest scoring words per topic
-      topics = Hash.new
-      indices = (0...@vocab.size).to_a
+      topics = {}
 
-      self.beta.each_with_index do |topic, topic_num|
-        topics[topic_num] = (topic.zip((0...@vocab.size).to_a).sort { |i, j| i[0] <=> j[0] }.map { |i, j| j }.reverse)[0...words_per_topic]
+      beta.each_with_index do |topic, topic_num|
+        topics[topic_num] = topic.zip((0...@vocab.size).to_a).sort { |x| x[0] }.map { |_i, j| j }.reverse[0...words_per_topic]
       end
 
       topics
     end
 
     def top_words(words_per_topic = 10)
-      output = Hash.new
+      output = {}
 
       topics = top_word_indices(words_per_topic)
       topics.each_pair do |topic_num, words|
@@ -118,7 +117,7 @@ module Lda
     # after the first call, so if it needs to be recomputed, set the +recompute+
     # value to true.
     #
-    def phi(recompute=false)
+    def phi(recompute = false)
       if @phi.nil? || recompute
         @phi = self.compute_phi
       end
@@ -132,17 +131,17 @@ module Lda
     # for the topic in the document.
     #
     def compute_topic_document_probability
-      outp = Array.new
+      outp = []
 
       @corpus.documents.each_with_index do |doc, idx|
-        tops = [0.0] * self.num_topics
-        ttl  = doc.counts.inject(0.0) {|sum, i| sum + i}
-        self.phi[idx].each_with_index do |word_dist, word_idx|
+        tops = [0.0] * num_topics
+        ttl  = doc.counts.inject(0.0) { |sum, i| sum + i }
+        phi[idx].each_with_index do |word_dist, word_idx|
           word_dist.each_with_index do |top_prob, top_idx|
             tops[top_idx] += Math.log(top_prob) * doc.counts[word_idx]
           end
         end
-        tops = tops.map {|i| i / ttl}
+        tops = tops.map { |i| i / ttl }
         outp << tops
       end
 
@@ -153,14 +152,14 @@ module Lda
     # String representation displaying current settings.
     #
     def to_s
-      outp = ["LDA Settings:"]
-      outp << "    Initial alpha: %0.6f" % self.init_alpha
-      outp << "      # of topics: %d" % self.num_topics
-      outp << "   Max iterations: %d" % self.max_iter
-      outp << "      Convergence: %0.6f" % self.convergence
-      outp << "EM max iterations: %d" % self.em_max_iter
-      outp << "   EM convergence: %0.6f" % self.em_convergence
-      outp << "   Estimate alpha: %d" % self.est_alpha
+      outp = ['LDA Settings:']
+      outp << '    Initial alpha: %0.6f'.format(init_alpha)
+      outp << '      # of topics: %d'.format(num_topics)
+      outp << '   Max iterations: %d'.format(max_iter)
+      outp << '      Convergence: %0.6f'.format(convergence)
+      outp << 'EM max iterations: %d'.format(em_max_iter)
+      outp << '   EM convergence: %0.6f'.format(em_convergence)
+      outp << '   Estimate alpha: %d'.format(est_alpha)
 
       outp.join("\n")
     end

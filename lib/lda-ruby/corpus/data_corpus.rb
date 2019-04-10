@@ -12,7 +12,7 @@ module Lda
     protected
 
     def load_from_file
-      txt = File.open(@filename, 'r') { |f| f.read }
+      txt = File.open(@filename, 'r', &:read)
       lines = txt.split(/[\r\n]+/)
       lines.each do |line|
         add_document(DataDocument.new(self, line))
