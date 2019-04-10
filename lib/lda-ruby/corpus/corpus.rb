@@ -9,11 +9,11 @@ module Lda
       @all_terms = Set.new
       @num_terms = @num_docs = 0
       @vocabulary = Vocabulary.new
-      if stop_word_list.nil?
-        @stopwords = File.join(File.dirname(__FILE__), '..', 'config', 'stopwords.yml')
-      else
-        @stopwords = stop_word_list
-      end
+      @stopwords =  if stop_word_list.nil?
+                      File.join(File.dirname(__FILE__), '..', 'config', 'stopwords.yml')
+                    else
+                      stop_word_list
+                    end
       @stopwords = YAML.load_file(@stopwords)
       @stopwords.map!(&:strip)
     end
