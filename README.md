@@ -43,6 +43,7 @@ For an interactive shell inside the dev container:
 - `bundle exec rake compile` builds the native extension.
 - `bundle exec rake test` rebuilds the extension, then runs tests.
 - `bundle exec rake build` builds the gem package.
+- `bundle exec ruby -Ilib:test test/backend_compatibility_test.rb` runs backend compatibility fixtures.
 
 ### Backend selection
 
@@ -52,6 +53,8 @@ For an interactive shell inside the dev container:
   - or `LDA_RUBY_BACKEND=pure`
 - Force native backend:
   - `Lda::Lda.new(corpus, backend: :native)`
+
+`em("seeded")` is supported by both native and pure backends for deterministic fixture-oriented runs.
 
 ## Resources
 

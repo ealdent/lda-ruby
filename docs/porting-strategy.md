@@ -33,6 +33,15 @@ Suggested backend selection:
 
 ## Migration plan
 
+### Current status
+
+Completed in `codex/experiment-ruby3-modernization`:
+
+- Phase 1 baseline test capture expanded with backend compatibility fixtures.
+- Phase 2 backend boundary extraction (`Lda::Lda` now delegates through backend adapters).
+- Phase 3 pure Ruby backend implementation (available as `backend: :pure` or `LDA_RUBY_BACKEND=pure`).
+- CI matrix added for Ruby 3.2/3.3 with native and pure backend jobs.
+
 ### Phase 1: Stabilize API and tests
 
 - Capture current behavior with golden tests around:

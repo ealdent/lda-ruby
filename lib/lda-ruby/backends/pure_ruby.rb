@@ -26,7 +26,7 @@ module Lda
         true
       end
 
-      def em(_start)
+      def em(start)
         return nil if @corpus.nil? || @corpus.num_docs.zero?
 
         topics = Integer(num_topics)
@@ -35,7 +35,12 @@ module Lda
         terms = max_term_index + 1
         raise ArgumentError, "corpus must contain terms" if terms <= 0
 
-        @beta_probabilities = initial_topic_term_probabilities(topics, terms)
+        @beta_probabilities =
+          if start.to_s.strip.casecmp("seeded").zero? || start.to_s.strip.casecmp("deterministic").zero?
+            seeded_topic_term_probabilities(topics, terms)
+          else
+            initial_topic_term_probabilities(topics, terms)
+          end
 
         previous_gamma = nil
 
@@ -128,6 +133,20 @@ module Lda
           weights = Array.new(terms) { @random.rand + MIN_PROBABILITY }
           normalize!(weights)
         end
+      end
+
+      def seeded_topic_term_probabilities(topics, terms)
+        topic_term_counts = Array.new(topics) { Array.new(terms, MIN_PROBABILITY) }
+
+        @corpus.documents.each_with_index do |document, document_index|
+          topic_index = document_index % topics
+
+          document.words.each_with_index do |word_index, word_offset|
+            topic_term_counts[topic_index][word_index] += document.counts[word_offset].to_f
+          end
+        end
+
+        topic_term_counts.map { |weights| normalize!(weights) }
       end
 
       def max_absolute_distance(left, right)
