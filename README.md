@@ -35,3 +35,7 @@ Blei, David M., Ng, Andrew Y., and Jordan, Michael I. 2003. Latent dirichlet all
 [ap-data]: http://web.archive.org/web/20160507090044/http://www.cs.princeton.edu/~blei/lda-c/ap.tgz
 [pdf]: http://www.cs.princeton.edu/picasso/mats/BleiNgJordan2003_blei.pdf
 [topic-models]: https://lists.cs.princeton.edu/mailman/listinfo/topic-models
+
+## Modernization
+
+For a Ruby 3.2+/3.3+ porting proposal, see `docs/porting-strategy.md`.
