@@ -2,15 +2,21 @@
 
 require "lda-ruby/version"
 
+native_extension_loaded = false
+
 begin
   require "lda-ruby/lda"
-rescue LoadError => e
+  native_extension_loaded = true
+rescue LoadError
   begin
     require_relative "../ext/lda-ruby/lda"
+    native_extension_loaded = true
   rescue LoadError
-    raise LoadError, "#{e.message}\nRun `bundle exec rake compile` to build the native extension."
+    native_extension_loaded = false
   end
 end
+
+LDA_RUBY_NATIVE_EXTENSION_LOADED = native_extension_loaded unless defined?(LDA_RUBY_NATIVE_EXTENSION_LOADED)
 
 require "lda-ruby/document/document"
 require "lda-ruby/document/data_document"
@@ -20,19 +26,67 @@ require "lda-ruby/corpus/data_corpus"
 require "lda-ruby/corpus/text_corpus"
 require "lda-ruby/corpus/directory_corpus"
 require "lda-ruby/vocabulary"
+require "lda-ruby/backends"
 
 module Lda
-  class Lda
-    attr_reader :vocab, :corpus
+  NATIVE_EXTENSION_LOADED = LDA_RUBY_NATIVE_EXTENSION_LOADED unless const_defined?(:NATIVE_EXTENSION_LOADED)
 
-    def initialize(corpus)
+  class Lda
+    NATIVE_ALIAS_MAP = {
+      fast_load_corpus_from_file: :__native_fast_load_corpus_from_file,
+      "corpus=": :__native_set_corpus,
+      em: :__native_em,
+      load_settings: :__native_load_settings,
+      set_config: :__native_set_config,
+      max_iter: :__native_max_iter,
+      "max_iter=": :__native_set_max_iter,
+      convergence: :__native_convergence,
+      "convergence=": :__native_set_convergence,
+      em_max_iter: :__native_em_max_iter,
+      "em_max_iter=": :__native_set_em_max_iter,
+      em_convergence: :__native_em_convergence,
+      "em_convergence=": :__native_set_em_convergence,
+      init_alpha: :__native_init_alpha,
+      "init_alpha=": :__native_set_init_alpha,
+      est_alpha: :__native_est_alpha,
+      "est_alpha=": :__native_set_est_alpha,
+      num_topics: :__native_num_topics,
+      "num_topics=": :__native_set_num_topics,
+      verbose: :__native_verbose,
+      "verbose=": :__native_set_verbose,
+      beta: :__native_beta,
+      gamma: :__native_gamma,
+      compute_phi: :__native_compute_phi,
+      model: :__native_model
+    }.freeze
+
+    NATIVE_ALIAS_MAP.each do |native_name, alias_name|
+      next unless method_defined?(native_name)
+
+      alias_method alias_name, native_name
+      private alias_name
+    end
+
+    attr_reader :vocab, :corpus, :backend
+
+    def initialize(corpus, backend: nil, random_seed: nil)
+      @backend = Backends.build(host: self, requested: backend, random_seed: random_seed)
+
       load_default_settings
 
       @vocab = nil
       self.corpus = corpus
-      @vocab = corpus.vocabulary.to_a if corpus.vocabulary
+      @vocab = corpus.vocabulary.to_a if corpus.respond_to?(:vocabulary) && corpus.vocabulary
 
       @phi = nil
+    end
+
+    def backend_name
+      @backend.name
+    end
+
+    def native_backend?
+      backend_name == "native"
     end
 
     def load_default_settings
@@ -47,23 +101,136 @@ module Lda
       [20, 1e-6, 100, 1e-4, 20, 0.3, 1]
     end
 
-    def load_corpus(filename)
-      @corpus = Corpus.new
-      @corpus.load_from_file(filename)
+    def set_config(init_alpha, num_topics, max_iter, convergence, em_max_iter, em_convergence = self.em_convergence, est_alpha = self.est_alpha)
+      @backend.set_config(
+        Float(init_alpha),
+        Integer(num_topics),
+        Integer(max_iter),
+        Float(convergence),
+        Integer(em_max_iter),
+        Float(em_convergence),
+        Integer(est_alpha)
+      )
+    end
 
+    def max_iter
+      @backend.max_iter
+    end
+
+    def max_iter=(value)
+      @backend.max_iter = Integer(value)
+    end
+
+    def convergence
+      @backend.convergence
+    end
+
+    def convergence=(value)
+      @backend.convergence = Float(value)
+    end
+
+    def em_max_iter
+      @backend.em_max_iter
+    end
+
+    def em_max_iter=(value)
+      @backend.em_max_iter = Integer(value)
+    end
+
+    def em_convergence
+      @backend.em_convergence
+    end
+
+    def em_convergence=(value)
+      @backend.em_convergence = Float(value)
+    end
+
+    def num_topics
+      @backend.num_topics
+    end
+
+    def num_topics=(value)
+      @backend.num_topics = Integer(value)
+    end
+
+    def init_alpha
+      @backend.init_alpha
+    end
+
+    def init_alpha=(value)
+      @backend.init_alpha = Float(value)
+    end
+
+    def est_alpha
+      @backend.est_alpha
+    end
+
+    def est_alpha=(value)
+      @backend.est_alpha = Integer(value)
+    end
+
+    def verbose
+      @backend.verbose
+    end
+
+    def verbose=(value)
+      @backend.verbose = !!value
+    end
+
+    def corpus=(corpus)
+      @corpus = corpus
+      @backend.corpus = corpus
       true
+    end
+
+    def load_corpus(filename)
+      fast_load_corpus_from_file(filename)
+    end
+
+    def fast_load_corpus_from_file(filename)
+      loaded = @backend.fast_load_corpus_from_file(filename)
+
+      if @backend.corpus
+        @corpus = @backend.corpus
+        @vocab = @corpus.vocabulary.to_a if @corpus.respond_to?(:vocabulary) && @corpus.vocabulary
+      elsif @corpus.nil?
+        @corpus = DataCorpus.new(filename)
+      end
+
+      !!loaded
+    end
+
+    def load_settings(settings_file)
+      @backend.load_settings(settings_file)
     end
 
     def load_vocabulary(vocab)
       if vocab.is_a?(Array)
-        @vocab = Marshal::load(Marshal::dump(vocab)) # deep clone array
+        @vocab = Marshal.load(Marshal.dump(vocab)) # deep clone array
       elsif vocab.is_a?(Vocabulary)
         @vocab = vocab.to_a
       else
-        @vocab = File.open(vocab, 'r') { |f| f.read.split(/\s+/) }
+        @vocab = File.read(vocab).split(/\s+/)
       end
 
       true
+    end
+
+    def em(start = "random")
+      @phi = nil
+      @backend.em(start.to_s)
+    end
+
+    def beta
+      @backend.beta
+    end
+
+    def gamma
+      @backend.gamma
+    end
+
+    def model
+      @backend.model
     end
 
     #
@@ -73,10 +240,9 @@ module Lda
     # See also +top_words+.
     #
     def print_topics(words_per_topic = 10)
-      raise 'No vocabulary loaded.' unless @vocab
+      raise "No vocabulary loaded." unless @vocab
 
       beta.each_with_index do |topic, topic_num|
-        # Sort the topic array and return the sorted indices of the best scores
         indices = topic
           .each_with_index
           .sort_by { |score, _index| score }
@@ -86,7 +252,7 @@ module Lda
 
         puts "Topic #{topic_num}"
         puts "\t#{indices.map { |i| @vocab[i] }.join("\n\t")}"
-        puts ''
+        puts ""
       end
 
       nil
@@ -103,9 +269,8 @@ module Lda
     # See also +print_topics+.
     #
     def top_word_indices(words_per_topic = 10)
-      raise 'No vocabulary loaded.' unless @vocab
+      raise "No vocabulary loaded." unless @vocab
 
-      # find the highest scoring words per topic
       topics = {}
 
       beta.each_with_index do |topic, topic_num|
@@ -139,11 +304,13 @@ module Lda
     # value to true.
     #
     def phi(recompute = false)
-      if @phi.nil? || recompute
-        @phi = self.compute_phi
-      end
+      @phi = compute_phi if @phi.nil? || recompute
 
       @phi
+    end
+
+    def compute_phi
+      @backend.compute_phi
     end
 
     #
@@ -156,12 +323,14 @@ module Lda
 
       @corpus.documents.each_with_index do |doc, idx|
         tops = [0.0] * num_topics
-        ttl  = doc.counts.inject(0.0) { |sum, i| sum + i }
+        ttl = doc.counts.inject(0.0) { |sum, i| sum + i }
+
         phi[idx].each_with_index do |word_dist, word_idx|
           word_dist.each_with_index do |top_prob, top_idx|
-            tops[top_idx] += Math.log(top_prob) * doc.counts[word_idx]
+            tops[top_idx] += Math.log([top_prob, 1e-300].max) * doc.counts[word_idx]
           end
         end
+
         tops = tops.map { |i| i / ttl }
         outp << tops
       end
@@ -173,14 +342,15 @@ module Lda
     # String representation displaying current settings.
     #
     def to_s
-      outp = ['LDA Settings:']
-      outp << '    Initial alpha: %0.6f'.format(init_alpha)
-      outp << '      # of topics: %d'.format(num_topics)
-      outp << '   Max iterations: %d'.format(max_iter)
-      outp << '      Convergence: %0.6f'.format(convergence)
-      outp << 'EM max iterations: %d'.format(em_max_iter)
-      outp << '   EM convergence: %0.6f'.format(em_convergence)
-      outp << '   Estimate alpha: %d'.format(est_alpha)
+      outp = ["LDA Settings:"]
+      outp << format("    Initial alpha: %0.6f", init_alpha)
+      outp << format("      # of topics: %d", num_topics)
+      outp << format("   Max iterations: %d", max_iter)
+      outp << format("      Convergence: %0.6f", convergence)
+      outp << format("EM max iterations: %d", em_max_iter)
+      outp << format("   EM convergence: %0.6f", em_convergence)
+      outp << format("   Estimate alpha: %d", est_alpha)
+      outp << format("         Backend: %s", backend_name)
 
       outp.join("\n")
     end

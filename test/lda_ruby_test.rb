@@ -233,6 +233,10 @@ class LdaRubyTest < Test::Unit::TestCase
       assert !@lda.est_alpha.nil?
     end
 
+    should "expose the selected backend name" do
+      assert(["native", "pure_ruby"].include?(@lda.backend_name))
+    end
+
     context "after running em" do
       setup do
         @lda.verbose = false
@@ -268,6 +272,24 @@ class LdaRubyTest < Test::Unit::TestCase
             assert_equal doc.size, @lda.num_topics
           end
         end
+      end
+    end
+
+    context "using the pure-ruby backend" do
+      setup do
+        @lda = Lda::Lda.new(@corpus, backend: :pure, random_seed: 1234)
+        @lda.verbose = false
+        @lda.num_topics = 6
+        @lda.max_iter = 20
+        @lda.em_max_iter = 30
+        @lda.em('random')
+      end
+
+      should "run em and generate model matrices" do
+        assert_equal "pure_ruby", @lda.backend_name
+        assert_equal @lda.num_topics, @lda.beta.size
+        assert_equal @corpus.num_docs, @lda.gamma.size
+        assert_equal @corpus.num_docs, @lda.phi.size
       end
     end
   end

@@ -44,6 +44,15 @@ For an interactive shell inside the dev container:
 - `bundle exec rake test` rebuilds the extension, then runs tests.
 - `bundle exec rake build` builds the gem package.
 
+### Backend selection
+
+- Default mode is `auto`: native extension when available, otherwise pure Ruby.
+- Force pure Ruby backend:
+  - `Lda::Lda.new(corpus, backend: :pure)`
+  - or `LDA_RUBY_BACKEND=pure`
+- Force native backend:
+  - `Lda::Lda.new(corpus, backend: :native)`
+
 ## Resources
 
 + [Blog post about LDA-Ruby][lda-ruby]
