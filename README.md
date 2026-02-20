@@ -17,6 +17,33 @@ The original C code relied on files for the input and output. We felt it was nec
 
 If you have general questions about Latent Dirichlet Allocation, I urge you to use the [topic models mailing list][topic-models], since the people who monitor that are very knowledgeable.  If you encounter bugs specific to lda-ruby, please post an issue on the Github project.
 
+## Development
+
+### Local (Ruby 3.2+)
+
+```bash
+bundle install
+bundle exec rake test
+```
+
+### Docker (recommended for isolated setup)
+
+```bash
+./bin/docker-test
+```
+
+For an interactive shell inside the dev container:
+
+```bash
+./bin/docker-shell
+```
+
+### Build tasks
+
+- `bundle exec rake compile` builds the native extension.
+- `bundle exec rake test` rebuilds the extension, then runs tests.
+- `bundle exec rake build` builds the gem package.
+
 ## Resources
 
 + [Blog post about LDA-Ruby][lda-ruby]

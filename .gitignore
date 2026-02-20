@@ -4,3 +4,12 @@
 pkg
 test/blei
 lda-ruby-*.gem
+/Makefile
+/ext/lda-ruby/Makefile
+/ext/lda-ruby/mkmf.log
+/ext/lda-ruby/lda.so
+/.bundle
+/vendor/bundle
+/tmp
+/coverage
+Gemfile.lock

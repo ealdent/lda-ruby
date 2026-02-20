@@ -614,7 +614,25 @@ void run_quiet_em(char* start, corpus* corpus) {
  *  * em_convergence
  *  * est_alpha
  */
-static VALUE wrap_set_config(VALUE self, VALUE init_alpha, VALUE num_topics, VALUE max_iter, VALUE convergence, VALUE em_max_iter, VALUE em_convergence, VALUE est_alpha) {
+static VALUE wrap_set_config(int argc, VALUE* argv, VALUE self) {
+  VALUE init_alpha = Qnil;
+  VALUE num_topics = Qnil;
+  VALUE max_iter = Qnil;
+  VALUE convergence = Qnil;
+  VALUE em_max_iter = Qnil;
+  VALUE em_convergence = Qnil;
+  VALUE est_alpha = Qnil;
+
+  rb_check_arity(argc, 5, 7);
+
+  init_alpha = argv[0];
+  num_topics = argv[1];
+  max_iter = argv[2];
+  convergence = argv[3];
+  em_max_iter = argv[4];
+  em_convergence = (argc >= 6) ? argv[5] : rb_float_new(EM_CONVERGED);
+  est_alpha = (argc == 7) ? argv[6] : rb_int_new(ESTIMATE_ALPHA);
+
 	INITIAL_ALPHA = NUM2DBL(init_alpha);
 	NTOPICS = NUM2INT(num_topics);
   if( NTOPICS < 0 ) { rb_raise(rb_eRuntimeError, "NTOPICS must be greater than 0 - %d", NTOPICS); }
@@ -954,12 +972,10 @@ static VALUE wrap_get_model_settings(VALUE self) {
 }
 
 
-void Init_lda() {
+void Init_lda(void) {
   corpus_loaded = FALSE;
   model_loaded = FALSE;
   VERBOSE = TRUE;
-
-  rb_require("lda-ruby");
 
   rb_cLdaModule   = rb_define_module("Lda");
   rb_cLda         = rb_define_class_under(rb_cLdaModule, "Lda", rb_cObject);
@@ -977,7 +993,7 @@ void Init_lda() {
   rb_define_method(rb_cLda, "load_settings", wrap_load_settings, 1);
 
   // method to set all the config options at once
-  rb_define_method(rb_cLda, "set_config", wrap_set_config, 5);
+  rb_define_method(rb_cLda, "set_config", wrap_set_config, -1);
 
   // accessor stuff for main settings
   rb_define_method(rb_cLda, "max_iter", wrap_get_max_iter, 0);

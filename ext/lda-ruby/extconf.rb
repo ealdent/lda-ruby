@@ -1,9 +1,13 @@
-ENV['ARCHFLAGS'] = "-arch #{`uname -p` =~ /powerpc/ ? 'ppc' : 'i386'}"
+# frozen_string_literal: true
 
-require 'mkmf'
+require "mkmf"
 
-$CFLAGS << ' -Wall -ggdb -O0'
-$defs.push( '-D USE_RUBY' )
+extension_name = "lda-ruby/lda"
+dir_config(extension_name)
 
-dir_config('lda-ruby/lda')
-create_makefile('lda-ruby/lda')
+$defs << "-DUSE_RUBY"
+append_cflags("-Wall")
+append_cflags("-Wextra")
+append_cflags("-Wno-unused-parameter")
+
+create_makefile(extension_name)

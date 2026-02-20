@@ -1,4 +1,5 @@
-require 'set'
+require "set"
+require "yaml"
 
 module Lda
   class Corpus

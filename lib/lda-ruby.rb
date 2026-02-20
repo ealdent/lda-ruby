@@ -1,14 +1,25 @@
-$LOAD_PATH.unshift(File.dirname(__FILE__)) unless $LOAD_PATH.include?(File.dirname(__FILE__))
+# frozen_string_literal: true
 
-require 'lda-ruby/lda'
-require 'lda-ruby/document/document'
-require 'lda-ruby/document/data_document'
-require 'lda-ruby/document/text_document'
-require 'lda-ruby/corpus/corpus'
-require 'lda-ruby/corpus/data_corpus'
-require 'lda-ruby/corpus/text_corpus'
-require 'lda-ruby/corpus/directory_corpus'
-require 'lda-ruby/vocabulary'
+require "lda-ruby/version"
+
+begin
+  require "lda-ruby/lda"
+rescue LoadError => e
+  begin
+    require_relative "../ext/lda-ruby/lda"
+  rescue LoadError
+    raise LoadError, "#{e.message}\nRun `bundle exec rake compile` to build the native extension."
+  end
+end
+
+require "lda-ruby/document/document"
+require "lda-ruby/document/data_document"
+require "lda-ruby/document/text_document"
+require "lda-ruby/corpus/corpus"
+require "lda-ruby/corpus/data_corpus"
+require "lda-ruby/corpus/text_corpus"
+require "lda-ruby/corpus/directory_corpus"
+require "lda-ruby/vocabulary"
 
 module Lda
   class Lda
@@ -66,7 +77,12 @@ module Lda
 
       beta.each_with_index do |topic, topic_num|
         # Sort the topic array and return the sorted indices of the best scores
-        indices = topic.zip((0...@vocab.size).to_a).sort { |x| x[0] }.map { |_i, j| j }.reverse[0...words_per_topic]
+        indices = topic
+          .each_with_index
+          .sort_by { |score, _index| score }
+          .reverse
+          .first(words_per_topic)
+          .map { |_score, index| index }
 
         puts "Topic #{topic_num}"
         puts "\t#{indices.map { |i| @vocab[i] }.join("\n\t")}"
@@ -93,7 +109,12 @@ module Lda
       topics = {}
 
       beta.each_with_index do |topic, topic_num|
-        topics[topic_num] = topic.zip((0...@vocab.size).to_a).sort { |x| x[0] }.map { |_i, j| j }.reverse[0...words_per_topic]
+        topics[topic_num] = topic
+          .each_with_index
+          .sort_by { |score, _index| score }
+          .reverse
+          .first(words_per_topic)
+          .map { |_score, index| index }
       end
 
       topics
