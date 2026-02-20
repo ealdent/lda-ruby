@@ -234,7 +234,13 @@ class LdaRubyTest < Test::Unit::TestCase
     end
 
     should "expose the selected backend name" do
-      assert(["native", "pure_ruby"].include?(@lda.backend_name))
+      assert(["native", "pure_ruby", "rust"].include?(@lda.backend_name))
+    end
+
+    should "raise when rust backend is requested but extension is unavailable" do
+      return if Lda::RUST_EXTENSION_LOADED
+
+      assert_raise(LoadError) { Lda::Lda.new(@corpus, backend: :rust) }
     end
 
     context "after running em" do

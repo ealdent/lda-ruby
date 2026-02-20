@@ -13,3 +13,5 @@ lda-ruby-*.gem
 /tmp
 /coverage
 Gemfile.lock
+/ext/lda-ruby-rust/target
+/ext/lda-ruby-rust/Cargo.lock

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "lda-ruby/backends/base"
+require "lda-ruby/backends/rust"
 require "lda-ruby/backends/native"
 require "lda-ruby/backends/pure_ruby"
 
@@ -12,11 +13,17 @@ module Lda
 
         case mode
         when :auto
-          if Native.available?(host)
+          if Rust.available?
+            Rust.new(random_seed: random_seed)
+          elsif Native.available?(host)
             Native.new(host, random_seed: random_seed)
           else
             PureRuby.new(random_seed: random_seed)
           end
+        when :rust
+          raise LoadError, "Rust backend is unavailable for this environment" unless Rust.available?
+
+          Rust.new(random_seed: random_seed)
         when :native
           raise LoadError, "Native backend is unavailable for this environment" unless Native.available?(host)
 
@@ -38,6 +45,8 @@ module Lda
           :auto
         when "native", "c"
           :native
+        when "rust", "rust_native"
+          :rust
         when "pure", "ruby", "pure_ruby"
           :pure
         else

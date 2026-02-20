@@ -41,6 +41,7 @@ For an interactive shell inside the dev container:
 ### Build tasks
 
 - `bundle exec rake compile` builds the native extension.
+- `bundle exec rake compile_rust` builds the experimental Rust extension scaffold.
 - `bundle exec rake test` rebuilds the extension, then runs tests.
 - `bundle exec rake build` builds the gem package.
 - `bundle exec ruby -Ilib:test test/backend_compatibility_test.rb` runs backend compatibility fixtures.
@@ -53,8 +54,14 @@ For an interactive shell inside the dev container:
   - or `LDA_RUBY_BACKEND=pure`
 - Force native backend:
   - `Lda::Lda.new(corpus, backend: :native)`
+- Force Rust backend (when extension is available):
+  - `Lda::Lda.new(corpus, backend: :rust)`
+  - or `LDA_RUBY_BACKEND=rust`
 
 `em("seeded")` is supported by both native and pure backends for deterministic fixture-oriented runs.
+
+Rust status: the extension hook layer is scaffolded in `ext/lda-ruby-rust`, and currently delegates model math to the pure Ruby backend while Rust kernels are implemented incrementally.
+`compile_rust` requires a Rust toolchain plus Ruby development headers and `libclang`.
 
 ## Resources
 

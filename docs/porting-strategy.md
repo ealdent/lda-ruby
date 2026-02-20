@@ -41,6 +41,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Phase 2 backend boundary extraction (`Lda::Lda` now delegates through backend adapters).
 - Phase 3 pure Ruby backend implementation (available as `backend: :pure` or `LDA_RUBY_BACKEND=pure`).
 - CI matrix added for Ruby 3.2/3.3 with native and pure backend jobs.
+- Phase 4 started with Rust extension scaffolding (`ext/lda-ruby-rust`) and backend mode wiring (`backend: :rust` when extension is available).
 
 ### Phase 1: Stabilize API and tests
 

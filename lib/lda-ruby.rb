@@ -2,6 +2,25 @@
 
 require "lda-ruby/version"
 
+rust_extension_loaded = false
+
+begin
+  require "lda_ruby_rust"
+  rust_extension_loaded = true
+rescue LoadError
+  begin
+    require_relative "../ext/lda-ruby-rust/target/release/lda_ruby_rust"
+    rust_extension_loaded = true
+  rescue LoadError
+    begin
+      require_relative "../ext/lda-ruby-rust/target/debug/lda_ruby_rust"
+      rust_extension_loaded = true
+    rescue LoadError
+      rust_extension_loaded = false
+    end
+  end
+end
+
 native_extension_loaded = false
 
 begin
@@ -17,6 +36,7 @@ rescue LoadError
 end
 
 LDA_RUBY_NATIVE_EXTENSION_LOADED = native_extension_loaded unless defined?(LDA_RUBY_NATIVE_EXTENSION_LOADED)
+LDA_RUBY_RUST_EXTENSION_LOADED = rust_extension_loaded unless defined?(LDA_RUBY_RUST_EXTENSION_LOADED)
 
 require "lda-ruby/document/document"
 require "lda-ruby/document/data_document"
@@ -29,6 +49,7 @@ require "lda-ruby/vocabulary"
 require "lda-ruby/backends"
 
 module Lda
+  RUST_EXTENSION_LOADED = LDA_RUBY_RUST_EXTENSION_LOADED unless const_defined?(:RUST_EXTENSION_LOADED)
   NATIVE_EXTENSION_LOADED = LDA_RUBY_NATIVE_EXTENSION_LOADED unless const_defined?(:NATIVE_EXTENSION_LOADED)
 
   class Lda
@@ -87,6 +108,10 @@ module Lda
 
     def native_backend?
       backend_name == "native"
+    end
+
+    def rust_backend?
+      backend_name == "rust"
     end
 
     def load_default_settings

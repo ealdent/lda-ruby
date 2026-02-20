@@ -10,3 +10,4 @@ ext/lda-ruby/*.bundle
 ext/lda-ruby/*.so
 ext/lda-ruby/Makefile
 ext/lda-ruby/mkmf.log
+ext/lda-ruby-rust/target

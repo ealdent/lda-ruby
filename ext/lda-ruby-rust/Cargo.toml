@@ -1,0 +1,12 @@
+[package]
+name = "lda_ruby_rust"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.74"
+
+[lib]
+name = "lda_ruby_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+magnus = "0.7"
