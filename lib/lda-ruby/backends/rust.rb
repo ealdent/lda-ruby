@@ -40,6 +40,7 @@ module Lda
         @fallback.topic_term_finalizer_kernel = method(:rust_finalize_topic_term_counts)
         @fallback.gamma_shift_kernel = method(:rust_average_gamma_shift)
         @fallback.topic_document_probability_kernel = method(:rust_topic_document_probability)
+        @fallback.topic_term_seed_kernel = method(:rust_seeded_topic_term_probabilities)
       end
 
       def name
@@ -199,6 +200,21 @@ module Lda
           phi_matrix,
           document_counts,
           Integer(num_topics),
+          Float(min_probability)
+        )
+      rescue StandardError
+        nil
+      end
+
+      def rust_seeded_topic_term_probabilities(document_words, document_counts, topics, terms, min_probability)
+        return nil unless defined?(::Lda::RustBackend)
+        return nil unless ::Lda::RustBackend.respond_to?(:seeded_topic_term_probabilities)
+
+        ::Lda::RustBackend.seeded_topic_term_probabilities(
+          document_words,
+          document_counts,
+          Integer(topics),
+          Integer(terms),
           Float(min_probability)
         )
       rescue StandardError

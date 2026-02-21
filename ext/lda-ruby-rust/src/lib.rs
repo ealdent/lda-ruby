@@ -222,6 +222,48 @@ fn topic_document_probability(
     output
 }
 
+fn seeded_topic_term_probabilities(
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    topics: usize,
+    terms: usize,
+    min_probability: f64,
+) -> Vec<Vec<f64>> {
+    if topics == 0 || terms == 0 {
+        return Vec::new();
+    }
+
+    let floor = floor_value(min_probability);
+    let mut topic_term_counts = vec![vec![floor; terms]; topics];
+
+    for (doc_index, words) in document_words.iter().enumerate() {
+        let topic_index = doc_index % topics;
+        let counts = document_counts.get(doc_index);
+
+        for (word_offset, &word_index) in words.iter().enumerate() {
+            if word_index >= terms {
+                continue;
+            }
+
+            let count = counts
+                .and_then(|row| row.get(word_offset))
+                .copied()
+                .unwrap_or(0.0);
+            if !count.is_finite() || count == 0.0 {
+                continue;
+            }
+
+            topic_term_counts[topic_index][word_index] += count;
+        }
+    }
+
+    for row in topic_term_counts.iter_mut() {
+        normalize_in_place(row);
+    }
+
+    topic_term_counts
+}
+
 fn infer_document_internal(
     beta_probabilities: &[Vec<f64>],
     gamma_initial: &[f64],
@@ -404,6 +446,10 @@ fn init() -> Result<(), Error> {
     rust_backend_module.define_singleton_method(
         "topic_document_probability",
         function!(topic_document_probability, 4),
+    )?;
+    rust_backend_module.define_singleton_method(
+        "seeded_topic_term_probabilities",
+        function!(seeded_topic_term_probabilities, 5),
     )?;
 
     Ok(())

@@ -16,6 +16,7 @@ Current scope:
   - `Lda::RustBackend.normalize_topic_term_counts(topic_term_counts, min_probability)`
   - `Lda::RustBackend.average_gamma_shift(previous_gamma, current_gamma)`
   - `Lda::RustBackend.topic_document_probability(phi_tensor, document_counts, num_topics, min_probability)`
+  - `Lda::RustBackend.seeded_topic_term_probabilities(document_words, document_counts, topics, terms, min_probability)`
 
 Hot-path kernels currently executed in Rust when `backend: :rust` is active:
 - topic weights for a word across topics
@@ -25,6 +26,7 @@ Hot-path kernels currently executed in Rust when `backend: :rust` is active:
 - topic-term normalization and log-probability finalization for EM beta updates
 - gamma convergence shift reduction between EM iterations
 - topic-document average log-probability computation
+- seeded topic-term initialization
 
 Remaining numeric LDA kernels are still provided by the pure Ruby backend and will move incrementally.
 

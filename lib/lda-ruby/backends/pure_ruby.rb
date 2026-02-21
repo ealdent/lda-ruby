@@ -18,6 +18,7 @@ module Lda
         @topic_term_finalizer_kernel = nil
         @gamma_shift_kernel = nil
         @topic_document_probability_kernel = nil
+        @topic_term_seed_kernel = nil
       end
 
       attr_writer :topic_weights_kernel,
@@ -26,7 +27,8 @@ module Lda
                   :corpus_iteration_kernel,
                   :topic_term_finalizer_kernel,
                   :gamma_shift_kernel,
-                  :topic_document_probability_kernel
+                  :topic_document_probability_kernel,
+                  :topic_term_seed_kernel
 
       def name
         "pure_ruby"
@@ -50,15 +52,16 @@ module Lda
         terms = max_term_index + 1
         raise ArgumentError, "corpus must contain terms" if terms <= 0
 
+        document_words = @corpus.documents.map { |document| document.words.map(&:to_i) }
+        document_counts = @corpus.documents.map { |document| document.counts.map(&:to_f) }
+
         @beta_probabilities =
           if start.to_s.strip.casecmp("seeded").zero? || start.to_s.strip.casecmp("deterministic").zero?
-            seeded_topic_term_probabilities(topics, terms)
+            seeded_topic_term_probabilities(topics, terms, document_words, document_counts)
           else
             initial_topic_term_probabilities(topics, terms)
           end
 
-        document_words = @corpus.documents.map { |document| document.words.map(&:to_i) }
-        document_counts = @corpus.documents.map { |document| document.counts.map(&:to_f) }
         document_totals = document_counts.map { |counts| counts.sum.to_f }
         document_lengths = document_words.map(&:length)
 
@@ -141,14 +144,54 @@ module Lda
         end
       end
 
-      def seeded_topic_term_probabilities(topics, terms)
+      def seeded_topic_term_probabilities(topics, terms, document_words, document_counts)
+        kernel_output = nil
+        if @topic_term_seed_kernel
+          kernel_output = @topic_term_seed_kernel.call(
+            document_words,
+            document_counts,
+            Integer(topics),
+            Integer(terms),
+            MIN_PROBABILITY
+          )
+        end
+
+        if valid_seeded_topic_term_probabilities?(kernel_output, topics, terms)
+          kernel_output.map { |weights| normalize!(weights.map(&:to_f)) }
+        else
+          default_seeded_topic_term_probabilities(topics, terms, document_words, document_counts)
+        end
+      rescue StandardError
+        default_seeded_topic_term_probabilities(topics, terms, document_words, document_counts)
+      end
+
+      def valid_seeded_topic_term_probabilities?(matrix, expected_topics, expected_terms)
+        return false unless matrix.is_a?(Array)
+        return false unless matrix.size == expected_topics
+
+        matrix.each do |row|
+          return false unless row.is_a?(Array)
+          return false unless row.size == expected_terms
+          row.each do |value|
+            return false unless value.is_a?(Numeric)
+            return false unless value.finite?
+          end
+        end
+
+        true
+      end
+
+      def default_seeded_topic_term_probabilities(topics, terms, document_words, document_counts)
         topic_term_counts = Array.new(topics) { Array.new(terms, MIN_PROBABILITY) }
 
-        @corpus.documents.each_with_index do |document, document_index|
+        document_words.each_with_index do |words, document_index|
           topic_index = document_index % topics
+          counts = document_counts[document_index] || []
 
-          document.words.each_with_index do |word_index, word_offset|
-            topic_term_counts[topic_index][word_index] += document.counts[word_offset].to_f
+          words.each_with_index do |word_index, word_offset|
+            next if word_index >= terms
+
+            topic_term_counts[topic_index][word_index] += counts[word_offset].to_f
           end
         end
 
