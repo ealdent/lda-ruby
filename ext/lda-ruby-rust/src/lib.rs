@@ -56,6 +56,40 @@ fn topic_weights_for_word(
     weights
 }
 
+fn accumulate_topic_term_counts(
+    mut topic_term_counts: Vec<Vec<f64>>,
+    phi_d: Vec<Vec<f64>>,
+    words: Vec<usize>,
+    counts: Vec<f64>,
+) -> Vec<Vec<f64>> {
+    let topics = topic_term_counts.len();
+    if topics == 0 {
+        return topic_term_counts;
+    }
+
+    for (word_offset, &word_index) in words.iter().enumerate() {
+        let count = counts.get(word_offset).copied().unwrap_or(0.0);
+        if count == 0.0 {
+            continue;
+        }
+
+        let Some(phi_row) = phi_d.get(word_offset) else {
+            continue;
+        };
+
+        for topic_index in 0..topics {
+            let phi_value = phi_row.get(topic_index).copied().unwrap_or(0.0);
+            if let Some(topic_terms) = topic_term_counts.get_mut(topic_index) {
+                if word_index < topic_terms.len() {
+                    topic_terms[word_index] += count * phi_value;
+                }
+            }
+        }
+    }
+
+    topic_term_counts
+}
+
 #[magnus::init]
 fn init() -> Result<(), Error> {
     let lda_module = define_module("Lda")?;
@@ -67,6 +101,10 @@ fn init() -> Result<(), Error> {
     rust_backend_module.define_singleton_method(
         "topic_weights_for_word",
         function!(topic_weights_for_word, 4),
+    )?;
+    rust_backend_module.define_singleton_method(
+        "accumulate_topic_term_counts",
+        function!(accumulate_topic_term_counts, 4),
     )?;
 
     Ok(())

@@ -12,9 +12,10 @@ module Lda
         @gamma = nil
         @phi = nil
         @topic_weights_kernel = nil
+        @topic_term_accumulator_kernel = nil
       end
 
-      attr_writer :topic_weights_kernel
+      attr_writer :topic_weights_kernel, :topic_term_accumulator_kernel
 
       def name
         "pure_ruby"
@@ -77,12 +78,7 @@ module Lda
             current_gamma[document_index] = gamma_d
             current_phi[document_index] = phi_d
 
-            document.words.each_with_index do |word_index, word_offset|
-              count = document.counts[word_offset].to_f
-              topics.times do |topic_index|
-                topic_term_counts[topic_index][word_index] += count * phi_d[word_offset][topic_index]
-              end
-            end
+            topic_term_counts = accumulate_topic_term_counts(topic_term_counts, phi_d, document.words, document.counts)
           end
 
           @beta_probabilities = topic_term_counts.map { |weights| normalize!(weights) }
@@ -176,6 +172,53 @@ module Lda
         Array.new(topics) do |topic_index|
           @beta_probabilities[topic_index][word_index] * [gamma_d[topic_index], MIN_PROBABILITY].max
         end
+      end
+
+      def accumulate_topic_term_counts(topic_term_counts, phi_d, words, counts)
+        kernel_counts = nil
+        if @topic_term_accumulator_kernel
+          kernel_counts = @topic_term_accumulator_kernel.call(
+            topic_term_counts,
+            phi_d,
+            words.map(&:to_i),
+            counts.map(&:to_f)
+          )
+        end
+
+        if valid_topic_term_counts?(kernel_counts, topic_term_counts)
+          kernel_counts
+        else
+          default_accumulate_topic_term_counts(topic_term_counts, phi_d, words, counts)
+        end
+      rescue StandardError
+        default_accumulate_topic_term_counts(topic_term_counts, phi_d, words, counts)
+      end
+
+      def valid_topic_term_counts?(candidate, reference)
+        return false unless candidate.is_a?(Array)
+        return false unless candidate.size == reference.size
+
+        candidate.each_with_index do |row, index|
+          return false unless row.is_a?(Array)
+          return false unless row.size == reference[index].size
+        end
+
+        true
+      end
+
+      def default_accumulate_topic_term_counts(topic_term_counts, phi_d, words, counts)
+        topics = topic_term_counts.size
+
+        words.each_with_index do |word_index, word_offset|
+          count = counts[word_offset].to_f
+          next if count.zero?
+
+          topics.times do |topic_index|
+            topic_term_counts[topic_index][word_index] += count * phi_d[word_offset][topic_index]
+          end
+        end
+
+        topic_term_counts
       end
 
       def max_absolute_distance(left, right)

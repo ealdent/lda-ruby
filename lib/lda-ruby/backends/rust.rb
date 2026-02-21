@@ -34,6 +34,7 @@ module Lda
 
         @fallback = PureRuby.new(random_seed: random_seed)
         @fallback.topic_weights_kernel = method(:rust_topic_weights_for_word)
+        @fallback.topic_term_accumulator_kernel = method(:rust_accumulate_topic_term_counts)
       end
 
       def name
@@ -103,6 +104,20 @@ module Lda
           gamma,
           Integer(word_index),
           Float(min_probability)
+        )
+      rescue StandardError
+        nil
+      end
+
+      def rust_accumulate_topic_term_counts(topic_term_counts, phi_d, words, counts)
+        return nil unless defined?(::Lda::RustBackend)
+        return nil unless ::Lda::RustBackend.respond_to?(:accumulate_topic_term_counts)
+
+        ::Lda::RustBackend.accumulate_topic_term_counts(
+          topic_term_counts,
+          phi_d,
+          words,
+          counts
         )
       rescue StandardError
         nil

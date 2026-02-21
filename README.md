@@ -60,7 +60,7 @@ For an interactive shell inside the dev container:
 
 `em("seeded")` is supported by both native and pure backends for deterministic fixture-oriented runs.
 
-Rust status: the extension hook layer is scaffolded in `ext/lda-ruby-rust`. The first EM hot-path kernel (topic weights per word) now runs in Rust when `backend: :rust` is active; remaining model math still delegates to the pure Ruby backend.
+Rust status: the extension hook layer is scaffolded in `ext/lda-ruby-rust`. Current Rust kernels include topic-weights-per-word and topic-term-count accumulation inside EM when `backend: :rust` is active; remaining model math still delegates to the pure Ruby backend.
 `compile_rust` requires a Rust toolchain plus Ruby development headers and `libclang`.
 
 ## Resources
