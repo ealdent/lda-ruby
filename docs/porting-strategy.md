@@ -47,6 +47,7 @@ Completed in `codex/experiment-ruby3-modernization`:
   - batched per-document inference loop (EM inner updates)
   - per-word topic-weight computation
   - topic-term accumulation from per-document `phi`
+  - topic-term normalization and log-beta finalization in EM
 - Rust runtime CI job added (compile + execute rust backend tests).
 - Rust/Pure numeric parity fixtures added for deterministic seeded runs.
 - `compile_rust` now stages a Ruby-loadable extension artifact to avoid `Init_` symbol mismatch from Cargo's `lib*` output naming.

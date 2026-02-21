@@ -15,12 +15,14 @@ module Lda
         @topic_term_accumulator_kernel = nil
         @document_inference_kernel = nil
         @corpus_iteration_kernel = nil
+        @topic_term_finalizer_kernel = nil
       end
 
       attr_writer :topic_weights_kernel,
                   :topic_term_accumulator_kernel,
                   :document_inference_kernel,
-                  :corpus_iteration_kernel
+                  :corpus_iteration_kernel,
+                  :topic_term_finalizer_kernel
 
       def name
         "pure_ruby"
@@ -70,17 +72,13 @@ module Lda
             terms
           )
 
-          @beta_probabilities = topic_term_counts.map { |weights| normalize!(weights) }
+          @beta_probabilities, @beta_log = finalize_topic_term_counts(topic_term_counts)
           @gamma = current_gamma
           @phi = current_phi
 
           break if previous_gamma && average_gamma_shift(previous_gamma, current_gamma) <= Float(em_convergence)
 
           previous_gamma = clone_matrix(current_gamma)
-        end
-
-        @beta_log = @beta_probabilities.map do |topic_weights|
-          topic_weights.map { |probability| Math.log([probability, MIN_PROBABILITY].max) }
         end
 
         nil
@@ -382,6 +380,55 @@ module Lda
         end
 
         topic_term_counts
+      end
+
+      def finalize_topic_term_counts(topic_term_counts)
+        kernel_output = nil
+        if @topic_term_finalizer_kernel
+          kernel_output = @topic_term_finalizer_kernel.call(topic_term_counts, MIN_PROBABILITY)
+        end
+
+        if valid_topic_term_finalization_output?(kernel_output, topic_term_counts)
+          beta_probabilities = kernel_output[0].map { |row| row.map(&:to_f) }
+          beta_log = kernel_output[1].map { |row| row.map(&:to_f) }
+          [beta_probabilities, beta_log]
+        else
+          default_finalize_topic_term_counts(topic_term_counts)
+        end
+      rescue StandardError
+        default_finalize_topic_term_counts(topic_term_counts)
+      end
+
+      def valid_topic_term_finalization_output?(output, topic_term_counts)
+        return false unless output.is_a?(Array)
+        return false unless output.size == 2
+
+        beta_probabilities = output[0]
+        beta_log = output[1]
+        return false unless beta_probabilities.is_a?(Array) && beta_log.is_a?(Array)
+        return false unless beta_probabilities.size == topic_term_counts.size
+        return false unless beta_log.size == topic_term_counts.size
+
+        beta_probabilities.each_with_index do |row, index|
+          return false unless row.is_a?(Array)
+          return false unless row.size == topic_term_counts[index].size
+        end
+
+        beta_log.each_with_index do |row, index|
+          return false unless row.is_a?(Array)
+          return false unless row.size == topic_term_counts[index].size
+        end
+
+        true
+      end
+
+      def default_finalize_topic_term_counts(topic_term_counts)
+        beta_probabilities = topic_term_counts.map { |weights| normalize!(weights) }
+        beta_log = beta_probabilities.map do |topic_weights|
+          topic_weights.map { |probability| Math.log([probability, MIN_PROBABILITY].max) }
+        end
+
+        [beta_probabilities, beta_log]
       end
 
       def max_absolute_distance(left, right)

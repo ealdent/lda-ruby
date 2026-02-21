@@ -37,6 +37,7 @@ module Lda
         @fallback.topic_term_accumulator_kernel = method(:rust_accumulate_topic_term_counts)
         @fallback.document_inference_kernel = method(:rust_infer_document)
         @fallback.corpus_iteration_kernel = method(:rust_infer_corpus_iteration)
+        @fallback.topic_term_finalizer_kernel = method(:rust_finalize_topic_term_counts)
       end
 
       def name
@@ -162,6 +163,18 @@ module Lda
           Float(convergence),
           Float(min_probability),
           Float(init_alpha)
+        )
+      rescue StandardError
+        nil
+      end
+
+      def rust_finalize_topic_term_counts(topic_term_counts, min_probability)
+        return nil unless defined?(::Lda::RustBackend)
+        return nil unless ::Lda::RustBackend.respond_to?(:normalize_topic_term_counts)
+
+        ::Lda::RustBackend.normalize_topic_term_counts(
+          topic_term_counts,
+          Float(min_probability)
         )
       rescue StandardError
         nil

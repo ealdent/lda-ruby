@@ -123,6 +123,41 @@ fn accumulate_topic_term_counts(
     topic_term_counts
 }
 
+fn normalize_topic_term_counts(
+    topic_term_counts: Vec<Vec<f64>>,
+    min_probability: f64,
+) -> (Vec<Vec<f64>>, Vec<Vec<f64>>) {
+    let floor = floor_value(min_probability);
+
+    let mut beta_probabilities = Vec::with_capacity(topic_term_counts.len());
+    let mut beta_log = Vec::with_capacity(topic_term_counts.len());
+
+    for topic_counts in topic_term_counts.iter() {
+        let mut normalized = topic_counts
+            .iter()
+            .map(|value| {
+                if value.is_finite() {
+                    value.max(floor)
+                } else {
+                    floor
+                }
+            })
+            .collect::<Vec<_>>();
+
+        normalize_in_place(&mut normalized);
+
+        let topic_log = normalized
+            .iter()
+            .map(|value| value.max(floor).ln())
+            .collect::<Vec<_>>();
+
+        beta_probabilities.push(normalized);
+        beta_log.push(topic_log);
+    }
+
+    (beta_probabilities, beta_log)
+}
+
 fn infer_document_internal(
     beta_probabilities: &[Vec<f64>],
     gamma_initial: &[f64],
@@ -295,6 +330,10 @@ fn init() -> Result<(), Error> {
     rust_backend_module.define_singleton_method(
         "infer_corpus_iteration",
         function!(infer_corpus_iteration, 7),
+    )?;
+    rust_backend_module.define_singleton_method(
+        "normalize_topic_term_counts",
+        function!(normalize_topic_term_counts, 2),
     )?;
 
     Ok(())
