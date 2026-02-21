@@ -16,13 +16,15 @@ module Lda
         @document_inference_kernel = nil
         @corpus_iteration_kernel = nil
         @topic_term_finalizer_kernel = nil
+        @gamma_shift_kernel = nil
       end
 
       attr_writer :topic_weights_kernel,
                   :topic_term_accumulator_kernel,
                   :document_inference_kernel,
                   :corpus_iteration_kernel,
-                  :topic_term_finalizer_kernel
+                  :topic_term_finalizer_kernel,
+                  :gamma_shift_kernel
 
       def name
         "pure_ruby"
@@ -436,6 +438,21 @@ module Lda
       end
 
       def average_gamma_shift(previous_gamma, current_gamma)
+        kernel_shift = nil
+        if @gamma_shift_kernel
+          kernel_shift = @gamma_shift_kernel.call(previous_gamma, current_gamma)
+        end
+
+        if kernel_shift.is_a?(Numeric) && kernel_shift.finite? && kernel_shift >= 0.0
+          kernel_shift.to_f
+        else
+          default_average_gamma_shift(previous_gamma, current_gamma)
+        end
+      rescue StandardError
+        default_average_gamma_shift(previous_gamma, current_gamma)
+      end
+
+      def default_average_gamma_shift(previous_gamma, current_gamma)
         deltas = []
 
         previous_gamma.each_with_index do |previous_row, row_index|

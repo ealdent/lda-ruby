@@ -158,6 +158,31 @@ fn normalize_topic_term_counts(
     (beta_probabilities, beta_log)
 }
 
+fn average_gamma_shift(previous_gamma: Vec<Vec<f64>>, current_gamma: Vec<Vec<f64>>) -> f64 {
+    let mut sum = 0.0_f64;
+    let mut count = 0_usize;
+
+    for (row_index, previous_row) in previous_gamma.iter().enumerate() {
+        let current_row = current_gamma.get(row_index);
+
+        for (col_index, previous_value) in previous_row.iter().enumerate() {
+            let current_value = current_row
+                .and_then(|row| row.get(col_index))
+                .copied()
+                .unwrap_or(*previous_value);
+
+            sum += (previous_value - current_value).abs();
+            count += 1;
+        }
+    }
+
+    if count == 0 {
+        0.0
+    } else {
+        sum / count as f64
+    }
+}
+
 fn infer_document_internal(
     beta_probabilities: &[Vec<f64>],
     gamma_initial: &[f64],
@@ -335,6 +360,8 @@ fn init() -> Result<(), Error> {
         "normalize_topic_term_counts",
         function!(normalize_topic_term_counts, 2),
     )?;
+    rust_backend_module
+        .define_singleton_method("average_gamma_shift", function!(average_gamma_shift, 2))?;
 
     Ok(())
 }

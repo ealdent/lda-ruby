@@ -14,6 +14,7 @@ Current scope:
   - `Lda::RustBackend.infer_document(beta, gamma_initial, words, counts, max_iter, convergence, min_probability, init_alpha)`
   - `Lda::RustBackend.infer_corpus_iteration(beta, document_words, document_counts, max_iter, convergence, min_probability, init_alpha)`
   - `Lda::RustBackend.normalize_topic_term_counts(topic_term_counts, min_probability)`
+  - `Lda::RustBackend.average_gamma_shift(previous_gamma, current_gamma)`
 
 Hot-path kernels currently executed in Rust when `backend: :rust` is active:
 - topic weights for a word across topics
@@ -21,6 +22,7 @@ Hot-path kernels currently executed in Rust when `backend: :rust` is active:
 - full per-document inference loop (batched inner EM updates)
 - full per-iteration corpus inference (batched document processing)
 - topic-term normalization and log-probability finalization for EM beta updates
+- gamma convergence shift reduction between EM iterations
 
 Remaining numeric LDA kernels are still provided by the pure Ruby backend and will move incrementally.
 
