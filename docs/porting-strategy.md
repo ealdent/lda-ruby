@@ -50,6 +50,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Rust runtime CI job added (compile + execute rust backend tests).
 - Rust/Pure numeric parity fixtures added for deterministic seeded runs.
 - `compile_rust` now stages a Ruby-loadable extension artifact to avoid `Init_` symbol mismatch from Cargo's `lib*` output naming.
+- Dockerized rust runtime workflow added for local parity with CI (`Dockerfile.rust`, `bin/docker-test-rust`).
 
 ### Phase 1: Stabilize API and tests
 

@@ -32,10 +32,22 @@ bundle exec rake test
 ./bin/docker-test
 ```
 
+Rust backend runtime checks in Docker:
+
+```bash
+./bin/docker-test-rust
+```
+
 For an interactive shell inside the dev container:
 
 ```bash
 ./bin/docker-shell
+```
+
+For an interactive shell with Rust toolchain + bindgen dependencies:
+
+```bash
+./bin/docker-shell-rust
 ```
 
 ### Build tasks

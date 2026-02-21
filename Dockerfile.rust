@@ -1,0 +1,21 @@
+# syntax=docker/dockerfile:1.7
+
+FROM ruby:3.3-bookworm
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends build-essential git curl pkg-config clang libclang-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+WORKDIR /workspace
+
+COPY Gemfile lda-ruby.gemspec README.md CHANGELOG.md VERSION.yml ./
+COPY lib ./lib
+
+RUN bundle install
+
+COPY . .
+
+CMD ["bash"]
