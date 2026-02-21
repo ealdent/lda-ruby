@@ -41,10 +41,11 @@ For an interactive shell inside the dev container:
 ### Build tasks
 
 - `bundle exec rake compile` builds the native extension.
-- `bundle exec rake compile_rust` builds the experimental Rust extension scaffold.
+- `bundle exec rake compile_rust` builds the experimental Rust extension and stages a Ruby-loadable artifact (`lda_ruby_rust.<dlext>`).
 - `bundle exec rake test` rebuilds the extension, then runs tests.
 - `bundle exec rake build` builds the gem package.
 - `bundle exec ruby -Ilib:test test/backend_compatibility_test.rb` runs backend compatibility fixtures.
+- `LDA_RUBY_BACKEND=rust bundle exec ruby -Ilib:test test/backend_compatibility_test.rb` runs parity checks in rust mode.
 
 ### Backend selection
 
@@ -60,7 +61,7 @@ For an interactive shell inside the dev container:
 
 `em("seeded")` is supported by both native and pure backends for deterministic fixture-oriented runs.
 
-Rust status: the extension hook layer is scaffolded in `ext/lda-ruby-rust`. Current Rust kernels include batched per-iteration corpus inference, batched per-document inference, topic-weights-per-word, and topic-term-count accumulation inside EM when `backend: :rust` is active; remaining model math still delegates to the pure Ruby backend.
+Rust status: the extension hook layer is scaffolded in `ext/lda-ruby-rust`. Current Rust kernels include batched per-iteration corpus inference, batched per-document inference, topic-weights-per-word, and topic-term-count accumulation inside EM when `backend: :rust` is active; remaining model math still delegates to the pure Ruby backend. CI now runs dedicated rust-runtime checks and numeric parity fixtures against the pure backend.
 `compile_rust` requires a Rust toolchain plus Ruby development headers and `libclang`.
 
 ## Resources
