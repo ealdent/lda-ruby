@@ -54,6 +54,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Gem packaging now excludes local Rust cargo build artifacts (`target/**`) for clean release builds.
 - Backend benchmark driver added (`bin/benchmark-backends`) to track pure/native/rust runtime deltas.
 - Source install path now has explicit Rust build policy via `LDA_RUBY_RUST_BUILD=auto|always|never`.
+- Docker install-policy matrix script added (`bin/docker-test-install-policies`) to verify source install behavior across environments.
 
 ### Phase 1: Stabilize API and tests
 

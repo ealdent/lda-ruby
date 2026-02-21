@@ -38,6 +38,12 @@ Rust backend runtime checks in Docker:
 ./bin/docker-test-rust
 ```
 
+Install policy matrix checks in Docker:
+
+```bash
+./bin/docker-test-install-policies
+```
+
 For an interactive shell inside the dev container:
 
 ```bash
@@ -59,6 +65,7 @@ For an interactive shell with Rust toolchain + bindgen dependencies:
 - `bundle exec ruby -Ilib:test test/backend_compatibility_test.rb` runs backend compatibility fixtures.
 - `LDA_RUBY_BACKEND=rust bundle exec ruby -Ilib:test test/backend_compatibility_test.rb` runs parity checks in rust mode.
 - `./bin/benchmark-backends` benchmarks available backends (`pure`, `native`, `rust`) and prints JSON.
+- `./bin/docker-test-install-policies` verifies source-install behavior for `LDA_RUBY_RUST_BUILD=auto|always|never`.
 
 Benchmark environment variables:
 - `BENCH_RUNS` (default: `3`)
