@@ -1,15 +1,17 @@
 # frozen_string_literal: true
 
 require "lda-ruby/version"
+require "rbconfig"
 
 rust_extension_loaded = false
+rust_dlext = RbConfig::CONFIG.fetch("DLEXT")
 
 [
   "lda_ruby_rust",
   "../ext/lda-ruby-rust/target/release/lda_ruby_rust",
-  "../ext/lda-ruby-rust/target/release/liblda_ruby_rust",
+  "../ext/lda-ruby-rust/target/release/lda_ruby_rust.#{rust_dlext}",
   "../ext/lda-ruby-rust/target/debug/lda_ruby_rust",
-  "../ext/lda-ruby-rust/target/debug/liblda_ruby_rust"
+  "../ext/lda-ruby-rust/target/debug/lda_ruby_rust.#{rust_dlext}"
 ].each do |rust_extension_candidate|
   begin
     if rust_extension_candidate.start_with?("../")

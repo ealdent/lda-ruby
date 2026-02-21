@@ -4,6 +4,7 @@ require "bundler/gem_tasks"
 require "rake/clean"
 require "rake/testtask"
 require "rbconfig"
+require "fileutils"
 
 EXT_DIR = File.expand_path("ext/lda-ruby", __dir__)
 EXT_MAKEFILE = File.join(EXT_DIR, "Makefile")
@@ -33,6 +34,9 @@ task :compile_rust do
   Dir.chdir(RUST_EXT_DIR) do
     sh cargo, "build", "--release"
   end
+
+  staged_path = stage_rust_extension_for_ruby
+  puts "Staged Rust extension at #{staged_path}"
 end
 
 desc "Run unit tests"
@@ -44,3 +48,34 @@ end
 
 task test: :compile
 task default: :test
+
+def stage_rust_extension_for_ruby
+  source = File.join(RUST_EXT_DIR, "target", "release", rust_cdylib_filename)
+  unless File.exist?(source)
+    abort "Expected Rust extension artifact at #{source}, but it was not produced."
+  end
+
+  destination = File.join(
+    RUST_EXT_DIR,
+    "target",
+    "release",
+    "lda_ruby_rust.#{RbConfig::CONFIG.fetch("DLEXT")}"
+  )
+  FileUtils.cp(source, destination)
+  destination
+end
+
+def rust_cdylib_filename
+  host_os = RbConfig::CONFIG.fetch("host_os")
+  extension =
+    case host_os
+    when /darwin/
+      "dylib"
+    when /mswin|mingw|cygwin/
+      "dll"
+    else
+      "so"
+    end
+
+  "liblda_ruby_rust.#{extension}"
+end

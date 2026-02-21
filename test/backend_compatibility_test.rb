@@ -52,6 +52,22 @@ class BackendCompatibilityTest < Test::Unit::TestCase
     assert_backend_output_valid(rust)
   end
 
+  def test_rust_and_pure_backend_numeric_parity
+    return unless Lda::RUST_EXTENSION_LOADED
+
+    pure = build_and_train(:pure)
+    rust = build_and_train(:rust)
+
+    assert_nested_close(pure.gamma, rust.gamma, 1e-9)
+    assert_nested_close(pure.beta, rust.beta, 1e-9)
+    assert_nested_close(pure.phi, rust.phi, 1e-9)
+    assert_nested_close(
+      exponentiate_nested(pure.compute_topic_document_probability),
+      exponentiate_nested(rust.compute_topic_document_probability),
+      1e-6
+    )
+  end
+
   private
 
   def build_and_train(backend)
@@ -107,5 +123,24 @@ class BackendCompatibilityTest < Test::Unit::TestCase
     top_words = lda.top_words(4)
     assert_equal 3, top_words.size
     top_words.each_value { |words| assert_equal 4, words.size }
+  end
+
+  def assert_nested_close(left, right, tolerance)
+    assert_equal left.class, right.class
+
+    if left.is_a?(Array)
+      assert_equal left.size, right.size
+      left.each_with_index do |left_item, index|
+        assert_nested_close(left_item, right[index], tolerance)
+      end
+    else
+      assert_in_delta left.to_f, right.to_f, tolerance
+    end
+  end
+
+  def exponentiate_nested(value)
+    return Math.exp(value.to_f) unless value.is_a?(Array)
+
+    value.map { |item| exponentiate_nested(item) }
   end
 end

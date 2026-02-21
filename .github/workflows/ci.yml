@@ -62,6 +62,40 @@ jobs:
       - name: Run pipeline smoke test in pure mode
         run: bundle exec ruby -Ilib:test test/simple_pipeline_test.rb
 
+  rust-runtime:
+    name: rust runtime / ubuntu-latest / ruby-3.3
+    runs-on: ubuntu-latest
+
+    env:
+      LDA_RUBY_BACKEND: rust
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust bindgen dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-dev pkg-config
+
+      - name: Build native and Rust extensions
+        run: bundle exec rake compile compile_rust
+
+      - name: Run compatibility tests in rust mode
+        run: bundle exec ruby -Ilib:test test/backend_compatibility_test.rb
+
+      - name: Run full model tests in rust mode
+        run: bundle exec ruby -Ilib:test test/lda_ruby_test.rb
+
+      - name: Run pipeline smoke test in rust mode
+        run: bundle exec ruby -Ilib:test test/simple_pipeline_test.rb
+
   rust-scaffold:
     name: rust scaffold / ubuntu-latest
     runs-on: ubuntu-latest
