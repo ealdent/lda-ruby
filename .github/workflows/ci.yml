@@ -61,3 +61,25 @@ jobs:
 
       - name: Run pipeline smoke test in pure mode
         run: bundle exec ruby -Ilib:test test/simple_pipeline_test.rb
+
+  rust-scaffold:
+    name: rust scaffold / ubuntu-latest
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: false
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust bindgen dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-dev pkg-config
+
+      - name: Check Rust extension scaffold
+        run: cargo check --manifest-path ext/lda-ruby-rust/Cargo.toml

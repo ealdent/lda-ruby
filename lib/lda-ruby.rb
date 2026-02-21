@@ -4,20 +4,24 @@ require "lda-ruby/version"
 
 rust_extension_loaded = false
 
-begin
-  require "lda_ruby_rust"
-  rust_extension_loaded = true
-rescue LoadError
+[
+  "lda_ruby_rust",
+  "../ext/lda-ruby-rust/target/release/lda_ruby_rust",
+  "../ext/lda-ruby-rust/target/release/liblda_ruby_rust",
+  "../ext/lda-ruby-rust/target/debug/lda_ruby_rust",
+  "../ext/lda-ruby-rust/target/debug/liblda_ruby_rust"
+].each do |rust_extension_candidate|
   begin
-    require_relative "../ext/lda-ruby-rust/target/release/lda_ruby_rust"
-    rust_extension_loaded = true
-  rescue LoadError
-    begin
-      require_relative "../ext/lda-ruby-rust/target/debug/lda_ruby_rust"
-      rust_extension_loaded = true
-    rescue LoadError
-      rust_extension_loaded = false
+    if rust_extension_candidate.start_with?("../")
+      require_relative rust_extension_candidate
+    else
+      require rust_extension_candidate
     end
+
+    rust_extension_loaded = true
+    break
+  rescue LoadError
+    next
   end
 end
 

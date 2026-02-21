@@ -238,9 +238,26 @@ class LdaRubyTest < Test::Unit::TestCase
     end
 
     should "raise when rust backend is requested but extension is unavailable" do
-      return if Lda::RUST_EXTENSION_LOADED
+      if Lda::RUST_EXTENSION_LOADED
+        assert true
+      else
+        assert_raise(LoadError) { Lda::Lda.new(@corpus, backend: :rust) }
+      end
+    end
 
-      assert_raise(LoadError) { Lda::Lda.new(@corpus, backend: :rust) }
+    should "run with rust backend when extension is available" do
+      if Lda::RUST_EXTENSION_LOADED
+        rust_lda = Lda::Lda.new(@corpus, backend: :rust, random_seed: 1234)
+        rust_lda.verbose = false
+        rust_lda.num_topics = 4
+        rust_lda.em("seeded")
+
+        assert_equal "rust", rust_lda.backend_name
+        assert_equal @corpus.num_docs, rust_lda.gamma.size
+        assert_equal @corpus.num_docs, rust_lda.phi.size
+      else
+        assert true
+      end
     end
 
     context "after running em" do

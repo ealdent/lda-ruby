@@ -33,6 +33,7 @@ module Lda
         raise LoadError, "Rust backend is unavailable for this environment" unless self.class.available?
 
         @fallback = PureRuby.new(random_seed: random_seed)
+        @fallback.topic_weights_kernel = method(:rust_topic_weights_for_word)
       end
 
       def name
@@ -89,6 +90,20 @@ module Lda
         return unless ::Lda::RustBackend.respond_to?(:before_em)
 
         ::Lda::RustBackend.before_em(start.to_s, @corpus&.num_docs.to_i, @corpus&.num_terms.to_i)
+      rescue StandardError
+        nil
+      end
+
+      def rust_topic_weights_for_word(beta_probabilities, gamma, word_index, min_probability)
+        return nil unless defined?(::Lda::RustBackend)
+        return nil unless ::Lda::RustBackend.respond_to?(:topic_weights_for_word)
+
+        ::Lda::RustBackend.topic_weights_for_word(
+          beta_probabilities,
+          gamma,
+          Integer(word_index),
+          Float(min_probability)
+        )
       rescue StandardError
         nil
       end

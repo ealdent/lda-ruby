@@ -11,7 +11,10 @@ module Lda
         @beta_log = nil
         @gamma = nil
         @phi = nil
+        @topic_weights_kernel = nil
       end
+
+      attr_writer :topic_weights_kernel
 
       def name
         "pure_ruby"
@@ -57,11 +60,7 @@ module Lda
               gamma_next = Array.new(topics, Float(init_alpha))
 
               document.words.each_with_index do |word_index, word_offset|
-                topic_weights = Array.new(topics) do |topic_index|
-                  @beta_probabilities[topic_index][word_index] * [gamma_d[topic_index], MIN_PROBABILITY].max
-                end
-
-                normalize!(topic_weights)
+                topic_weights = topic_weights_for_word(word_index, gamma_d)
                 phi_d[word_offset] = topic_weights
 
                 count = document.counts[word_offset].to_f
@@ -147,6 +146,36 @@ module Lda
         end
 
         topic_term_counts.map { |weights| normalize!(weights) }
+      end
+
+      def topic_weights_for_word(word_index, gamma_d)
+        kernel_weights = nil
+        if @topic_weights_kernel
+          kernel_weights = @topic_weights_kernel.call(@beta_probabilities, gamma_d, Integer(word_index), MIN_PROBABILITY)
+        end
+
+        weights =
+          if valid_topic_weights?(kernel_weights, gamma_d.length)
+            kernel_weights.map(&:to_f)
+          else
+            default_topic_weights_for_word(word_index, gamma_d)
+          end
+
+        normalize!(weights)
+      rescue StandardError
+        normalize!(default_topic_weights_for_word(word_index, gamma_d))
+      end
+
+      def valid_topic_weights?(weights, expected_size)
+        weights.is_a?(Array) && weights.size == expected_size
+      end
+
+      def default_topic_weights_for_word(word_index, gamma_d)
+        topics = gamma_d.length
+
+        Array.new(topics) do |topic_index|
+          @beta_probabilities[topic_index][word_index] * [gamma_d[topic_index], MIN_PROBABILITY].max
+        end
       end
 
       def max_absolute_distance(left, right)

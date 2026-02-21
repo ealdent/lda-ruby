@@ -43,6 +43,15 @@ class BackendCompatibilityTest < Test::Unit::TestCase
     assert_equal native.phi.size, pure.phi.size
   end
 
+  def test_rust_backend_seeded_fixture
+    return unless Lda::RUST_EXTENSION_LOADED
+
+    rust = build_and_train(:rust)
+
+    assert_equal "rust", rust.backend_name
+    assert_backend_output_valid(rust)
+  end
+
   private
 
   def build_and_train(backend)
