@@ -103,6 +103,10 @@ module Lda
         raise NotImplementedError, "#{self.class} must implement #model"
       end
 
+      def topic_document_probability(_phi_matrix, _document_counts)
+        nil
+      end
+
       private
 
       def normalize!(weights)

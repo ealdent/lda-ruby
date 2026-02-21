@@ -183,6 +183,45 @@ fn average_gamma_shift(previous_gamma: Vec<Vec<f64>>, current_gamma: Vec<Vec<f64
     }
 }
 
+fn topic_document_probability(
+    phi_tensor: Vec<Vec<Vec<f64>>>,
+    document_counts: Vec<Vec<f64>>,
+    num_topics: usize,
+    min_probability: f64,
+) -> Vec<Vec<f64>> {
+    let floor = floor_value(min_probability);
+    let mut output = Vec::with_capacity(document_counts.len());
+
+    for (doc_index, counts) in document_counts.iter().enumerate() {
+        let mut tops = vec![0.0_f64; num_topics];
+        let ttl: f64 = counts.iter().copied().sum();
+
+        if let Some(doc_phi) = phi_tensor.get(doc_index) {
+            for (word_index, word_dist) in doc_phi.iter().enumerate() {
+                let count = counts.get(word_index).copied().unwrap_or(0.0);
+                if count == 0.0 {
+                    continue;
+                }
+
+                for topic_index in 0..num_topics {
+                    let top_prob = word_dist.get(topic_index).copied().unwrap_or(floor).max(floor);
+                    tops[topic_index] += top_prob.ln() * count;
+                }
+            }
+        }
+
+        if ttl.is_finite() && ttl > 0.0 {
+            for value in tops.iter_mut() {
+                *value /= ttl;
+            }
+        }
+
+        output.push(tops);
+    }
+
+    output
+}
+
 fn infer_document_internal(
     beta_probabilities: &[Vec<f64>],
     gamma_initial: &[f64],
@@ -362,6 +401,10 @@ fn init() -> Result<(), Error> {
     )?;
     rust_backend_module
         .define_singleton_method("average_gamma_shift", function!(average_gamma_shift, 2))?;
+    rust_backend_module.define_singleton_method(
+        "topic_document_probability",
+        function!(topic_document_probability, 4),
+    )?;
 
     Ok(())
 }

@@ -39,6 +39,7 @@ module Lda
         @fallback.corpus_iteration_kernel = method(:rust_infer_corpus_iteration)
         @fallback.topic_term_finalizer_kernel = method(:rust_finalize_topic_term_counts)
         @fallback.gamma_shift_kernel = method(:rust_average_gamma_shift)
+        @fallback.topic_document_probability_kernel = method(:rust_topic_document_probability)
       end
 
       def name
@@ -186,6 +187,20 @@ module Lda
         return nil unless ::Lda::RustBackend.respond_to?(:average_gamma_shift)
 
         ::Lda::RustBackend.average_gamma_shift(previous_gamma, current_gamma)
+      rescue StandardError
+        nil
+      end
+
+      def rust_topic_document_probability(phi_matrix, document_counts, num_topics, min_probability)
+        return nil unless defined?(::Lda::RustBackend)
+        return nil unless ::Lda::RustBackend.respond_to?(:topic_document_probability)
+
+        ::Lda::RustBackend.topic_document_probability(
+          phi_matrix,
+          document_counts,
+          Integer(num_topics),
+          Float(min_probability)
+        )
       rescue StandardError
         nil
       end

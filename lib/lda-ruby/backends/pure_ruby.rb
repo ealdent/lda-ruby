@@ -17,6 +17,7 @@ module Lda
         @corpus_iteration_kernel = nil
         @topic_term_finalizer_kernel = nil
         @gamma_shift_kernel = nil
+        @topic_document_probability_kernel = nil
       end
 
       attr_writer :topic_weights_kernel,
@@ -24,7 +25,8 @@ module Lda
                   :document_inference_kernel,
                   :corpus_iteration_kernel,
                   :topic_term_finalizer_kernel,
-                  :gamma_shift_kernel
+                  :gamma_shift_kernel,
+                  :topic_document_probability_kernel
 
       def name
         "pure_ruby"
@@ -100,6 +102,26 @@ module Lda
 
       def model
         [Integer(num_topics), max_term_index + 1, Float(init_alpha)]
+      end
+
+      def topic_document_probability(phi_matrix, document_counts)
+        kernel_output = nil
+        if @topic_document_probability_kernel
+          kernel_output = @topic_document_probability_kernel.call(
+            phi_matrix,
+            document_counts,
+            Integer(num_topics),
+            MIN_PROBABILITY
+          )
+        end
+
+        if valid_topic_document_probability_output?(kernel_output, document_counts.size, Integer(num_topics))
+          kernel_output.map { |row| row.map(&:to_f) }
+        else
+          default_topic_document_probability(phi_matrix, document_counts)
+        end
+      rescue StandardError
+        default_topic_document_probability(phi_matrix, document_counts)
       end
 
       private
@@ -431,6 +453,48 @@ module Lda
         end
 
         [beta_probabilities, beta_log]
+      end
+
+      def valid_topic_document_probability_output?(output, expected_docs, expected_topics)
+        return false unless output.is_a?(Array)
+        return false unless output.size == expected_docs
+
+        output.each do |row|
+          return false unless row.is_a?(Array)
+          return false unless row.size == expected_topics
+          row.each do |value|
+            return false unless value.is_a?(Numeric)
+            return false unless value.finite?
+          end
+        end
+
+        true
+      end
+
+      def default_topic_document_probability(phi_matrix, document_counts)
+        topics = Integer(num_topics)
+        output = []
+
+        document_counts.each_with_index do |counts, doc_index|
+          tops = Array.new(topics, 0.0)
+          ttl = counts.inject(0.0) { |sum, value| sum + value.to_f }
+          doc_phi = phi_matrix[doc_index] || []
+
+          doc_phi.each_with_index do |word_dist, word_idx|
+            count = counts[word_idx].to_f
+            next if count.zero?
+
+            topics.times do |topic_idx|
+              top_prob = word_dist[topic_idx].to_f
+              tops[topic_idx] += Math.log([top_prob, MIN_PROBABILITY].max) * count
+            end
+          end
+
+          tops = tops.map { |value| value / ttl } if ttl.positive?
+          output << tops
+        end
+
+        output
       end
 
       def max_absolute_distance(left, right)

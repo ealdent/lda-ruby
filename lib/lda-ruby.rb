@@ -350,13 +350,21 @@ module Lda
     # for the topic in the document.
     #
     def compute_topic_document_probability
+      phi_matrix = phi
+      document_counts = @corpus.documents.map(&:counts)
+
+      backend_output = @backend.topic_document_probability(phi_matrix, document_counts)
+      if valid_topic_document_probability_output?(backend_output, document_counts.size, num_topics)
+        return backend_output
+      end
+
       outp = []
 
       @corpus.documents.each_with_index do |doc, idx|
         tops = [0.0] * num_topics
         ttl = doc.counts.inject(0.0) { |sum, i| sum + i }
 
-        phi[idx].each_with_index do |word_dist, word_idx|
+        phi_matrix[idx].each_with_index do |word_dist, word_idx|
           word_dist.each_with_index do |top_prob, top_idx|
             tops[top_idx] += Math.log([top_prob, 1e-300].max) * doc.counts[word_idx]
           end
@@ -367,6 +375,22 @@ module Lda
       end
 
       outp
+    end
+
+    def valid_topic_document_probability_output?(output, expected_docs, expected_topics)
+      return false unless output.is_a?(Array)
+      return false unless output.size == expected_docs
+
+      output.each do |row|
+        return false unless row.is_a?(Array)
+        return false unless row.size == expected_topics
+        row.each do |value|
+          return false unless value.is_a?(Numeric)
+          return false unless value.finite?
+        end
+      end
+
+      true
     end
 
     #
