@@ -67,6 +67,19 @@ Benchmark environment variables:
 - `BENCH_MAX_ITER` (default: `20`)
 - `BENCH_EM_MAX_ITER` (default: `40`)
 
+### Install-time Rust build policy
+
+Source installs now run both extension setup scripts (`ext/lda-ruby/extconf.rb` and `ext/lda-ruby-rust/extconf.rb`).
+
+Rust build policy is controlled by `LDA_RUBY_RUST_BUILD`:
+- `auto` (default): build Rust extension if `cargo` is available, otherwise skip.
+- `always`: require Rust extension build and fail install if unavailable.
+- `never`: skip Rust extension build.
+
+Examples:
+- `LDA_RUBY_RUST_BUILD=always gem install lda-ruby`
+- `LDA_RUBY_RUST_BUILD=never bundle exec rake compile`
+
 ### Backend selection
 
 - Default mode is `auto`: native extension when available, otherwise pure Ruby.
@@ -82,7 +95,7 @@ Benchmark environment variables:
 `em("seeded")` is supported by both native and pure backends for deterministic fixture-oriented runs.
 
 Rust status: the extension hook layer is scaffolded in `ext/lda-ruby-rust`. Current Rust kernels include batched per-iteration corpus inference, batched per-document inference, topic-weights-per-word, and topic-term-count accumulation inside EM when `backend: :rust` is active; remaining model math still delegates to the pure Ruby backend. CI now runs dedicated rust-runtime checks and numeric parity fixtures against the pure backend.
-`compile_rust` requires a Rust toolchain plus Ruby development headers and `libclang`.
+`compile_rust` and `LDA_RUBY_RUST_BUILD=always` require a Rust toolchain plus Ruby development headers and `libclang`.
 Gem packaging excludes local Rust build artifacts (`ext/lda-ruby-rust/target/**`) so local cargo outputs do not leak into published gems.
 
 ## Resources

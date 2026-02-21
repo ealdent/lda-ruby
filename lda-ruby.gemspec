@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
     "changelog_uri" => "#{spec.homepage}/blob/master/CHANGELOG.md"
   }
 
-  spec.extensions = ["ext/lda-ruby/extconf.rb"]
+  spec.extensions = ["ext/lda-ruby/extconf.rb", "ext/lda-ruby-rust/extconf.rb"]
   spec.require_paths = ["lib"]
 
   included = %w[CHANGELOG.md Gemfile README.md VERSION.yml lda-ruby.gemspec license.txt]
@@ -34,7 +34,9 @@ Gem::Specification.new do |spec|
     .reject { |path| path.start_with?("ext/lda-ruby-rust/target/") }
     .reject { |path| path == "ext/lda-ruby-rust/Cargo.lock" }
     .reject { |path| path.end_with?(".o", ".so", ".bundle", ".dylib", ".dll", ".rlib", ".rmeta") }
-    .reject { |path| ["Makefile", "ext/lda-ruby/Makefile", "ext/lda-ruby/mkmf.log"].include?(path) }
+    .reject do |path|
+      ["Makefile", "ext/lda-ruby/Makefile", "ext/lda-ruby/mkmf.log", "ext/lda-ruby-rust/Makefile"].include?(path)
+    end
     .uniq
     .sort
 end

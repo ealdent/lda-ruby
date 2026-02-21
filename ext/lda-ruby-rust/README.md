@@ -30,3 +30,11 @@ cargo build --release
 ```
 
 Then run Ruby with `require "lda_ruby_rust"` available on load path.
+
+## Install-time policy
+
+During source gem installs, `ext/lda-ruby-rust/extconf.rb` can optionally build this extension.
+
+- `LDA_RUBY_RUST_BUILD=auto` (default): build when `cargo` is available.
+- `LDA_RUBY_RUST_BUILD=always`: require a successful Rust build or fail installation.
+- `LDA_RUBY_RUST_BUILD=never`: always skip Rust build.

@@ -15,3 +15,8 @@ lda-ruby-*.gem
 Gemfile.lock
 /ext/lda-ruby-rust/target
 /ext/lda-ruby-rust/Cargo.lock
+/ext/lda-ruby-rust/Makefile
+/lib/lda_ruby_rust.so
+/lib/lda_ruby_rust.bundle
+/lib/lda_ruby_rust.dylib
+/lib/lda_ruby_rust.dll
