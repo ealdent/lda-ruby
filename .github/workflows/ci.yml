@@ -96,6 +96,17 @@ jobs:
       - name: Run pipeline smoke test in rust mode
         run: bundle exec ruby -Ilib:test test/simple_pipeline_test.rb
 
+  install-policy-matrix:
+    name: install policy matrix / ubuntu-latest
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Docker install policy matrix checks
+        run: ./bin/docker-test-install-policies
+
   rust-scaffold:
     name: rust scaffold / ubuntu-latest
     runs-on: ubuntu-latest
