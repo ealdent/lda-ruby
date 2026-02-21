@@ -14,9 +14,13 @@ module Lda
         @topic_weights_kernel = nil
         @topic_term_accumulator_kernel = nil
         @document_inference_kernel = nil
+        @corpus_iteration_kernel = nil
       end
 
-      attr_writer :topic_weights_kernel, :topic_term_accumulator_kernel, :document_inference_kernel
+      attr_writer :topic_weights_kernel,
+                  :topic_term_accumulator_kernel,
+                  :document_inference_kernel,
+                  :corpus_iteration_kernel
 
       def name
         "pure_ruby"
@@ -47,24 +51,24 @@ module Lda
             initial_topic_term_probabilities(topics, terms)
           end
 
+        document_words = @corpus.documents.map { |document| document.words.map(&:to_i) }
+        document_counts = @corpus.documents.map { |document| document.counts.map(&:to_f) }
+        document_totals = document_counts.map { |counts| counts.sum.to_f }
+        document_lengths = document_words.map(&:length)
+
         previous_gamma = nil
 
         Integer(em_max_iter).times do
           topic_term_counts = Array.new(topics) { Array.new(terms, MIN_PROBABILITY) }
-          current_gamma = Array.new(@corpus.num_docs) { Array.new(topics, Float(init_alpha)) }
-          current_phi = Array.new(@corpus.num_docs)
-
-          @corpus.documents.each_with_index do |document, document_index|
-            gamma_d = Array.new(topics, Float(init_alpha) + (document.total.to_f / topics))
-            phi_d = Array.new(document.length) { Array.new(topics, 1.0 / topics) }
-
-            gamma_d, phi_d = infer_document(gamma_d, phi_d, document.words, document.counts)
-
-            current_gamma[document_index] = gamma_d
-            current_phi[document_index] = phi_d
-
-            topic_term_counts = accumulate_topic_term_counts(topic_term_counts, phi_d, document.words, document.counts)
-          end
+          current_gamma, current_phi, topic_term_counts = infer_corpus_iteration(
+            topic_term_counts,
+            document_words,
+            document_counts,
+            document_totals,
+            document_lengths,
+            topics,
+            terms
+          )
 
           @beta_probabilities = topic_term_counts.map { |weights| normalize!(weights) }
           @gamma = current_gamma
@@ -223,6 +227,114 @@ module Lda
         end
 
         [gamma_d, phi_d]
+      end
+
+      def infer_corpus_iteration(
+        topic_term_counts_initial,
+        document_words,
+        document_counts,
+        document_totals,
+        document_lengths,
+        topics,
+        terms
+      )
+        kernel_output = nil
+
+        if @corpus_iteration_kernel
+          kernel_output = @corpus_iteration_kernel.call(
+            @beta_probabilities,
+            document_words,
+            document_counts,
+            Integer(max_iter),
+            Float(convergence),
+            MIN_PROBABILITY,
+            Float(init_alpha)
+          )
+        end
+
+        if valid_corpus_iteration_output?(kernel_output, document_words.size, document_lengths, topics, terms)
+          current_gamma = kernel_output[0].map { |row| row.map(&:to_f) }
+          current_phi = kernel_output[1].map do |doc_phi|
+            doc_phi.map { |row| normalize!(row.map(&:to_f)) }
+          end
+          topic_term_counts = kernel_output[2].map { |row| row.map(&:to_f) }
+
+          [current_gamma, current_phi, topic_term_counts]
+        else
+          default_infer_corpus_iteration(
+            topic_term_counts_initial,
+            document_words,
+            document_counts,
+            document_totals,
+            topics
+          )
+        end
+      rescue StandardError
+        default_infer_corpus_iteration(
+          topic_term_counts_initial,
+          document_words,
+          document_counts,
+          document_totals,
+          topics
+        )
+      end
+
+      def valid_corpus_iteration_output?(output, expected_docs, expected_lengths, expected_topics, expected_terms)
+        return false unless output.is_a?(Array)
+        return false unless output.size == 3
+
+        gamma_matrix = output[0]
+        phi_tensor = output[1]
+        topic_term_counts = output[2]
+
+        return false unless gamma_matrix.is_a?(Array) && gamma_matrix.size == expected_docs
+        return false unless phi_tensor.is_a?(Array) && phi_tensor.size == expected_docs
+        return false unless topic_term_counts.is_a?(Array) && topic_term_counts.size == expected_topics
+
+        gamma_matrix.each do |row|
+          return false unless row.is_a?(Array) && row.size == expected_topics
+        end
+
+        phi_tensor.each_with_index do |doc_phi, index|
+          return false unless doc_phi.is_a?(Array) && doc_phi.size == expected_lengths[index]
+          doc_phi.each do |row|
+            return false unless row.is_a?(Array) && row.size == expected_topics
+          end
+        end
+
+        topic_term_counts.each do |row|
+          return false unless row.is_a?(Array) && row.size == expected_terms
+        end
+
+        true
+      end
+
+      def default_infer_corpus_iteration(
+        topic_term_counts_initial,
+        document_words,
+        document_counts,
+        document_totals,
+        topics
+      )
+        topic_term_counts = clone_matrix(topic_term_counts_initial)
+        current_gamma = Array.new(document_words.size) { Array.new(topics, Float(init_alpha)) }
+        current_phi = Array.new(document_words.size)
+
+        document_words.each_with_index do |words, document_index|
+          counts = document_counts[document_index]
+          total = document_totals[document_index].to_f
+
+          gamma_d = Array.new(topics, Float(init_alpha) + (total / topics))
+          phi_d = Array.new(words.length) { Array.new(topics, 1.0 / topics) }
+
+          gamma_d, phi_d = infer_document(gamma_d, phi_d, words, counts)
+
+          current_gamma[document_index] = gamma_d
+          current_phi[document_index] = phi_d
+          topic_term_counts = accumulate_topic_term_counts(topic_term_counts, phi_d, words, counts)
+        end
+
+        [current_gamma, current_phi, topic_term_counts]
       end
 
       def accumulate_topic_term_counts(topic_term_counts, phi_d, words, counts)

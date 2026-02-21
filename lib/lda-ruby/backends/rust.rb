@@ -36,6 +36,7 @@ module Lda
         @fallback.topic_weights_kernel = method(:rust_topic_weights_for_word)
         @fallback.topic_term_accumulator_kernel = method(:rust_accumulate_topic_term_counts)
         @fallback.document_inference_kernel = method(:rust_infer_document)
+        @fallback.corpus_iteration_kernel = method(:rust_infer_corpus_iteration)
       end
 
       def name
@@ -145,6 +146,23 @@ module Lda
         gamma = output.first
         phi_rows = output[1..] || []
         [gamma, phi_rows]
+      rescue StandardError
+        nil
+      end
+
+      def rust_infer_corpus_iteration(beta_probabilities, document_words, document_counts, max_iter, convergence, min_probability, init_alpha)
+        return nil unless defined?(::Lda::RustBackend)
+        return nil unless ::Lda::RustBackend.respond_to?(:infer_corpus_iteration)
+
+        ::Lda::RustBackend.infer_corpus_iteration(
+          beta_probabilities,
+          document_words,
+          document_counts,
+          Integer(max_iter),
+          Float(convergence),
+          Float(min_probability),
+          Float(init_alpha)
+        )
       rescue StandardError
         nil
       end

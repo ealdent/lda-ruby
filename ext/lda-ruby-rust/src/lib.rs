@@ -76,15 +76,15 @@ fn topic_weights_for_word(
     compute_topic_weights(&beta_probabilities, &gamma, word_index, floor)
 }
 
-fn accumulate_topic_term_counts(
-    mut topic_term_counts: Vec<Vec<f64>>,
-    phi_d: Vec<Vec<f64>>,
-    words: Vec<usize>,
-    counts: Vec<f64>,
-) -> Vec<Vec<f64>> {
+fn accumulate_topic_term_counts_in_place(
+    topic_term_counts: &mut [Vec<f64>],
+    phi_d: &[Vec<f64>],
+    words: &[usize],
+    counts: &[f64],
+) {
     let topics = topic_term_counts.len();
     if topics == 0 {
-        return topic_term_counts;
+        return;
     }
 
     for (word_offset, &word_index) in words.iter().enumerate() {
@@ -106,23 +106,36 @@ fn accumulate_topic_term_counts(
             }
         }
     }
+}
 
+fn accumulate_topic_term_counts(
+    mut topic_term_counts: Vec<Vec<f64>>,
+    phi_d: Vec<Vec<f64>>,
+    words: Vec<usize>,
+    counts: Vec<f64>,
+) -> Vec<Vec<f64>> {
+    accumulate_topic_term_counts_in_place(
+        topic_term_counts.as_mut_slice(),
+        phi_d.as_slice(),
+        words.as_slice(),
+        counts.as_slice(),
+    );
     topic_term_counts
 }
 
-fn infer_document(
-    beta_probabilities: Vec<Vec<f64>>,
-    gamma_initial: Vec<f64>,
-    words: Vec<usize>,
-    counts: Vec<f64>,
+fn infer_document_internal(
+    beta_probabilities: &[Vec<f64>],
+    gamma_initial: &[f64],
+    words: &[usize],
+    counts: &[f64],
     max_iter: i64,
     convergence: f64,
     min_probability: f64,
     init_alpha: f64,
-) -> Vec<Vec<f64>> {
+) -> (Vec<f64>, Vec<Vec<f64>>) {
     let topics = gamma_initial.len().min(beta_probabilities.len());
     if topics == 0 {
-        return vec![Vec::new(), Vec::new()];
+        return (Vec::new(), Vec::new());
     }
 
     let floor = floor_value(min_probability);
@@ -138,7 +151,7 @@ fn infer_document(
     };
     let max_iter_value = if max_iter <= 0 { 1 } else { max_iter as usize };
 
-    let mut gamma_d = gamma_initial.into_iter().take(topics).collect::<Vec<_>>();
+    let mut gamma_d = gamma_initial.iter().copied().take(topics).collect::<Vec<_>>();
     if gamma_d.len() < topics {
         gamma_d.resize(topics, init_alpha_value);
     }
@@ -149,7 +162,7 @@ fn infer_document(
         let mut gamma_next = vec![init_alpha_value; topics];
 
         for (word_offset, &word_index) in words.iter().enumerate() {
-            let topic_weights = compute_topic_weights(&beta_probabilities, &gamma_d, word_index, floor);
+            let topic_weights = compute_topic_weights(beta_probabilities, &gamma_d, word_index, floor);
             phi_d[word_offset] = topic_weights.clone();
 
             let count = counts.get(word_offset).copied().unwrap_or(0.0);
@@ -176,10 +189,90 @@ fn infer_document(
         }
     }
 
+    (gamma_d, phi_d)
+}
+
+fn infer_document(
+    beta_probabilities: Vec<Vec<f64>>,
+    gamma_initial: Vec<f64>,
+    words: Vec<usize>,
+    counts: Vec<f64>,
+    max_iter: i64,
+    convergence: f64,
+    min_probability: f64,
+    init_alpha: f64,
+) -> Vec<Vec<f64>> {
+    let (gamma_d, phi_d) = infer_document_internal(
+        beta_probabilities.as_slice(),
+        gamma_initial.as_slice(),
+        words.as_slice(),
+        counts.as_slice(),
+        max_iter,
+        convergence,
+        min_probability,
+        init_alpha,
+    );
+
     let mut output = Vec::with_capacity(phi_d.len() + 1);
     output.push(gamma_d);
     output.extend(phi_d);
     output
+}
+
+fn infer_corpus_iteration(
+    beta_probabilities: Vec<Vec<f64>>,
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    max_iter: i64,
+    convergence: f64,
+    min_probability: f64,
+    init_alpha: f64,
+) -> (Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>, Vec<Vec<f64>>) {
+    let topics = beta_probabilities.len();
+    if topics == 0 {
+        return (Vec::new(), Vec::new(), Vec::new());
+    }
+
+    let terms = beta_probabilities
+        .iter()
+        .map(|row| row.len())
+        .max()
+        .unwrap_or(0);
+    let floor = floor_value(min_probability);
+    let init_alpha_value = if init_alpha.is_finite() { init_alpha } else { 0.3 };
+
+    let mut topic_term_counts = vec![vec![floor; terms]; topics];
+    let mut gamma_matrix = Vec::with_capacity(document_words.len());
+    let mut phi_tensor = Vec::with_capacity(document_words.len());
+
+    for (doc_index, words) in document_words.iter().enumerate() {
+        let counts = document_counts.get(doc_index).cloned().unwrap_or_else(|| vec![0.0; words.len()]);
+        let total: f64 = counts.iter().sum();
+        let gamma_initial = vec![init_alpha_value + (total / topics as f64); topics];
+
+        let (gamma_d, phi_d) = infer_document_internal(
+            beta_probabilities.as_slice(),
+            gamma_initial.as_slice(),
+            words.as_slice(),
+            counts.as_slice(),
+            max_iter,
+            convergence,
+            min_probability,
+            init_alpha,
+        );
+
+        accumulate_topic_term_counts_in_place(
+            topic_term_counts.as_mut_slice(),
+            phi_d.as_slice(),
+            words.as_slice(),
+            counts.as_slice(),
+        );
+
+        gamma_matrix.push(gamma_d);
+        phi_tensor.push(phi_d);
+    }
+
+    (gamma_matrix, phi_tensor, topic_term_counts)
 }
 
 #[magnus::init]
@@ -199,6 +292,10 @@ fn init() -> Result<(), Error> {
         function!(accumulate_topic_term_counts, 4),
     )?;
     rust_backend_module.define_singleton_method("infer_document", function!(infer_document, 8))?;
+    rust_backend_module.define_singleton_method(
+        "infer_corpus_iteration",
+        function!(infer_corpus_iteration, 7),
+    )?;
 
     Ok(())
 }
