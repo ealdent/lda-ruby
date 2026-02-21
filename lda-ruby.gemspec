@@ -31,7 +31,9 @@ Gem::Specification.new do |spec|
 
   spec.files = included
     .reject { |path| File.directory?(path) }
-    .reject { |path| path.end_with?(".o", ".so", ".bundle") }
+    .reject { |path| path.start_with?("ext/lda-ruby-rust/target/") }
+    .reject { |path| path == "ext/lda-ruby-rust/Cargo.lock" }
+    .reject { |path| path.end_with?(".o", ".so", ".bundle", ".dylib", ".dll", ".rlib", ".rmeta") }
     .reject { |path| ["Makefile", "ext/lda-ruby/Makefile", "ext/lda-ruby/mkmf.log"].include?(path) }
     .uniq
     .sort

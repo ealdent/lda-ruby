@@ -51,6 +51,8 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Rust/Pure numeric parity fixtures added for deterministic seeded runs.
 - `compile_rust` now stages a Ruby-loadable extension artifact to avoid `Init_` symbol mismatch from Cargo's `lib*` output naming.
 - Dockerized rust runtime workflow added for local parity with CI (`Dockerfile.rust`, `bin/docker-test-rust`).
+- Gem packaging now excludes local Rust cargo build artifacts (`target/**`) for clean release builds.
+- Backend benchmark driver added (`bin/benchmark-backends`) to track pure/native/rust runtime deltas.
 
 ### Phase 1: Stabilize API and tests
 

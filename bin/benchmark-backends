@@ -1,0 +1,83 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "yaml"
+require "json"
+require "time"
+
+$LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
+require "lda-ruby"
+
+def build_corpus
+  fixture_path = File.expand_path("../test/data/wiki-test-docs.yml", __dir__)
+  documents = YAML.load_file(fixture_path)
+  Lda::TextCorpus.new(documents)
+end
+
+def available_backends
+  backends = [:pure]
+  backends << :native if Lda::NATIVE_EXTENSION_LOADED
+  backends << :rust if Lda::RUST_EXTENSION_LOADED
+  backends
+end
+
+def benchmark_backend(backend, corpus, runs:, start_mode:, num_topics:, max_iter:, em_max_iter:)
+  elapsed = []
+
+  runs.times do
+    lda = Lda::Lda.new(corpus, backend: backend, random_seed: 1234)
+    lda.verbose = false
+    lda.num_topics = num_topics
+    lda.max_iter = max_iter
+    lda.em_max_iter = em_max_iter
+
+    start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    lda.em(start_mode)
+    finish_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    elapsed << (finish_time - start_time)
+  end
+
+  {
+    backend: backend,
+    runs: runs,
+    min_seconds: elapsed.min,
+    max_seconds: elapsed.max,
+    mean_seconds: elapsed.sum / elapsed.length.to_f
+  }
+end
+
+runs = Integer(ENV.fetch("BENCH_RUNS", "3"))
+start_mode = ENV.fetch("BENCH_START", "seeded")
+num_topics = Integer(ENV.fetch("BENCH_TOPICS", "8"))
+max_iter = Integer(ENV.fetch("BENCH_MAX_ITER", "20"))
+em_max_iter = Integer(ENV.fetch("BENCH_EM_MAX_ITER", "40"))
+
+corpus = build_corpus
+results = available_backends.map do |backend|
+  benchmark_backend(
+    backend,
+    corpus,
+    runs: runs,
+    start_mode: start_mode,
+    num_topics: num_topics,
+    max_iter: max_iter,
+    em_max_iter: em_max_iter
+  )
+end
+
+output = {
+  generated_at: Time.now.utc.iso8601,
+  ruby_version: RUBY_VERSION,
+  rust_extension_loaded: Lda::RUST_EXTENSION_LOADED,
+  native_extension_loaded: Lda::NATIVE_EXTENSION_LOADED,
+  benchmark: {
+    runs: runs,
+    start_mode: start_mode,
+    num_topics: num_topics,
+    max_iter: max_iter,
+    em_max_iter: em_max_iter
+  },
+  results: results
+}
+
+puts JSON.pretty_generate(output)

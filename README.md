@@ -58,6 +58,14 @@ For an interactive shell with Rust toolchain + bindgen dependencies:
 - `bundle exec rake build` builds the gem package.
 - `bundle exec ruby -Ilib:test test/backend_compatibility_test.rb` runs backend compatibility fixtures.
 - `LDA_RUBY_BACKEND=rust bundle exec ruby -Ilib:test test/backend_compatibility_test.rb` runs parity checks in rust mode.
+- `./bin/benchmark-backends` benchmarks available backends (`pure`, `native`, `rust`) and prints JSON.
+
+Benchmark environment variables:
+- `BENCH_RUNS` (default: `3`)
+- `BENCH_START` (default: `seeded`)
+- `BENCH_TOPICS` (default: `8`)
+- `BENCH_MAX_ITER` (default: `20`)
+- `BENCH_EM_MAX_ITER` (default: `40`)
 
 ### Backend selection
 
@@ -75,6 +83,7 @@ For an interactive shell with Rust toolchain + bindgen dependencies:
 
 Rust status: the extension hook layer is scaffolded in `ext/lda-ruby-rust`. Current Rust kernels include batched per-iteration corpus inference, batched per-document inference, topic-weights-per-word, and topic-term-count accumulation inside EM when `backend: :rust` is active; remaining model math still delegates to the pure Ruby backend. CI now runs dedicated rust-runtime checks and numeric parity fixtures against the pure backend.
 `compile_rust` requires a Rust toolchain plus Ruby development headers and `libclang`.
+Gem packaging excludes local Rust build artifacts (`ext/lda-ruby-rust/target/**`) so local cargo outputs do not leak into published gems.
 
 ## Resources
 
