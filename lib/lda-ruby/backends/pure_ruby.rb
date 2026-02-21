@@ -13,9 +13,10 @@ module Lda
         @phi = nil
         @topic_weights_kernel = nil
         @topic_term_accumulator_kernel = nil
+        @document_inference_kernel = nil
       end
 
-      attr_writer :topic_weights_kernel, :topic_term_accumulator_kernel
+      attr_writer :topic_weights_kernel, :topic_term_accumulator_kernel, :document_inference_kernel
 
       def name
         "pure_ruby"
@@ -57,23 +58,7 @@ module Lda
             gamma_d = Array.new(topics, Float(init_alpha) + (document.total.to_f / topics))
             phi_d = Array.new(document.length) { Array.new(topics, 1.0 / topics) }
 
-            Integer(max_iter).times do
-              gamma_next = Array.new(topics, Float(init_alpha))
-
-              document.words.each_with_index do |word_index, word_offset|
-                topic_weights = topic_weights_for_word(word_index, gamma_d)
-                phi_d[word_offset] = topic_weights
-
-                count = document.counts[word_offset].to_f
-                topics.times do |topic_index|
-                  gamma_next[topic_index] += count * topic_weights[topic_index]
-                end
-              end
-
-              gamma_shift = max_absolute_distance(gamma_d, gamma_next)
-              gamma_d = gamma_next
-              break if gamma_shift <= Float(convergence)
-            end
+            gamma_d, phi_d = infer_document(gamma_d, phi_d, document.words, document.counts)
 
             current_gamma[document_index] = gamma_d
             current_phi[document_index] = phi_d
@@ -172,6 +157,72 @@ module Lda
         Array.new(topics) do |topic_index|
           @beta_probabilities[topic_index][word_index] * [gamma_d[topic_index], MIN_PROBABILITY].max
         end
+      end
+
+      def infer_document(gamma_initial, phi_initial, words, counts)
+        kernel_output = nil
+
+        if @document_inference_kernel
+          kernel_output = @document_inference_kernel.call(
+            @beta_probabilities,
+            gamma_initial,
+            words.map(&:to_i),
+            counts.map(&:to_f),
+            Integer(max_iter),
+            Float(convergence),
+            MIN_PROBABILITY,
+            Float(init_alpha)
+          )
+        end
+
+        if valid_document_inference_output?(kernel_output, gamma_initial.length, phi_initial.length)
+          gamma_out = kernel_output[0].map(&:to_f)
+          phi_out = kernel_output[1].map { |row| normalize!(row.map(&:to_f)) }
+          [gamma_out, phi_out]
+        else
+          default_infer_document(gamma_initial, phi_initial, words, counts)
+        end
+      rescue StandardError
+        default_infer_document(gamma_initial, phi_initial, words, counts)
+      end
+
+      def valid_document_inference_output?(output, expected_topics, expected_length)
+        return false unless output.is_a?(Array)
+        return false unless output.size == 2
+
+        gamma_out = output[0]
+        phi_out = output[1]
+
+        return false unless gamma_out.is_a?(Array) && gamma_out.size == expected_topics
+        return false unless phi_out.is_a?(Array) && phi_out.size == expected_length
+
+        phi_out.all? { |row| row.is_a?(Array) && row.size == expected_topics }
+      end
+
+      def default_infer_document(gamma_initial, phi_initial, words, counts)
+        topics = gamma_initial.length
+        gamma_d = gamma_initial.dup
+        phi_d = clone_matrix(phi_initial)
+
+        Integer(max_iter).times do
+          gamma_next = Array.new(topics, Float(init_alpha))
+
+          words.each_with_index do |word_index, word_offset|
+            topic_weights = topic_weights_for_word(word_index, gamma_d)
+            phi_d[word_offset] = topic_weights
+
+            count = counts[word_offset].to_f
+            topics.times do |topic_index|
+              gamma_next[topic_index] += count * topic_weights[topic_index]
+            end
+          end
+
+          gamma_shift = max_absolute_distance(gamma_d, gamma_next)
+          gamma_d = gamma_next
+          break if gamma_shift <= Float(convergence)
+        end
+
+        [gamma_d, phi_d]
       end
 
       def accumulate_topic_term_counts(topic_term_counts, phi_d, words, counts)

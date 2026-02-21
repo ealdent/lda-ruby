@@ -35,6 +35,7 @@ module Lda
         @fallback = PureRuby.new(random_seed: random_seed)
         @fallback.topic_weights_kernel = method(:rust_topic_weights_for_word)
         @fallback.topic_term_accumulator_kernel = method(:rust_accumulate_topic_term_counts)
+        @fallback.document_inference_kernel = method(:rust_infer_document)
       end
 
       def name
@@ -119,6 +120,31 @@ module Lda
           words,
           counts
         )
+      rescue StandardError
+        nil
+      end
+
+      def rust_infer_document(beta_probabilities, gamma_initial, words, counts, max_iter, convergence, min_probability, init_alpha)
+        return nil unless defined?(::Lda::RustBackend)
+        return nil unless ::Lda::RustBackend.respond_to?(:infer_document)
+
+        output = ::Lda::RustBackend.infer_document(
+          beta_probabilities,
+          gamma_initial,
+          words,
+          counts,
+          Integer(max_iter),
+          Float(convergence),
+          Float(min_probability),
+          Float(init_alpha)
+        )
+
+        return nil unless output.is_a?(Array)
+        return nil if output.empty?
+
+        gamma = output.first
+        phi_rows = output[1..] || []
+        [gamma, phi_rows]
       rescue StandardError
         nil
       end

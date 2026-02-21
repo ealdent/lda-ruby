@@ -43,6 +43,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - CI matrix added for Ruby 3.2/3.3 with native and pure backend jobs.
 - Phase 4 started with Rust extension scaffolding (`ext/lda-ruby-rust`) and backend mode wiring (`backend: :rust` when extension is available).
 - Rust kernels ported so far:
+  - batched per-document inference loop (EM inner updates)
   - per-word topic-weight computation
   - topic-term accumulation from per-document `phi`
 
