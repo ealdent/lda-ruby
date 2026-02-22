@@ -61,6 +61,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Docker install-policy matrix script added (`bin/docker-test-install-policies`) to verify source install behavior across environments.
 - CI now runs install-policy matrix checks on Ubuntu.
 - Install-policy matrix now runs packaged-gem runtime smoke checks (auto/pure/native/rust mode selection + EM pipeline) to validate release-time fallback behavior.
+- Cross-OS packaged-gem fallback CI job added (`bin/test-packaged-gem-fallback`) to validate auto/never/always install policy semantics without Cargo.
 
 ### Phase 1: Stabilize API and tests
 

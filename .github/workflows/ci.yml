@@ -107,6 +107,26 @@ jobs:
       - name: Run Docker install policy matrix checks
         run: ./bin/docker-test-install-policies
 
+  packaged-gem-fallback:
+    name: packaged gem fallback / ${{ matrix.os }} / ruby-3.3
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Run packaged gem fallback checks
+        run: ./bin/test-packaged-gem-fallback
+
   rust-scaffold:
     name: rust scaffold / ubuntu-latest
     runs-on: ubuntu-latest

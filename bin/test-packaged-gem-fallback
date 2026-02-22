@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MISSING_CARGO_PATH="/__missing__/cargo"
+
+build_gem() {
+  bundle exec rake build >/dev/null
+  ls -1t pkg/lda-ruby-*.gem | head -n1
+}
+
+run_smoke_modes() {
+  local gem_home="$1"
+
+  GEM_HOME="${gem_home}" \
+    GEM_PATH="${gem_home}" \
+    EXPECTED_GEM_HOME_PREFIX="${gem_home}" \
+    EXPECTED_BACKEND="native" \
+    SMOKE_MODE="auto" \
+    ruby ./bin/packaged-gem-smoke.rb
+
+  GEM_HOME="${gem_home}" \
+    GEM_PATH="${gem_home}" \
+    EXPECTED_GEM_HOME_PREFIX="${gem_home}" \
+    EXPECTED_BACKEND="pure_ruby" \
+    SMOKE_MODE="pure" \
+    LDA_RUBY_BACKEND="pure" \
+    ruby ./bin/packaged-gem-smoke.rb
+
+  GEM_HOME="${gem_home}" \
+    GEM_PATH="${gem_home}" \
+    EXPECTED_GEM_HOME_PREFIX="${gem_home}" \
+    EXPECTED_BACKEND="native" \
+    SMOKE_MODE="native" \
+    LDA_RUBY_BACKEND="native" \
+    ruby ./bin/packaged-gem-smoke.rb
+}
+
+run_success_case() {
+  local label="$1"
+  local gem_file="$2"
+  local gem_home="$3"
+  local policy="${4:-__unset__}"
+
+  echo "==> ${label}"
+  rm -rf "${gem_home}"
+  mkdir -p "${gem_home}"
+
+  local -a install_env=(
+    "CARGO=${MISSING_CARGO_PATH}"
+    "GEM_HOME=${gem_home}"
+    "GEM_PATH=${gem_home}"
+  )
+  if [[ "${policy}" != "__unset__" ]]; then
+    install_env+=("LDA_RUBY_RUST_BUILD=${policy}")
+  fi
+
+  env "${install_env[@]}" gem install --local "${gem_file}" --no-document >/tmp/lda-ruby-gem-install.log 2>&1
+
+  local runtime_flags
+  runtime_flags=$(env \
+    "GEM_HOME=${gem_home}" \
+    "GEM_PATH=${gem_home}" \
+    ruby -e 'require "lda-ruby"; puts "RUST=#{Lda::RUST_EXTENSION_LOADED} NATIVE=#{Lda::NATIVE_EXTENSION_LOADED}"')
+  echo "${runtime_flags}"
+  echo "${runtime_flags}" | grep -q "RUST=false"
+  echo "${runtime_flags}" | grep -q "NATIVE=true"
+
+  run_smoke_modes "${gem_home}"
+}
+
+run_failure_case() {
+  local label="$1"
+  local gem_file="$2"
+  local gem_home="$3"
+
+  echo "==> ${label}"
+  rm -rf "${gem_home}"
+  mkdir -p "${gem_home}"
+
+  if env \
+    "CARGO=${MISSING_CARGO_PATH}" \
+    "LDA_RUBY_RUST_BUILD=always" \
+    "GEM_HOME=${gem_home}" \
+    "GEM_PATH=${gem_home}" \
+    gem install --local "${gem_file}" --no-document >/tmp/lda-ruby-gem-install-fail.log 2>&1; then
+    echo "ERROR: ${label} was expected to fail but succeeded."
+    exit 1
+  fi
+}
+
+main() {
+  local gem_file
+  gem_file="$(build_gem)"
+
+  local temp_root
+  temp_root="$(mktemp -d)"
+  trap "rm -rf '${temp_root}'" EXIT
+
+  run_success_case "auto policy (simulated no cargo) falls back cleanly" "${gem_file}" "${temp_root}/auto"
+  run_success_case "never policy (simulated no cargo) falls back cleanly" "${gem_file}" "${temp_root}/never" "never"
+  run_failure_case "always policy (simulated no cargo) fails install" "${gem_file}" "${temp_root}/always"
+
+  echo "Packaged gem fallback checks passed."
+}
+
+main "$@"
