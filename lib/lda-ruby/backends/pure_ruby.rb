@@ -19,6 +19,7 @@ module Lda
         @gamma_shift_kernel = nil
         @topic_document_probability_kernel = nil
         @topic_term_seed_kernel = nil
+        @trusted_kernel_outputs = false
       end
 
       attr_writer :topic_weights_kernel,
@@ -28,7 +29,8 @@ module Lda
                   :topic_term_finalizer_kernel,
                   :gamma_shift_kernel,
                   :topic_document_probability_kernel,
-                  :topic_term_seed_kernel
+                  :topic_term_seed_kernel,
+                  :trusted_kernel_outputs
 
       def name
         "pure_ruby"
@@ -68,16 +70,28 @@ module Lda
         previous_gamma = nil
 
         Integer(em_max_iter).times do
-          topic_term_counts = Array.new(topics) { Array.new(terms, MIN_PROBABILITY) }
-          current_gamma, current_phi, topic_term_counts = infer_corpus_iteration(
-            topic_term_counts,
-            document_words,
-            document_counts,
-            document_totals,
-            document_lengths,
-            topics,
-            terms
-          )
+          if @trusted_kernel_outputs && @corpus_iteration_kernel
+            current_gamma, current_phi, topic_term_counts = infer_corpus_iteration(
+              nil,
+              document_words,
+              document_counts,
+              document_totals,
+              document_lengths,
+              topics,
+              terms
+            )
+          else
+            topic_term_counts = Array.new(topics) { Array.new(terms, MIN_PROBABILITY) }
+            current_gamma, current_phi, topic_term_counts = infer_corpus_iteration(
+              topic_term_counts,
+              document_words,
+              document_counts,
+              document_totals,
+              document_lengths,
+              topics,
+              terms
+            )
+          end
 
           @beta_probabilities, @beta_log = finalize_topic_term_counts(topic_term_counts)
           @gamma = current_gamma
@@ -119,7 +133,11 @@ module Lda
         end
 
         if valid_topic_document_probability_output?(kernel_output, document_counts.size, Integer(num_topics))
-          kernel_output.map { |row| row.map(&:to_f) }
+          if @trusted_kernel_outputs
+            kernel_output
+          else
+            kernel_output.map { |row| row.map(&:to_f) }
+          end
         else
           default_topic_document_probability(phi_matrix, document_counts)
         end
@@ -157,7 +175,11 @@ module Lda
         end
 
         if valid_seeded_topic_term_probabilities?(kernel_output, topics, terms)
-          kernel_output.map { |weights| normalize!(weights.map(&:to_f)) }
+          if @trusted_kernel_outputs
+            kernel_output
+          else
+            kernel_output.map { |weights| normalize!(weights.map(&:to_f)) }
+          end
         else
           default_seeded_topic_term_probabilities(topics, terms, document_words, document_counts)
         end
@@ -245,9 +267,13 @@ module Lda
         end
 
         if valid_document_inference_output?(kernel_output, gamma_initial.length, phi_initial.length)
-          gamma_out = kernel_output[0].map(&:to_f)
-          phi_out = kernel_output[1].map { |row| normalize!(row.map(&:to_f)) }
-          [gamma_out, phi_out]
+          if @trusted_kernel_outputs
+            [kernel_output[0], kernel_output[1]]
+          else
+            gamma_out = kernel_output[0].map(&:to_f)
+            phi_out = kernel_output[1].map { |row| normalize!(row.map(&:to_f)) }
+            [gamma_out, phi_out]
+          end
         else
           default_infer_document(gamma_initial, phi_initial, words, counts)
         end
@@ -303,6 +329,8 @@ module Lda
         topics,
         terms
       )
+        topic_term_counts_fallback =
+          topic_term_counts_initial || Array.new(topics) { Array.new(terms, MIN_PROBABILITY) }
         kernel_output = nil
 
         if @corpus_iteration_kernel
@@ -318,16 +346,20 @@ module Lda
         end
 
         if valid_corpus_iteration_output?(kernel_output, document_words.size, document_lengths, topics, terms)
-          current_gamma = kernel_output[0].map { |row| row.map(&:to_f) }
-          current_phi = kernel_output[1].map do |doc_phi|
-            doc_phi.map { |row| normalize!(row.map(&:to_f)) }
-          end
-          topic_term_counts = kernel_output[2].map { |row| row.map(&:to_f) }
+          if @trusted_kernel_outputs
+            [kernel_output[0], kernel_output[1], kernel_output[2]]
+          else
+            current_gamma = kernel_output[0].map { |row| row.map(&:to_f) }
+            current_phi = kernel_output[1].map do |doc_phi|
+              doc_phi.map { |row| normalize!(row.map(&:to_f)) }
+            end
+            topic_term_counts = kernel_output[2].map { |row| row.map(&:to_f) }
 
-          [current_gamma, current_phi, topic_term_counts]
+            [current_gamma, current_phi, topic_term_counts]
+          end
         else
           default_infer_corpus_iteration(
-            topic_term_counts_initial,
+            topic_term_counts_fallback,
             document_words,
             document_counts,
             document_totals,
@@ -336,7 +368,7 @@ module Lda
         end
       rescue StandardError
         default_infer_corpus_iteration(
-          topic_term_counts_initial,
+          topic_term_counts_fallback,
           document_words,
           document_counts,
           document_totals,
@@ -456,9 +488,13 @@ module Lda
         end
 
         if valid_topic_term_finalization_output?(kernel_output, topic_term_counts)
-          beta_probabilities = kernel_output[0].map { |row| row.map(&:to_f) }
-          beta_log = kernel_output[1].map { |row| row.map(&:to_f) }
-          [beta_probabilities, beta_log]
+          if @trusted_kernel_outputs
+            [kernel_output[0], kernel_output[1]]
+          else
+            beta_probabilities = kernel_output[0].map { |row| row.map(&:to_f) }
+            beta_log = kernel_output[1].map { |row| row.map(&:to_f) }
+            [beta_probabilities, beta_log]
+          end
         else
           default_finalize_topic_term_counts(topic_term_counts)
         end

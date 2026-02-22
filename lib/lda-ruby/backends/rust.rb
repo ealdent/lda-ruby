@@ -41,6 +41,7 @@ module Lda
         @fallback.gamma_shift_kernel = method(:rust_average_gamma_shift)
         @fallback.topic_document_probability_kernel = method(:rust_topic_document_probability)
         @fallback.topic_term_seed_kernel = method(:rust_seeded_topic_term_probabilities)
+        @fallback.trusted_kernel_outputs = true
       end
 
       def name
