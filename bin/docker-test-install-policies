@@ -10,12 +10,14 @@ run_success_case() {
   local policy="$3"
   local expected_rust="$4"
   local expected_native="$5"
+  local expected_auto_backend="$6"
 
   echo "==> ${name}"
 
   local -a env_args=(
     -e "EXPECT_RUST=${expected_rust}"
     -e "EXPECT_NATIVE=${expected_native}"
+    -e "EXPECT_AUTO_BACKEND=${expected_auto_backend}"
   )
   if [[ "${policy}" != "__unset__" ]]; then
     env_args+=(-e "LDA_RUBY_RUST_BUILD=${policy}")
@@ -36,6 +38,35 @@ run_success_case() {
       echo "$runtime_flags"
       echo "$runtime_flags" | grep -q "RUST=${EXPECT_RUST}"
       echo "$runtime_flags" | grep -q "NATIVE=${EXPECT_NATIVE}"
+
+      run_smoke() {
+        local mode="$1"
+        local expected_backend="$2"
+
+        if [[ "${mode}" == "auto" ]]; then
+          GEM_HOME=/tmp/gemhome GEM_PATH=/tmp/gemhome \
+            EXPECTED_GEM_HOME_PREFIX=/tmp/gemhome \
+            EXPECTED_BACKEND="${expected_backend}" \
+            SMOKE_MODE="${mode}" \
+            ruby ./bin/packaged-gem-smoke.rb
+        else
+          GEM_HOME=/tmp/gemhome GEM_PATH=/tmp/gemhome \
+            EXPECTED_GEM_HOME_PREFIX=/tmp/gemhome \
+            EXPECTED_BACKEND="${expected_backend}" \
+            SMOKE_MODE="${mode}" \
+            LDA_RUBY_BACKEND="${mode}" \
+            ruby ./bin/packaged-gem-smoke.rb
+        fi
+      }
+
+      run_smoke "auto" "${EXPECT_AUTO_BACKEND}"
+      run_smoke "pure" "pure_ruby"
+      if [[ "${EXPECT_NATIVE}" == "true" ]]; then
+        run_smoke "native" "native"
+      fi
+      if [[ "${EXPECT_RUST}" == "true" ]]; then
+        run_smoke "rust" "rust"
+      fi
     '
 }
 
@@ -67,10 +98,10 @@ echo "Building Docker images: ${NATIVE_IMAGE}, ${RUST_IMAGE}"
 docker build -t "${NATIVE_IMAGE}" .
 docker build -f Dockerfile.rust -t "${RUST_IMAGE}" .
 
-run_success_case "no-cargo image / default policy(auto) / expect Rust disabled" "${NATIVE_IMAGE}" "__unset__" "false" "true"
+run_success_case "no-cargo image / default policy(auto) / expect Rust disabled" "${NATIVE_IMAGE}" "__unset__" "false" "true" "native"
 run_failure_case "no-cargo image / always policy / expect install failure" "${NATIVE_IMAGE}" "always"
-run_success_case "rust image / default policy(auto) / expect Rust enabled" "${RUST_IMAGE}" "__unset__" "true" "true"
-run_success_case "rust image / never policy / expect Rust disabled" "${RUST_IMAGE}" "never" "false" "true"
-run_success_case "rust image / always policy / expect Rust enabled" "${RUST_IMAGE}" "always" "true" "true"
+run_success_case "rust image / default policy(auto) / expect Rust enabled" "${RUST_IMAGE}" "__unset__" "true" "true" "rust"
+run_success_case "rust image / never policy / expect Rust disabled" "${RUST_IMAGE}" "never" "false" "true" "native"
+run_success_case "rust image / always policy / expect Rust enabled" "${RUST_IMAGE}" "always" "true" "true" "rust"
 
 echo "Install policy matrix passed."

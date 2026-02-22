@@ -65,7 +65,7 @@ For an interactive shell with Rust toolchain + bindgen dependencies:
 - `bundle exec ruby -Ilib:test test/backend_compatibility_test.rb` runs backend compatibility fixtures.
 - `LDA_RUBY_BACKEND=rust bundle exec ruby -Ilib:test test/backend_compatibility_test.rb` runs parity checks in rust mode.
 - `./bin/benchmark-backends` benchmarks available backends (`pure`, `native`, `rust`) and prints JSON.
-- `./bin/docker-test-install-policies` verifies source-install behavior for `LDA_RUBY_RUST_BUILD=auto|always|never`.
+- `./bin/docker-test-install-policies` verifies packaged-gem install behavior for `LDA_RUBY_RUST_BUILD=auto|always|never`, including runtime EM smoke checks.
 
 Benchmark environment variables:
 - `BENCH_RUNS` (default: `3`)
@@ -89,7 +89,7 @@ Examples:
 
 ### Backend selection
 
-- Default mode is `auto`: native extension when available, otherwise pure Ruby.
+- Default mode is `auto`: Rust backend when available, otherwise native extension, otherwise pure Ruby.
 - Force pure Ruby backend:
   - `Lda::Lda.new(corpus, backend: :pure)`
   - or `LDA_RUBY_BACKEND=pure`

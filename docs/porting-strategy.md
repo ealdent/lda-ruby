@@ -60,6 +60,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Source install path now has explicit Rust build policy via `LDA_RUBY_RUST_BUILD=auto|always|never`.
 - Docker install-policy matrix script added (`bin/docker-test-install-policies`) to verify source install behavior across environments.
 - CI now runs install-policy matrix checks on Ubuntu.
+- Install-policy matrix now runs packaged-gem runtime smoke checks (auto/pure/native/rust mode selection + EM pipeline) to validate release-time fallback behavior.
 
 ### Phase 1: Stabilize API and tests
 
