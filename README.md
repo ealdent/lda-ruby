@@ -69,6 +69,7 @@ For an interactive shell with Rust toolchain + bindgen dependencies:
 - `./bin/test-packaged-gem-fallback` verifies packaged-gem fallback behavior without Cargo (auto/never succeed, always fails) plus runtime smoke checks.
 - `./bin/test-packaged-gem-rust-enabled` verifies packaged-gem behavior with Cargo available (auto/always enable Rust, never disables Rust) plus runtime smoke checks.
 - `./bin/test-packaged-gem-manifest` verifies packaged-gem contents/metadata and rejects leaked build artifacts.
+- `./bin/release-preflight` runs unit tests + packaged-gem validation stack; set `SKIP_DOCKER=1` to skip Docker matrix checks.
 
 Benchmark environment variables:
 - `BENCH_RUNS` (default: `3`)

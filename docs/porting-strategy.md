@@ -64,6 +64,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Cross-OS packaged-gem fallback CI job added (`bin/test-packaged-gem-fallback`) to validate auto/never/always install policy semantics without Cargo.
 - Packaged-gem Rust-enabled CI job added (`bin/test-packaged-gem-rust-enabled`) to validate auto/never/always install policy semantics with Cargo available.
 - Packaged-gem manifest CI job added (`bin/test-packaged-gem-manifest`) to enforce release artifact contents and metadata.
+- Local release preflight command added (`bin/release-preflight`) to run unit + packaged-gem validation checks in one pass.
 
 ### Phase 1: Stabilize API and tests
 

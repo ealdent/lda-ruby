@@ -99,7 +99,7 @@ module Lda
 
           break if previous_gamma && average_gamma_shift(previous_gamma, current_gamma) <= Float(em_convergence)
 
-          previous_gamma = clone_matrix(current_gamma)
+          previous_gamma = current_gamma
         end
 
         nil
@@ -297,7 +297,7 @@ module Lda
       def default_infer_document(gamma_initial, phi_initial, words, counts)
         topics = gamma_initial.length
         gamma_d = gamma_initial.dup
-        phi_d = clone_matrix(phi_initial)
+        phi_d = phi_initial
 
         Integer(max_iter).times do
           gamma_next = Array.new(topics, Float(init_alpha))
@@ -413,7 +413,7 @@ module Lda
         document_totals,
         topics
       )
-        topic_term_counts = clone_matrix(topic_term_counts_initial)
+        topic_term_counts = topic_term_counts_initial
         current_gamma = Array.new(document_words.size) { Array.new(topics, Float(init_alpha)) }
         current_phi = Array.new(document_words.size)
 
