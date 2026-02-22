@@ -127,6 +127,28 @@ jobs:
       - name: Run packaged gem fallback checks
         run: ./bin/test-packaged-gem-fallback
 
+  packaged-gem-rust-enabled:
+    name: packaged gem rust-enabled / ubuntu-latest / ruby-3.3
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust bindgen dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-dev pkg-config
+
+      - name: Run packaged gem rust-enabled checks
+        run: ./bin/test-packaged-gem-rust-enabled
+
   rust-scaffold:
     name: rust scaffold / ubuntu-latest
     runs-on: ubuntu-latest
