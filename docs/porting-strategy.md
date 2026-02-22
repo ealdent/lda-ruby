@@ -22,14 +22,15 @@ This gives a practical balance between maintenance and speed:
 
 ## Proposed architecture
 
-- `Lda::Backend::Rust` (default when extension loads)
-- `Lda::Backend::PureRuby` (always available)
+- `Lda::Backends::Rust` (preferred in `auto` mode when extension loads)
+- `Lda::Backends::Native` (fallback in `auto` mode when Rust is unavailable)
+- `Lda::Backends::PureRuby` (always available)
 - `Lda::Lda` delegates heavy operations to the selected backend.
 
 Suggested backend selection:
 
 - `ENV['LDA_RUBY_BACKEND']=pure_ruby` → force Ruby backend.
-- default → try Rust backend, fallback to pure Ruby.
+- default (`auto`) → try Rust backend, then native backend, then pure Ruby.
 
 ## Migration plan
 
@@ -65,6 +66,8 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Packaged-gem Rust-enabled CI job added (`bin/test-packaged-gem-rust-enabled`) to validate auto/never/always install policy semantics with Cargo available.
 - Packaged-gem manifest CI job added (`bin/test-packaged-gem-manifest`) to enforce release artifact contents and metadata.
 - Local release preflight command added (`bin/release-preflight`) to run unit + packaged-gem validation checks in one pass.
+
+For an up-to-date resume snapshot (phase status + exact remaining queue), see `docs/modernization-handoff.md`.
 
 ### Phase 1: Stabilize API and tests
 

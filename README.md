@@ -131,3 +131,5 @@ Blei, David M., Ng, Andrew Y., and Jordan, Michael I. 2003. Latent dirichlet all
 ## Modernization
 
 For a Ruby 3.2+/3.3+ porting proposal, see `docs/porting-strategy.md`.
+
+For the latest implementation status and exact resume instructions, see `docs/modernization-handoff.md`.
