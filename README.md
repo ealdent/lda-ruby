@@ -68,6 +68,7 @@ For an interactive shell with Rust toolchain + bindgen dependencies:
 - `./bin/docker-test-install-policies` verifies packaged-gem install behavior for `LDA_RUBY_RUST_BUILD=auto|always|never`, including runtime EM smoke checks.
 - `./bin/test-packaged-gem-fallback` verifies packaged-gem fallback behavior without Cargo (auto/never succeed, always fails) plus runtime smoke checks.
 - `./bin/test-packaged-gem-rust-enabled` verifies packaged-gem behavior with Cargo available (auto/always enable Rust, never disables Rust) plus runtime smoke checks.
+- `./bin/test-packaged-gem-manifest` verifies packaged-gem contents/metadata and rejects leaked build artifacts.
 
 Benchmark environment variables:
 - `BENCH_RUNS` (default: `3`)

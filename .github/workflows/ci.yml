@@ -149,6 +149,22 @@ jobs:
       - name: Run packaged gem rust-enabled checks
         run: ./bin/test-packaged-gem-rust-enabled
 
+  packaged-gem-manifest:
+    name: packaged gem manifest / ubuntu-latest / ruby-3.3
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Run packaged gem manifest checks
+        run: ./bin/test-packaged-gem-manifest
+
   rust-scaffold:
     name: rust scaffold / ubuntu-latest
     runs-on: ubuntu-latest

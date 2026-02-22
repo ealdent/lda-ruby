@@ -63,6 +63,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Install-policy matrix now runs packaged-gem runtime smoke checks (auto/pure/native/rust mode selection + EM pipeline) to validate release-time fallback behavior.
 - Cross-OS packaged-gem fallback CI job added (`bin/test-packaged-gem-fallback`) to validate auto/never/always install policy semantics without Cargo.
 - Packaged-gem Rust-enabled CI job added (`bin/test-packaged-gem-rust-enabled`) to validate auto/never/always install policy semantics with Cargo available.
+- Packaged-gem manifest CI job added (`bin/test-packaged-gem-manifest`) to enforce release artifact contents and metadata.
 
 ### Phase 1: Stabilize API and tests
 
