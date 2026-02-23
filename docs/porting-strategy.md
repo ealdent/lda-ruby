@@ -66,6 +66,11 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Packaged-gem Rust-enabled CI job added (`bin/test-packaged-gem-rust-enabled`) to validate auto/never/always install policy semantics with Cargo available.
 - Packaged-gem manifest CI job added (`bin/test-packaged-gem-manifest`) to enforce release artifact contents and metadata.
 - Local release preflight command added (`bin/release-preflight`) to run unit + packaged-gem validation checks in one pass.
+- Version/tag sync guard added (`bin/check-version-sync`) to enforce parity between `VERSION.yml`, `lib/lda-ruby/version.rb`, and release tags.
+- Release preparation helper added (`bin/release-prepare`) for deterministic version/changelog updates.
+- Release artifact helper added (`bin/release-artifacts`) to build source gem artifacts with SHA256 checksums.
+- Tag-driven release workflow added (`.github/workflows/release.yml`) with dry-run support and environment-gated publish jobs.
+- Maintainer release runbook added (`docs/release-runbook.md`) with publish and rollback/yank procedures.
 
 For an up-to-date resume snapshot (phase status + exact remaining queue), see `docs/modernization-handoff.md`.
 
@@ -97,9 +102,9 @@ For an up-to-date resume snapshot (phase status + exact remaining queue), see `d
 
 ### Phase 5: Packaging and release
 
-- Build native gems where practical.
+- Phase 5A (source-gem release automation): complete.
 - Keep source build path available.
-- Document fallback behavior clearly.
+- Phase 5B (precompiled/native gem publishing): pending.
 
 ## Tooling suggestions
 

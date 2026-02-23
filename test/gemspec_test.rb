@@ -17,4 +17,11 @@ class GemspecTest < Test::Unit::TestCase
 
     assert(spec.extensions.include?("ext/lda-ruby-rust/extconf.rb"))
   end
+
+  def test_gemspec_includes_release_runbook
+    spec = Gem::Specification.load(File.expand_path("../lda-ruby.gemspec", __dir__))
+    assert_not_nil spec
+
+    assert(spec.files.include?("docs/release-runbook.md"))
+  end
 end

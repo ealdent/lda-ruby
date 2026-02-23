@@ -23,6 +23,7 @@ maybe_run_docker_checks() {
 }
 
 main() {
+  run_step "version sync checks" ./bin/check-version-sync
   run_step "unit test suite" bundle exec rake test
   run_step "packaged gem manifest checks" ./bin/test-packaged-gem-manifest
   run_step "packaged gem fallback checks (no cargo)" ./bin/test-packaged-gem-fallback

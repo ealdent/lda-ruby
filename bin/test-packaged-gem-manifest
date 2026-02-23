@@ -54,6 +54,7 @@ verify_manifest() {
     "ext/lda-ruby-rust/Cargo.toml"
     "ext/lda-ruby-rust/src/lib.rs"
     "docs/porting-strategy.md"
+    "docs/release-runbook.md"
   )
 
   local path

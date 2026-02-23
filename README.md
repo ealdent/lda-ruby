@@ -70,6 +70,9 @@ For an interactive shell with Rust toolchain + bindgen dependencies:
 - `./bin/test-packaged-gem-rust-enabled` verifies packaged-gem behavior with Cargo available (auto/always enable Rust, never disables Rust) plus runtime smoke checks.
 - `./bin/test-packaged-gem-manifest` verifies packaged-gem contents/metadata and rejects leaked build artifacts.
 - `./bin/release-preflight` runs unit tests + packaged-gem validation stack; set `SKIP_DOCKER=1` to skip Docker matrix checks.
+- `./bin/check-version-sync` verifies version parity between `VERSION.yml`, `lib/lda-ruby/version.rb`, and expected release tag.
+- `./bin/release-prepare 0.4.0` updates version/changelog files for a new release version.
+- `./bin/release-artifacts --tag v0.4.0` runs release checks, builds the source gem, and writes SHA256 checksums.
 
 Benchmark environment variables:
 - `BENCH_RUNS` (default: `3`)
@@ -133,3 +136,5 @@ Blei, David M., Ng, Andrew Y., and Jordan, Michael I. 2003. Latent dirichlet all
 For a Ruby 3.2+/3.3+ porting proposal, see `docs/porting-strategy.md`.
 
 For the latest implementation status and exact resume instructions, see `docs/modernization-handoff.md`.
+
+For release steps and rollback guidance, see `docs/release-runbook.md`.

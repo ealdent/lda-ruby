@@ -1,0 +1,119 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "open3"
+require "optparse"
+
+def fail!(message)
+  warn("ERROR: #{message}")
+  exit(1)
+end
+
+options = {
+  allow_dirty: false,
+  dry_run: false
+}
+
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage: bin/release-prepare VERSION [options]"
+
+  opts.on("--allow-dirty", "Allow running with a dirty git working tree") do
+    options[:allow_dirty] = true
+  end
+
+  opts.on("--dry-run", "Print planned changes without writing files") do
+    options[:dry_run] = true
+  end
+
+  opts.on("-h", "--help", "Show help") do
+    puts(opts)
+    exit(0)
+  end
+end
+
+parser.parse!(ARGV)
+
+version = ARGV.shift
+fail!("VERSION argument is required") if version.nil? || version.empty?
+fail!("unexpected arguments: #{ARGV.join(' ')}") unless ARGV.empty?
+fail!("VERSION must be semantic (X.Y.Z), got #{version.inspect}") unless version.match?(/\A\d+\.\d+\.\d+\z/)
+
+repo_root = File.expand_path("..", __dir__)
+Dir.chdir(repo_root)
+
+unless options[:allow_dirty]
+  status_output, status = Open3.capture2("git", "status", "--porcelain")
+  fail!("failed to check git status") unless status.success?
+  fail!("working tree is not clean. Commit or stash changes, or use --allow-dirty.") unless status_output.strip.empty?
+end
+
+major, minor, patch = version.split(".").map(&:to_i)
+
+new_version_yml = <<~YML
+  ---
+  :major: #{major}
+  :minor: #{minor}
+  :patch: #{patch}
+  :build:
+YML
+
+new_version_rb = <<~RUBY
+  # frozen_string_literal: true
+
+  module Lda
+    VERSION = "#{version}"
+  end
+RUBY
+
+changelog_path = "CHANGELOG.md"
+current_changelog = File.read(changelog_path)
+
+entry_pattern = /^version #{Regexp.escape(version)}\n=+\n/i
+new_entry = <<~CHANGELOG
+  version #{version}
+  =============
+
+  - Ruby 3.2+/3.3+ modernization release.
+  - Added Rust/native/pure backend selection and packaged-gem policy checks.
+  - Added tag-driven release automation and release runbook.
+CHANGELOG
+
+new_changelog =
+  if current_changelog.match?(entry_pattern)
+    current_changelog
+  else
+    "#{new_entry}\n#{current_changelog.lstrip}"
+  end
+
+files = {
+  "VERSION.yml" => new_version_yml,
+  File.join("lib", "lda-ruby", "version.rb") => new_version_rb,
+  changelog_path => new_changelog
+}
+
+changed_files = []
+files.each do |path, new_content|
+  old_content = File.exist?(path) ? File.read(path) : nil
+  next if old_content == new_content
+
+  changed_files << path
+  File.write(path, new_content) unless options[:dry_run]
+end
+
+if changed_files.empty?
+  puts("No file changes required for version #{version}.")
+elsif options[:dry_run]
+  puts("Dry run: would update #{changed_files.join(', ')}")
+else
+  puts("Updated #{changed_files.join(', ')}")
+end
+
+expected_tag = "v#{version}"
+
+unless options[:dry_run]
+  check_script = File.join(repo_root, "bin", "check-version-sync")
+  _out, err, status = Open3.capture3(check_script, "--tag", expected_tag, "--quiet", chdir: repo_root)
+  fail!("post-update version sync check failed: #{err.strip}") unless status.success?
+end
+
+puts("Prepared release files for #{version} (tag #{expected_tag}).")

@@ -6,7 +6,7 @@ This document is the canonical handoff state for continuing the Ruby 3.2+/3.3+ m
 
 - Snapshot date: 2026-02-22
 - Active branch: `codex/experiment-ruby3-modernization`
-- Branch head at snapshot: `915e94e`
+- Branch head at snapshot: `61d61e8` (pre-Phase 5A release automation implementation)
 - Repo status at snapshot: clean working tree
 
 ## Project Goal
@@ -78,7 +78,7 @@ Open in Phase 4:
 
 ### Phase 5 (packaging/release)
 
-Status: advanced, not fully complete.
+Status: Phase 5A complete (source-gem release automation), Phase 5B pending.
 
 Delivered:
 
@@ -88,12 +88,17 @@ Delivered:
 - packaged gem runtime checks with Cargo (`bin/test-packaged-gem-rust-enabled`)
 - packaged gem manifest/metadata gate (`bin/test-packaged-gem-manifest`)
 - single-command local gate (`bin/release-preflight`)
+- version/tag parity guard (`bin/check-version-sync`)
+- deterministic release preparation helper (`bin/release-prepare`)
+- release artifact builder with checksum output (`bin/release-artifacts`)
+- tag-driven release workflow (`.github/workflows/release.yml`)
+- maintainer release runbook (`docs/release-runbook.md`)
 - CI jobs for packaged-gem fallback, rust-enabled checks, and manifest checks
 
 Open in Phase 5:
 
-- native/precompiled gem publishing workflow is not implemented yet
-- tag-driven release/publish automation still needs finalization
+- native/precompiled gem publishing workflow is not implemented yet (Phase 5B)
+- platform strategy (initial Linux/macOS target matrix, packaging format, and rollout guardrails) still needs implementation
 
 ## Validation Commands
 
@@ -104,10 +109,12 @@ Core:
 
 Packaging/release checks:
 
+- `./bin/check-version-sync`
 - `./bin/test-packaged-gem-manifest`
 - `./bin/test-packaged-gem-fallback`
 - `./bin/test-packaged-gem-rust-enabled`
 - `SKIP_DOCKER=1 ./bin/release-preflight`
+- `./bin/release-artifacts --tag v0.4.0`
 
 Optional full Docker matrix:
 
@@ -127,13 +134,14 @@ Performance tracking:
 - packaged gem rust-enabled checks (`packaged-gem-rust-enabled`)
 - packaged gem manifest checks (`packaged-gem-manifest`)
 - rust scaffold check (`rust-scaffold`)
+- release validation/build/publish pipeline on `v*` tags (`release.yml`)
 
 ## Remaining Work Queue
 
 Priority 1:
 
-- implement native/precompiled gem build+publish pipeline (initially Linux/macOS targets)
-- add release workflow for version bump/tag/publish with explicit checks and rollback-safe steps
+- implement Phase 5B native/precompiled gem build+publish pipeline (initial Linux/macOS targets)
+- define publish artifact strategy (single platform gems vs. split package set) and compatibility policy
 
 Priority 2:
 
@@ -142,15 +150,16 @@ Priority 2:
 
 Priority 3:
 
-- tighten release docs with maintainer runbook and troubleshooting for common build/publish failures
+- extend release runbook with Phase 5B precompiled-gem troubleshooting once packaging strategy lands
 
 ## Resume Instructions For A New Conversation
 
 1. Check out `codex/experiment-ruby3-modernization`.
 2. Open this file first: `docs/modernization-handoff.md`.
 3. Run `SKIP_DOCKER=1 ./bin/release-preflight`.
-4. Continue with `Priority 1` items under "Remaining Work Queue".
+4. Review `docs/release-runbook.md` for release flow/rollback details.
+5. Continue with `Priority 1` items under "Remaining Work Queue" (Phase 5B precompiled gems).
 
 If you want the next assistant to continue immediately, use:
 
-"Open `docs/modernization-handoff.md`, validate with `SKIP_DOCKER=1 ./bin/release-preflight`, and start implementing Priority 1 item 1."
+"Open `docs/modernization-handoff.md`, validate with `SKIP_DOCKER=1 ./bin/release-preflight`, and start implementing Phase 5B precompiled gem packaging."
