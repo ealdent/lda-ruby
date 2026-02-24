@@ -1,61 +1,81 @@
-require 'rubygems'
-require 'rake'
-require 'yaml'
+# frozen_string_literal: true
 
-begin
-  require 'jeweler'
-  Jeweler::Tasks.new do |gem|
-    gem.name = "lda-ruby"
-    gem.summary = %Q{Ruby port of Latent Dirichlet Allocation by David M. Blei.}
-    gem.description = %Q{Ruby port of Latent Dirichlet Allocation by David M. Blei. See http://www.cs.princeton.edu/~blei/lda-c/.}
-    gem.email = "jasonmadams@gmail.com"
-    gem.homepage = "http://github.com/ealdent/lda-ruby"
-    gem.authors = ['David Blei', 'Jason Adams', 'Rio Akasaka']
-    gem.extensions = ['ext/lda-ruby/extconf.rb']
-    gem.files.include 'stopwords.txt'
-    gem.require_paths = ['lib', 'ext']
-    gem.add_dependency 'shoulda'
-    # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
+require "bundler/gem_tasks"
+require "rake/clean"
+require "rake/testtask"
+require "rbconfig"
+require "fileutils"
+
+EXT_DIR = File.expand_path("ext/lda-ruby", __dir__)
+EXT_MAKEFILE = File.join(EXT_DIR, "Makefile")
+EXT_SHARED_OBJECT = File.join(EXT_DIR, "lda.#{RbConfig::CONFIG.fetch("DLEXT")}")
+RUST_EXT_DIR = File.expand_path("ext/lda-ruby-rust", __dir__)
+RUST_TARGET_DIR = File.join(RUST_EXT_DIR, "target")
+
+CLEAN.include(File.join(EXT_DIR, "*.o"))
+CLOBBER.include(EXT_MAKEFILE, File.join(EXT_DIR, "mkmf.log"), EXT_SHARED_OBJECT)
+CLOBBER.include(RUST_TARGET_DIR)
+
+desc "Build native extension"
+task :compile do
+  Dir.chdir(EXT_DIR) do
+    sh RbConfig.ruby, "extconf.rb"
+    sh "make"
   end
-
-rescue LoadError
-  puts "Jeweler (or a dependency) not available. Install it with: sudo gem install jeweler"
 end
 
-require 'rake/testtask'
+desc "Build experimental Rust extension (requires cargo)"
+task :compile_rust do
+  cargo = ENV.fetch("CARGO", "cargo")
+  unless system("command -v #{cargo} >/dev/null 2>&1")
+    abort "cargo not found in PATH. Install Rust toolchain or skip compile_rust."
+  end
+
+  Dir.chdir(RUST_EXT_DIR) do
+    sh cargo, "build", "--release"
+  end
+
+  staged_path = stage_rust_extension_for_ruby
+  puts "Staged Rust extension at #{staged_path}"
+end
+
+desc "Run unit tests"
 Rake::TestTask.new(:test) do |test|
-  test.libs << 'lib' << 'test'
-  test.pattern = 'test/**/*_test.rb'
-  test.verbose = true
+  test.libs << "lib" << "test"
+  test.pattern = "test/**/*_test.rb"
+  test.warning = true
 end
 
-begin
-  require 'rcov/rcovtask'
-  Rcov::RcovTask.new do |test|
-    test.libs << 'test'
-    test.pattern = 'test/**/*_test.rb'
-    test.verbose = true
+task test: :compile
+task default: :test
+
+def stage_rust_extension_for_ruby
+  source = File.join(RUST_EXT_DIR, "target", "release", rust_cdylib_filename)
+  unless File.exist?(source)
+    abort "Expected Rust extension artifact at #{source}, but it was not produced."
   end
-rescue LoadError
-  task :rcov do
-    abort "RCov is not available. In order to run rcov, you must: sudo gem install spicycode-rcov"
-  end
+
+  destination = File.join(
+    RUST_EXT_DIR,
+    "target",
+    "release",
+    "lda_ruby_rust.#{RbConfig::CONFIG.fetch("DLEXT")}"
+  )
+  FileUtils.cp(source, destination)
+  destination
 end
 
-task :default => :test
+def rust_cdylib_filename
+  host_os = RbConfig::CONFIG.fetch("host_os")
+  extension =
+    case host_os
+    when /darwin/
+      "dylib"
+    when /mswin|mingw|cygwin/
+      "dll"
+    else
+      "so"
+    end
 
-require 'rake/rdoctask'
-Rake::RDocTask.new do |rdoc|
-  if File.exist?('VERSION.yml')
-    config = YAML.load(File.read('VERSION.yml'))
-    version = "#{config[:major]}.#{config[:minor]}.#{config[:patch]}"
-  else
-    version = ""
-  end
-
-  rdoc.rdoc_dir = 'rdoc'
-  rdoc.title = "lda-ruby #{version}"
-  rdoc.rdoc_files.include('README*')
-  rdoc.rdoc_files.include('lib/**/*.rb')
+  "liblda_ruby_rust.#{extension}"
 end
-

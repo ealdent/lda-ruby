@@ -1,11 +1,4 @@
-require 'rubygems'
-require 'test/unit'
-require 'shoulda'
-require 'yaml'
-
-$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
-$LOAD_PATH.unshift(File.dirname(__FILE__))
-require 'lda-ruby'
+require_relative "test_helper"
 
 class LdaRubyTest < Test::Unit::TestCase
   context "A Document instance" do
@@ -240,6 +233,33 @@ class LdaRubyTest < Test::Unit::TestCase
       assert !@lda.est_alpha.nil?
     end
 
+    should "expose the selected backend name" do
+      assert(["native", "pure_ruby", "rust"].include?(@lda.backend_name))
+    end
+
+    should "raise when rust backend is requested but extension is unavailable" do
+      if Lda::RUST_EXTENSION_LOADED
+        assert true
+      else
+        assert_raise(LoadError) { Lda::Lda.new(@corpus, backend: :rust) }
+      end
+    end
+
+    should "run with rust backend when extension is available" do
+      if Lda::RUST_EXTENSION_LOADED
+        rust_lda = Lda::Lda.new(@corpus, backend: :rust, random_seed: 1234)
+        rust_lda.verbose = false
+        rust_lda.num_topics = 4
+        rust_lda.em("seeded")
+
+        assert_equal "rust", rust_lda.backend_name
+        assert_equal @corpus.num_docs, rust_lda.gamma.size
+        assert_equal @corpus.num_docs, rust_lda.phi.size
+      else
+        assert true
+      end
+    end
+
     context "after running em" do
       setup do
         @lda.verbose = false
@@ -275,6 +295,24 @@ class LdaRubyTest < Test::Unit::TestCase
             assert_equal doc.size, @lda.num_topics
           end
         end
+      end
+    end
+
+    context "using the pure-ruby backend" do
+      setup do
+        @lda = Lda::Lda.new(@corpus, backend: :pure, random_seed: 1234)
+        @lda.verbose = false
+        @lda.num_topics = 6
+        @lda.max_iter = 20
+        @lda.em_max_iter = 30
+        @lda.em('random')
+      end
+
+      should "run em and generate model matrices" do
+        assert_equal "pure_ruby", @lda.backend_name
+        assert_equal @lda.num_topics, @lda.beta.size
+        assert_equal @corpus.num_docs, @lda.gamma.size
+        assert_equal @corpus.num_docs, @lda.phi.size
       end
     end
   end

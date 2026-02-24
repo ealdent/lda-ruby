@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+IMAGE_NAME="${IMAGE_NAME:-lda-ruby-rust-dev}"
+
+docker build -f Dockerfile.rust -t "${IMAGE_NAME}" .
+docker run --rm -it -v "$(pwd)":/workspace -w /workspace "${IMAGE_NAME}" bash

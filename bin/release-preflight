@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+run_step() {
+  local label="$1"
+  shift
+  echo "==> ${label}"
+  "$@"
+}
+
+maybe_run_docker_checks() {
+  if [[ "${SKIP_DOCKER:-0}" == "1" ]]; then
+    echo "==> docker checks skipped (SKIP_DOCKER=1)"
+    return
+  fi
+
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "==> docker checks skipped (docker command not found)"
+    return
+  fi
+
+  run_step "docker install-policy matrix" ./bin/docker-test-install-policies
+}
+
+main() {
+  run_step "version sync checks" ./bin/check-version-sync
+  run_step "unit test suite" bundle exec rake test
+  run_step "packaged gem manifest checks" ./bin/test-packaged-gem-manifest
+  run_step "packaged gem fallback checks (no cargo)" ./bin/test-packaged-gem-fallback
+
+  if command -v cargo >/dev/null 2>&1; then
+    run_step "packaged gem rust-enabled checks (cargo available)" ./bin/test-packaged-gem-rust-enabled
+  else
+    echo "==> rust-enabled packaged checks skipped (cargo command not found)"
+  fi
+
+  maybe_run_docker_checks
+  echo "Release preflight passed."
+}
+
+main "$@"

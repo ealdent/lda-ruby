@@ -1,0 +1,98 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "open3"
+require "optparse"
+
+def fail!(message)
+  warn("ERROR: #{message}")
+  exit(1)
+end
+
+options = {
+  tag: nil,
+  git_tag: false,
+  print_tag: false,
+  quiet: false
+}
+
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage: bin/check-version-sync [options]"
+
+  opts.on("--tag TAG", "Require version files to match TAG (vX.Y.Z)") do |value|
+    options[:tag] = value
+  end
+
+  opts.on("--git-tag", "Require expected tag to be present on HEAD") do
+    options[:git_tag] = true
+  end
+
+  opts.on("--print-tag", "Print expected tag and exit") do
+    options[:print_tag] = true
+  end
+
+  opts.on("--quiet", "Suppress success output") do
+    options[:quiet] = true
+  end
+
+  opts.on("-h", "--help", "Show help") do
+    puts(opts)
+    exit(0)
+  end
+end
+
+parser.parse!(ARGV)
+fail!("unexpected arguments: #{ARGV.join(' ')}") unless ARGV.empty?
+
+repo_root = File.expand_path("..", __dir__)
+Dir.chdir(repo_root)
+
+version_file = File.join("lib", "lda-ruby", "version.rb")
+version_yml_file = "VERSION.yml"
+
+fail!("missing #{version_file}") unless File.file?(version_file)
+fail!("missing #{version_yml_file}") unless File.file?(version_yml_file)
+
+version_rb = File.read(version_file)[/VERSION\s*=\s*"([^"]+)"/, 1]
+fail!("could not parse version from #{version_file}") if version_rb.nil? || version_rb.empty?
+fail!("invalid semantic version in #{version_file}: #{version_rb.inspect}") unless version_rb.match?(/\A\d+\.\d+\.\d+\z/)
+
+version_yml = File.read(version_yml_file)
+major = version_yml[/^:major:\s*(\d+)\s*$/, 1]
+minor = version_yml[/^:minor:\s*(\d+)\s*$/, 1]
+patch = version_yml[/^:patch:\s*(\d+)\s*$/, 1]
+fail!("could not parse :major/:minor/:patch in #{version_yml_file}") if [major, minor, patch].any?(&:nil?)
+
+version_from_yaml = [major, minor, patch].join(".")
+if version_from_yaml != version_rb
+  fail!(
+    "version mismatch: #{version_yml_file}=#{version_from_yaml.inspect}, #{version_file}=#{version_rb.inspect}"
+  )
+end
+
+expected_tag = "v#{version_rb}"
+
+unless options[:tag].nil?
+  provided_tag = options[:tag].to_s.strip
+  fail!("provided --tag cannot be empty") if provided_tag.empty?
+  fail!("provided --tag must start with 'v': #{provided_tag.inspect}") unless provided_tag.start_with?("v")
+
+  unless provided_tag == expected_tag
+    fail!("provided tag #{provided_tag.inspect} does not match expected tag #{expected_tag.inspect}")
+  end
+end
+
+if options[:git_tag]
+  tags_output, status = Open3.capture2("git", "tag", "--points-at", "HEAD")
+  fail!("failed to read git tags for HEAD") unless status.success?
+
+  tags = tags_output.lines.map(&:strip).reject(&:empty?)
+  fail!("no git tags point at HEAD; expected #{expected_tag}") if tags.empty?
+  fail!("HEAD tags #{tags.inspect} do not include #{expected_tag.inspect}") unless tags.include?(expected_tag)
+end
+
+if options[:print_tag]
+  puts(expected_tag)
+elsif !options[:quiet]
+  puts("Version sync OK: VERSION.yml=#{version_from_yaml}, lib/lda-ruby/version.rb=#{version_rb}, expected_tag=#{expected_tag}")
+end

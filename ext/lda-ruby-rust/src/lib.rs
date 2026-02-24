@@ -1,0 +1,456 @@
+use magnus::{define_module, function, Error, Module, Object};
+
+fn available() -> bool {
+    true
+}
+
+fn abi_version() -> i64 {
+    1
+}
+
+fn before_em(_start: String, _num_docs: i64, _num_terms: i64) -> bool {
+    true
+}
+
+fn floor_value(min_probability: f64) -> f64 {
+    if min_probability.is_finite() && min_probability > 0.0 {
+        min_probability
+    } else {
+        1.0e-12
+    }
+}
+
+fn normalize_in_place(weights: &mut [f64]) {
+    let total: f64 = weights.iter().sum();
+
+    if !total.is_finite() || total <= 0.0 {
+        let uniform = if weights.is_empty() {
+            0.0
+        } else {
+            1.0 / weights.len() as f64
+        };
+        for weight in weights {
+            *weight = uniform;
+        }
+        return;
+    }
+
+    for weight in weights {
+        *weight /= total;
+    }
+}
+
+fn compute_topic_weights(
+    beta_probabilities: &[Vec<f64>],
+    gamma: &[f64],
+    word_index: usize,
+    floor: f64,
+) -> Vec<f64> {
+    let topics = gamma.len().min(beta_probabilities.len());
+    if topics == 0 {
+        return Vec::new();
+    }
+
+    let mut weights = Vec::with_capacity(topics);
+    for topic_index in 0..topics {
+        let beta_value = beta_probabilities[topic_index]
+            .get(word_index)
+            .copied()
+            .unwrap_or(floor)
+            .max(floor);
+        let gamma_value = gamma[topic_index].max(floor);
+        weights.push(beta_value * gamma_value);
+    }
+
+    normalize_in_place(&mut weights);
+    weights
+}
+
+fn topic_weights_for_word(
+    beta_probabilities: Vec<Vec<f64>>,
+    gamma: Vec<f64>,
+    word_index: usize,
+    min_probability: f64,
+) -> Vec<f64> {
+    let floor = floor_value(min_probability);
+    compute_topic_weights(&beta_probabilities, &gamma, word_index, floor)
+}
+
+fn accumulate_topic_term_counts_in_place(
+    topic_term_counts: &mut [Vec<f64>],
+    phi_d: &[Vec<f64>],
+    words: &[usize],
+    counts: &[f64],
+) {
+    let topics = topic_term_counts.len();
+    if topics == 0 {
+        return;
+    }
+
+    for (word_offset, &word_index) in words.iter().enumerate() {
+        let count = counts.get(word_offset).copied().unwrap_or(0.0);
+        if count == 0.0 {
+            continue;
+        }
+
+        let Some(phi_row) = phi_d.get(word_offset) else {
+            continue;
+        };
+
+        for topic_index in 0..topics {
+            let phi_value = phi_row.get(topic_index).copied().unwrap_or(0.0);
+            if let Some(topic_terms) = topic_term_counts.get_mut(topic_index) {
+                if word_index < topic_terms.len() {
+                    topic_terms[word_index] += count * phi_value;
+                }
+            }
+        }
+    }
+}
+
+fn accumulate_topic_term_counts(
+    mut topic_term_counts: Vec<Vec<f64>>,
+    phi_d: Vec<Vec<f64>>,
+    words: Vec<usize>,
+    counts: Vec<f64>,
+) -> Vec<Vec<f64>> {
+    accumulate_topic_term_counts_in_place(
+        topic_term_counts.as_mut_slice(),
+        phi_d.as_slice(),
+        words.as_slice(),
+        counts.as_slice(),
+    );
+    topic_term_counts
+}
+
+fn normalize_topic_term_counts(
+    topic_term_counts: Vec<Vec<f64>>,
+    min_probability: f64,
+) -> (Vec<Vec<f64>>, Vec<Vec<f64>>) {
+    let floor = floor_value(min_probability);
+
+    let mut beta_probabilities = Vec::with_capacity(topic_term_counts.len());
+    let mut beta_log = Vec::with_capacity(topic_term_counts.len());
+
+    for topic_counts in topic_term_counts.iter() {
+        let mut normalized = topic_counts
+            .iter()
+            .map(|value| {
+                if value.is_finite() {
+                    value.max(floor)
+                } else {
+                    floor
+                }
+            })
+            .collect::<Vec<_>>();
+
+        normalize_in_place(&mut normalized);
+
+        let topic_log = normalized
+            .iter()
+            .map(|value| value.max(floor).ln())
+            .collect::<Vec<_>>();
+
+        beta_probabilities.push(normalized);
+        beta_log.push(topic_log);
+    }
+
+    (beta_probabilities, beta_log)
+}
+
+fn average_gamma_shift(previous_gamma: Vec<Vec<f64>>, current_gamma: Vec<Vec<f64>>) -> f64 {
+    let mut sum = 0.0_f64;
+    let mut count = 0_usize;
+
+    for (row_index, previous_row) in previous_gamma.iter().enumerate() {
+        let current_row = current_gamma.get(row_index);
+
+        for (col_index, previous_value) in previous_row.iter().enumerate() {
+            let current_value = current_row
+                .and_then(|row| row.get(col_index))
+                .copied()
+                .unwrap_or(*previous_value);
+
+            sum += (previous_value - current_value).abs();
+            count += 1;
+        }
+    }
+
+    if count == 0 {
+        0.0
+    } else {
+        sum / count as f64
+    }
+}
+
+fn topic_document_probability(
+    phi_tensor: Vec<Vec<Vec<f64>>>,
+    document_counts: Vec<Vec<f64>>,
+    num_topics: usize,
+    min_probability: f64,
+) -> Vec<Vec<f64>> {
+    let floor = floor_value(min_probability);
+    let mut output = Vec::with_capacity(document_counts.len());
+
+    for (doc_index, counts) in document_counts.iter().enumerate() {
+        let mut tops = vec![0.0_f64; num_topics];
+        let ttl: f64 = counts.iter().copied().sum();
+
+        if let Some(doc_phi) = phi_tensor.get(doc_index) {
+            for (word_index, word_dist) in doc_phi.iter().enumerate() {
+                let count = counts.get(word_index).copied().unwrap_or(0.0);
+                if count == 0.0 {
+                    continue;
+                }
+
+                for topic_index in 0..num_topics {
+                    let top_prob = word_dist.get(topic_index).copied().unwrap_or(floor).max(floor);
+                    tops[topic_index] += top_prob.ln() * count;
+                }
+            }
+        }
+
+        if ttl.is_finite() && ttl > 0.0 {
+            for value in tops.iter_mut() {
+                *value /= ttl;
+            }
+        }
+
+        output.push(tops);
+    }
+
+    output
+}
+
+fn seeded_topic_term_probabilities(
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    topics: usize,
+    terms: usize,
+    min_probability: f64,
+) -> Vec<Vec<f64>> {
+    if topics == 0 || terms == 0 {
+        return Vec::new();
+    }
+
+    let floor = floor_value(min_probability);
+    let mut topic_term_counts = vec![vec![floor; terms]; topics];
+
+    for (doc_index, words) in document_words.iter().enumerate() {
+        let topic_index = doc_index % topics;
+        let counts = document_counts.get(doc_index);
+
+        for (word_offset, &word_index) in words.iter().enumerate() {
+            if word_index >= terms {
+                continue;
+            }
+
+            let count = counts
+                .and_then(|row| row.get(word_offset))
+                .copied()
+                .unwrap_or(0.0);
+            if !count.is_finite() || count == 0.0 {
+                continue;
+            }
+
+            topic_term_counts[topic_index][word_index] += count;
+        }
+    }
+
+    for row in topic_term_counts.iter_mut() {
+        normalize_in_place(row);
+    }
+
+    topic_term_counts
+}
+
+fn infer_document_internal(
+    beta_probabilities: &[Vec<f64>],
+    gamma_initial: &[f64],
+    words: &[usize],
+    counts: &[f64],
+    max_iter: i64,
+    convergence: f64,
+    min_probability: f64,
+    init_alpha: f64,
+) -> (Vec<f64>, Vec<Vec<f64>>) {
+    let topics = gamma_initial.len().min(beta_probabilities.len());
+    if topics == 0 {
+        return (Vec::new(), Vec::new());
+    }
+
+    let floor = floor_value(min_probability);
+    let init_alpha_value = if init_alpha.is_finite() {
+        init_alpha
+    } else {
+        0.3
+    };
+    let convergence_value = if convergence.is_finite() && convergence >= 0.0 {
+        convergence
+    } else {
+        1.0e-6
+    };
+    let max_iter_value = if max_iter <= 0 { 1 } else { max_iter as usize };
+
+    let mut gamma_d = gamma_initial.iter().copied().take(topics).collect::<Vec<_>>();
+    if gamma_d.len() < topics {
+        gamma_d.resize(topics, init_alpha_value);
+    }
+
+    let mut phi_d = vec![vec![1.0 / topics as f64; topics]; words.len()];
+
+    for _ in 0..max_iter_value {
+        let mut gamma_next = vec![init_alpha_value; topics];
+
+        for (word_offset, &word_index) in words.iter().enumerate() {
+            let topic_weights = compute_topic_weights(beta_probabilities, &gamma_d, word_index, floor);
+            phi_d[word_offset] = topic_weights.clone();
+
+            let count = counts.get(word_offset).copied().unwrap_or(0.0);
+            if count == 0.0 {
+                continue;
+            }
+
+            for topic_index in 0..topics {
+                gamma_next[topic_index] += count * topic_weights[topic_index];
+            }
+        }
+
+        let mut gamma_shift = 0.0_f64;
+        for topic_index in 0..topics {
+            let delta = (gamma_d[topic_index] - gamma_next[topic_index]).abs();
+            if delta > gamma_shift {
+                gamma_shift = delta;
+            }
+        }
+
+        gamma_d = gamma_next;
+        if gamma_shift <= convergence_value {
+            break;
+        }
+    }
+
+    (gamma_d, phi_d)
+}
+
+fn infer_document(
+    beta_probabilities: Vec<Vec<f64>>,
+    gamma_initial: Vec<f64>,
+    words: Vec<usize>,
+    counts: Vec<f64>,
+    max_iter: i64,
+    convergence: f64,
+    min_probability: f64,
+    init_alpha: f64,
+) -> Vec<Vec<f64>> {
+    let (gamma_d, phi_d) = infer_document_internal(
+        beta_probabilities.as_slice(),
+        gamma_initial.as_slice(),
+        words.as_slice(),
+        counts.as_slice(),
+        max_iter,
+        convergence,
+        min_probability,
+        init_alpha,
+    );
+
+    let mut output = Vec::with_capacity(phi_d.len() + 1);
+    output.push(gamma_d);
+    output.extend(phi_d);
+    output
+}
+
+fn infer_corpus_iteration(
+    beta_probabilities: Vec<Vec<f64>>,
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    max_iter: i64,
+    convergence: f64,
+    min_probability: f64,
+    init_alpha: f64,
+) -> (Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>, Vec<Vec<f64>>) {
+    let topics = beta_probabilities.len();
+    if topics == 0 {
+        return (Vec::new(), Vec::new(), Vec::new());
+    }
+
+    let terms = beta_probabilities
+        .iter()
+        .map(|row| row.len())
+        .max()
+        .unwrap_or(0);
+    let floor = floor_value(min_probability);
+    let init_alpha_value = if init_alpha.is_finite() { init_alpha } else { 0.3 };
+
+    let mut topic_term_counts = vec![vec![floor; terms]; topics];
+    let mut gamma_matrix = Vec::with_capacity(document_words.len());
+    let mut phi_tensor = Vec::with_capacity(document_words.len());
+
+    for (doc_index, words) in document_words.iter().enumerate() {
+        let counts = document_counts.get(doc_index).cloned().unwrap_or_else(|| vec![0.0; words.len()]);
+        let total: f64 = counts.iter().sum();
+        let gamma_initial = vec![init_alpha_value + (total / topics as f64); topics];
+
+        let (gamma_d, phi_d) = infer_document_internal(
+            beta_probabilities.as_slice(),
+            gamma_initial.as_slice(),
+            words.as_slice(),
+            counts.as_slice(),
+            max_iter,
+            convergence,
+            min_probability,
+            init_alpha,
+        );
+
+        accumulate_topic_term_counts_in_place(
+            topic_term_counts.as_mut_slice(),
+            phi_d.as_slice(),
+            words.as_slice(),
+            counts.as_slice(),
+        );
+
+        gamma_matrix.push(gamma_d);
+        phi_tensor.push(phi_d);
+    }
+
+    (gamma_matrix, phi_tensor, topic_term_counts)
+}
+
+#[magnus::init]
+fn init() -> Result<(), Error> {
+    let lda_module = define_module("Lda")?;
+    let rust_backend_module = lda_module.define_module("RustBackend")?;
+
+    rust_backend_module.define_singleton_method("available?", function!(available, 0))?;
+    rust_backend_module.define_singleton_method("abi_version", function!(abi_version, 0))?;
+    rust_backend_module.define_singleton_method("before_em", function!(before_em, 3))?;
+    rust_backend_module.define_singleton_method(
+        "topic_weights_for_word",
+        function!(topic_weights_for_word, 4),
+    )?;
+    rust_backend_module.define_singleton_method(
+        "accumulate_topic_term_counts",
+        function!(accumulate_topic_term_counts, 4),
+    )?;
+    rust_backend_module.define_singleton_method("infer_document", function!(infer_document, 8))?;
+    rust_backend_module.define_singleton_method(
+        "infer_corpus_iteration",
+        function!(infer_corpus_iteration, 7),
+    )?;
+    rust_backend_module.define_singleton_method(
+        "normalize_topic_term_counts",
+        function!(normalize_topic_term_counts, 2),
+    )?;
+    rust_backend_module
+        .define_singleton_method("average_gamma_shift", function!(average_gamma_shift, 2))?;
+    rust_backend_module.define_singleton_method(
+        "topic_document_probability",
+        function!(topic_document_probability, 4),
+    )?;
+    rust_backend_module.define_singleton_method(
+        "seeded_topic_term_probabilities",
+        function!(seeded_topic_term_probabilities, 5),
+    )?;
+
+    Ok(())
+}

@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+usage() {
+  cat <<'USAGE'
+Usage: ./bin/release-artifacts [--tag vX.Y.Z] [--skip-preflight]
+
+Builds release artifacts for the source gem:
+1) version sync checks
+2) release preflight (unless skipped)
+3) packaged gem manifest checks
+4) source gem build
+5) SHA256 checksum generation under pkg/
+USAGE
+}
+
+run_step() {
+  local label="$1"
+  shift
+  echo "==> ${label}"
+  "$@"
+}
+
+tag=""
+skip_preflight="${SKIP_PREFLIGHT:-0}"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --tag)
+      [[ $# -ge 2 ]] || fail "--tag requires a value"
+      tag="$2"
+      shift 2
+      ;;
+    --skip-preflight)
+      skip_preflight=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      fail "unknown argument: $1"
+      ;;
+  esac
+done
+
+version_check_cmd=(./bin/check-version-sync)
+if [[ -n "${tag}" ]]; then
+  version_check_cmd+=(--tag "${tag}")
+fi
+run_step "version sync checks" "${version_check_cmd[@]}"
+
+if [[ "${skip_preflight}" == "1" ]]; then
+  echo "==> release preflight skipped (SKIP_PREFLIGHT=1 or --skip-preflight)"
+else
+  run_step "release preflight" ./bin/release-preflight
+fi
+
+run_step "packaged gem manifest checks" ./bin/test-packaged-gem-manifest
+run_step "build source gem" bundle exec rake build
+
+gem_file="$(
+  ruby -e 'files = Dir["pkg/lda-ruby-*.gem"]; puts(files.max_by { |path| File.mtime(path) }.to_s)'
+)"
+[[ -n "${gem_file}" ]] || fail "no built gem found under pkg/"
+
+checksum_file="${gem_file}.sha256"
+if command -v sha256sum >/dev/null 2>&1; then
+  sha256sum "${gem_file}" > "${checksum_file}"
+elif command -v shasum >/dev/null 2>&1; then
+  shasum -a 256 "${gem_file}" > "${checksum_file}"
+else
+  fail "neither sha256sum nor shasum is available"
+fi
+
+echo "Built source gem: ${gem_file}"
+echo "Wrote checksum: ${checksum_file}"

@@ -1,0 +1,188 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - "codex/**"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test-native:
+    name: native / ${{ matrix.os }} / ruby-${{ matrix.ruby }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        ruby: ["3.2", "3.3"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+
+      - name: Run test suite (native backend)
+        run: bundle exec rake test
+
+      - name: Build gem
+        run: bundle exec rake build
+
+  test-pure:
+    name: pure / ubuntu-latest / ruby-${{ matrix.ruby }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ["3.2", "3.3"]
+
+    env:
+      LDA_RUBY_BACKEND: pure
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+
+      - name: Run compatibility tests without compiling native extension
+        run: bundle exec ruby -Ilib:test test/backend_compatibility_test.rb
+
+      - name: Run full model tests in pure mode
+        run: bundle exec ruby -Ilib:test test/lda_ruby_test.rb
+
+      - name: Run pipeline smoke test in pure mode
+        run: bundle exec ruby -Ilib:test test/simple_pipeline_test.rb
+
+  rust-runtime:
+    name: rust runtime / ubuntu-latest / ruby-3.3
+    runs-on: ubuntu-latest
+
+    env:
+      LDA_RUBY_BACKEND: rust
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust bindgen dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-dev pkg-config
+
+      - name: Build native and Rust extensions
+        run: bundle exec rake compile compile_rust
+
+      - name: Run compatibility tests in rust mode
+        run: bundle exec ruby -Ilib:test test/backend_compatibility_test.rb
+
+      - name: Run full model tests in rust mode
+        run: bundle exec ruby -Ilib:test test/lda_ruby_test.rb
+
+      - name: Run pipeline smoke test in rust mode
+        run: bundle exec ruby -Ilib:test test/simple_pipeline_test.rb
+
+  install-policy-matrix:
+    name: install policy matrix / ubuntu-latest
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Docker install policy matrix checks
+        run: ./bin/docker-test-install-policies
+
+  packaged-gem-fallback:
+    name: packaged gem fallback / ${{ matrix.os }} / ruby-3.3
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Run packaged gem fallback checks
+        run: ./bin/test-packaged-gem-fallback
+
+  packaged-gem-rust-enabled:
+    name: packaged gem rust-enabled / ubuntu-latest / ruby-3.3
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust bindgen dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-dev pkg-config
+
+      - name: Run packaged gem rust-enabled checks
+        run: ./bin/test-packaged-gem-rust-enabled
+
+  packaged-gem-manifest:
+    name: packaged gem manifest / ubuntu-latest / ruby-3.3
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Run packaged gem manifest checks
+        run: ./bin/test-packaged-gem-manifest
+
+  rust-scaffold:
+    name: rust scaffold / ubuntu-latest
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: false
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust bindgen dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-dev pkg-config
+
+      - name: Check Rust extension scaffold
+        run: cargo check --manifest-path ext/lda-ruby-rust/Cargo.toml

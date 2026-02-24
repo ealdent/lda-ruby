@@ -1,0 +1,13 @@
+.git
+.bundle
+vendor/bundle
+pkg
+tmp
+coverage
+*.gem
+ext/lda-ruby/*.o
+ext/lda-ruby/*.bundle
+ext/lda-ruby/*.so
+ext/lda-ruby/Makefile
+ext/lda-ruby/mkmf.log
+ext/lda-ruby-rust/target

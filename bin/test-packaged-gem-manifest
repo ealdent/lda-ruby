@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+build_gem() {
+  bundle exec rake build >/dev/null
+  ls -1t pkg/lda-ruby-*.gem | head -n1
+}
+
+verify_metadata() {
+  local gem_file="$1"
+
+  ruby - "${gem_file}" <<'RUBY'
+    require "rubygems/package"
+    require "rubygems/version"
+
+    gem_file = ARGV.fetch(0)
+    spec = Gem::Package.new(gem_file).spec
+
+    required_extensions = [
+      "ext/lda-ruby/extconf.rb",
+      "ext/lda-ruby-rust/extconf.rb"
+    ]
+    missing_extensions = required_extensions - spec.extensions
+    unless missing_extensions.empty?
+      abort("missing required extensions in gemspec: #{missing_extensions.join(', ')}")
+    end
+
+    minimum = Gem::Version.new("3.2.0")
+    unless spec.required_ruby_version.satisfied_by?(minimum)
+      abort("required_ruby_version does not allow Ruby #{minimum}")
+    end
+
+    source_code_uri = spec.metadata["source_code_uri"]
+    abort("missing source_code_uri metadata") if source_code_uri.nil? || source_code_uri.empty?
+RUBY
+}
+
+verify_manifest() {
+  local gem_root="$1"
+
+  local -a required_files=(
+    "README.md"
+    "CHANGELOG.md"
+    "VERSION.yml"
+    "lib/lda-ruby.rb"
+    "lib/lda-ruby/backends/rust.rb"
+    "ext/lda-ruby/extconf.rb"
+    "ext/lda-ruby-rust/extconf.rb"
+    "ext/lda-ruby-rust/Cargo.toml"
+    "ext/lda-ruby-rust/src/lib.rs"
+    "docs/porting-strategy.md"
+    "docs/release-runbook.md"
+  )
+
+  local path
+  for path in "${required_files[@]}"; do
+    [[ -f "${gem_root}/${path}" ]] || fail "required file missing from packaged gem: ${path}"
+  done
+
+  local -a banned_exact_paths=(
+    "ext/lda-ruby/Makefile"
+    "ext/lda-ruby/mkmf.log"
+    "ext/lda-ruby-rust/Makefile"
+    "ext/lda-ruby-rust/Cargo.lock"
+  )
+  for path in "${banned_exact_paths[@]}"; do
+    [[ ! -e "${gem_root}/${path}" ]] || fail "banned file leaked into packaged gem: ${path}"
+  done
+
+  local -a banned_name_patterns=(
+    "*.o"
+    "*.so"
+    "*.bundle"
+    "*.dylib"
+    "*.dll"
+    "*.rlib"
+    "*.rmeta"
+  )
+  local pattern
+  for pattern in "${banned_name_patterns[@]}"; do
+    if find "${gem_root}" -type f -name "${pattern}" | grep -q .; then
+      fail "banned artifact pattern leaked into packaged gem: ${pattern}"
+    fi
+  done
+
+  if find "${gem_root}" -type f -path "${gem_root}/ext/lda-ruby-rust/target/*" | grep -q .; then
+    fail "Rust cargo target artifacts leaked into packaged gem"
+  fi
+}
+
+main() {
+  local gem_file
+  gem_file="$(build_gem)"
+  echo "Built gem: ${gem_file}"
+
+  verify_metadata "${gem_file}"
+
+  local temp_root
+  temp_root="$(mktemp -d)"
+  trap "rm -rf '${temp_root}'" EXIT
+
+  local unpack_root="${temp_root}/unpack"
+  mkdir -p "${unpack_root}"
+  gem unpack --target "${unpack_root}" "${gem_file}" >/dev/null
+
+  local gem_dir
+  gem_dir="$(find "${unpack_root}" -mindepth 1 -maxdepth 1 -type d | head -n1)"
+  [[ -n "${gem_dir}" ]] || fail "failed to locate unpacked gem directory"
+
+  verify_manifest "${gem_dir}"
+  echo "Packaged gem manifest checks passed."
+}
+
+main "$@"

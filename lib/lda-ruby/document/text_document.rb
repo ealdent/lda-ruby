@@ -16,9 +16,10 @@ module Lda
     end
 
     def self.build_from_file(corpus, filename)
-      @filename = filename.dup.freeze
-      text = File.open(@filename, 'r', &:read)
-      new(corpus, text)
+      text = File.read(filename)
+      document = new(corpus, text)
+      document.instance_variable_set(:@filename, filename.dup.freeze)
+      document
     end
 
     protected

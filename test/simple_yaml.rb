@@ -1,10 +1,4 @@
-require 'rubygems'
-require 'shoulda'
-require 'yaml'
-require 'lda-ruby'
-
-$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
-$LOAD_PATH.unshift(File.dirname(__FILE__))
+require_relative "test_helper"
 
 class Test::Unit::TestCase
 
