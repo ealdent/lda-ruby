@@ -13,6 +13,13 @@ This document is the canonical handoff state for continuing the Ruby 3.2+/3.3+ m
   - workflow run: `release.yml` run `22382692416` (`workflow_dispatch`, `publish=false`)
   - result: success (`validate release candidate`, `build release artifacts`, and all `build precompiled artifacts` matrix targets)
   - publish jobs skipped by design (`publish=false`)
+- Open pull request:
+  - `codex/modernization` -> `master`
+  - PR `#18`: `https://github.com/ealdent/lda-ruby/pull/18`
+- Latest PR CI validation (GitHub Actions):
+  - date: 2026-02-25
+  - workflow run: `CI` run `22383301379` (trigger: `pull_request` for PR `#18`)
+  - result: success (all checks green, including `precompiled gem build` matrix and install policy/rust runtime jobs)
 
 ## Project Goal
 
