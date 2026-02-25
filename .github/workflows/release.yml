@@ -205,7 +205,7 @@ jobs:
 
           for gem_file in "${gem_files[@]}"; do
             echo "Pushing ${gem_file}"
-            gem push "${gem_file}" --key rubygems_api_key
+            gem push "${gem_file}"
           done
 
   publish_github_release:
