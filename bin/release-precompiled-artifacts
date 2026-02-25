@@ -125,14 +125,24 @@ stage_precompiled_extensions() {
 }
 
 default_platform() {
-  ruby -rrubygems -e 'puts Gem::Platform.local.to_s'
+  ruby -rrubygems -e 'puts Gem::Platform.local.to_s.sub(/-darwin-\d+\z/, "-darwin")'
+}
+
+canonicalize_platform() {
+  local platform="$1"
+  echo "${platform}" | sed -E 's/-darwin-[0-9]+$/-darwin/'
 }
 
 ensure_platform_matches_host() {
   local requested_platform="$1"
   local host_platform="$2"
+  local requested_canonical
+  local host_canonical
 
-  if [[ "${requested_platform}" != "${host_platform}" ]]; then
+  requested_canonical="$(canonicalize_platform "${requested_platform}")"
+  host_canonical="$(canonicalize_platform "${host_platform}")"
+
+  if [[ "${requested_canonical}" != "${host_canonical}" ]]; then
     fail "requested platform (${requested_platform}) does not match host platform (${host_platform}); cross-platform precompiled builds are not supported by this script"
   fi
 }
