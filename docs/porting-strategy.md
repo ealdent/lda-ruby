@@ -69,8 +69,11 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Version/tag sync guard added (`bin/check-version-sync`) to enforce parity between `VERSION.yml`, `lib/lda-ruby/version.rb`, and release tags.
 - Release preparation helper added (`bin/release-prepare`) for deterministic version/changelog updates.
 - Release artifact helper added (`bin/release-artifacts`) to build source gem artifacts with SHA256 checksums.
+- Precompiled platform artifact helper added (`bin/release-precompiled-artifacts`) to build + validate native gems.
 - Tag-driven release workflow added (`.github/workflows/release.yml`) with dry-run support and environment-gated publish jobs.
+- CI precompiled guardrail job added (`precompiled-gem-build`) for Linux/macOS packaging checks.
 - Maintainer release runbook added (`docs/release-runbook.md`) with publish and rollback/yank procedures.
+- Precompiled platform support policy added (`docs/precompiled-platform-policy.md`).
 
 For an up-to-date resume snapshot (phase status + exact remaining queue), see `docs/modernization-handoff.md`.
 
@@ -104,7 +107,7 @@ For an up-to-date resume snapshot (phase status + exact remaining queue), see `d
 
 - Phase 5A (source-gem release automation): complete.
 - Keep source build path available.
-- Phase 5B (precompiled/native gem publishing): pending.
+- Phase 5B (precompiled/native gem publishing): complete for initial Linux/macOS targets via `bin/release-precompiled-artifacts` and release workflow matrix builds.
 
 ## Tooling suggestions
 

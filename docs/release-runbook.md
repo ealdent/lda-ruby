@@ -1,15 +1,18 @@
-# Release Runbook (Phase 5A Source Gem)
+# Release Runbook (Phase 5A + 5B)
 
-This runbook defines the maintainer workflow for shipping `lda-ruby` source-gem releases.
+This runbook defines the maintainer workflow for shipping `lda-ruby` source and precompiled platform gem releases.
+
+Authoritative platform/support policy is maintained in `docs/precompiled-platform-policy.md`.
 
 ## Scope
 
-- Release artifact type: source gem (`pkg/lda-ruby-<version>.gem`)
+- Release artifact types:
+  - source gem: `pkg/lda-ruby-<version>.gem`
+  - precompiled gems (current targets are defined in `docs/precompiled-platform-policy.md`)
 - Release trigger: git tag (`vX.Y.Z`) with matching version files
 - Publish targets:
   - RubyGems (`gem push`)
   - GitHub Releases (gem + checksum attachment)
-- Out of scope for this phase: precompiled/native platform gems
 
 ## Prerequisites
 
@@ -19,6 +22,8 @@ This runbook defines the maintainer workflow for shipping `lda-ruby` source-gem 
    - RubyGems owner access for `lda-ruby`
 2. Local tooling:
    - Ruby 3.2+ with Bundler
+   - Rust toolchain (`cargo`) for local precompiled-gem build checks
+   - `libclang` available to Rust bindgen
    - Docker (recommended for reproducible checks)
 3. Repository state:
    - release commit merged to `master`
@@ -56,7 +61,15 @@ GitHub Actions environment:
    ./bin/test-packaged-gem-manifest
    ```
 
-4. Commit and merge to `master`.
+4. Validate local precompiled gem flow for your current host platform:
+
+   ```bash
+   ./bin/release-precompiled-artifacts --tag v0.4.0 --skip-preflight
+   ```
+
+   Note: `release-precompiled-artifacts` only supports building for the current host platform (no cross-compilation).
+
+5. Commit and merge to `master`.
 
 ## Dry-Run Path (No Publish)
 
@@ -65,7 +78,7 @@ Use `workflow_dispatch` with `publish=false`.
 Behavior:
 
 - runs release validation and artifact build
-- uploads `pkg/lda-ruby-*.gem` and checksum as workflow artifacts
+- uploads source + precompiled `pkg/lda-ruby-*.gem` and checksum files as workflow artifacts
 - does not push to RubyGems
 - does not create a GitHub release
 
@@ -73,6 +86,7 @@ Optional local dry-run equivalent:
 
 ```bash
 ./bin/release-artifacts --tag v0.4.0
+./bin/release-precompiled-artifacts --tag v0.4.0 --skip-preflight
 ```
 
 ## Publish Path (Tag-Driven)
@@ -90,12 +104,13 @@ Optional local dry-run equivalent:
 3. Monitor `.github/workflows/release.yml`:
    - `validate`
    - `build_artifacts`
+   - `build_precompiled_artifacts` (linux + macOS matrix)
    - environment-gated `publish_rubygems`
    - environment-gated `publish_github_release`
 4. Approve the protected `release` environment when prompted.
 5. Confirm published outputs:
-   - RubyGems shows `lda-ruby` `0.4.0`
-   - GitHub release `v0.4.0` exists with gem and `.sha256` attachment
+   - RubyGems shows `lda-ruby` `0.4.0` source gem and platform gems
+   - GitHub release `v0.4.0` exists with all gem and `.sha256` attachments
 
 ## Rollback and Recovery
 
@@ -127,5 +142,7 @@ If an incorrect gem is published:
 
 - `Could not find 'bundler'`: install the Bundler version pinned in `Gemfile.lock`.
 - `cargo not found` in rust-enabled checks: ensure Rust toolchain is installed or run in Docker.
+- `libclang` not found while building precompiled gems: install LLVM/libclang and set `LIBCLANG_PATH` if needed.
 - Tag/version mismatch: run `./bin/check-version-sync --tag vX.Y.Z`.
 - Artifact mismatch during release: rebuild with `./bin/release-artifacts --tag vX.Y.Z`.
+- Precompiled artifact mismatch: rebuild with `./bin/release-precompiled-artifacts --tag vX.Y.Z --skip-preflight`.

@@ -4,6 +4,7 @@ version 0.4.0
 - Ruby 3.2+/3.3+ modernization release.
 - Added Rust/native/pure backend selection and packaged-gem install policy validation.
 - Added tag-driven release automation and release runbook.
+- Added precompiled platform gem build/publish pipeline (Linux + macOS) and compatibility policy documentation.
 
 version 0.3.9
 =============

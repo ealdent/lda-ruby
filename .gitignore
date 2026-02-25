@@ -16,6 +16,10 @@ Gemfile.lock
 /ext/lda-ruby-rust/target
 /ext/lda-ruby-rust/Cargo.lock
 /ext/lda-ruby-rust/Makefile
+/lib/lda-ruby/lda.so
+/lib/lda-ruby/lda.bundle
+/lib/lda-ruby/lda.dylib
+/lib/lda-ruby/lda.dll
 /lib/lda_ruby_rust.so
 /lib/lda_ruby_rust.bundle
 /lib/lda_ruby_rust.dylib

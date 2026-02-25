@@ -1,0 +1,369 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+usage() {
+  cat <<'USAGE'
+Usage: ./bin/release-precompiled-artifacts [--tag vX.Y.Z] [--platform PLATFORM] [--skip-preflight] [--skip-runtime-checks]
+
+Builds precompiled/native release artifacts for the current host:
+1) version sync checks
+2) release preflight (unless skipped)
+3) native + Rust extension build
+4) staging precompiled binaries under lib/
+5) platform gem build (no install-time extension compilation)
+6) packaged gem metadata/runtime validation (unless skipped)
+7) SHA256 checksum generation under pkg/
+
+Defaults:
+- PLATFORM defaults to Gem::Platform.local (for example: x86_64-linux, arm64-darwin).
+- PLATFORM must match the current host platform.
+USAGE
+}
+
+run_step() {
+  local label="$1"
+  shift
+  echo "==> ${label}"
+  "$@"
+}
+
+build_precompiled_gem() {
+  local platform="$1"
+  local stale_root_gem
+  local root_gem
+  local pkg_gem
+
+  stale_root_gem="$(
+    ruby - "${platform}" <<'RUBY'
+      platform = ARGV.fetch(0)
+      files = Dir["lda-ruby-*-#{platform}.gem"]
+      puts(files.max_by { |path| File.mtime(path) }.to_s)
+RUBY
+  )"
+  if [[ -n "${stale_root_gem}" ]]; then
+    rm -f "${stale_root_gem}"
+  fi
+
+  env "LDA_RUBY_GEM_VARIANT=precompiled" "LDA_RUBY_GEM_PLATFORM=${platform}" gem build lda-ruby.gemspec >/dev/null
+
+  root_gem="$(
+    ruby - "${platform}" <<'RUBY'
+      platform = ARGV.fetch(0)
+      files = Dir["lda-ruby-*-#{platform}.gem"]
+      puts(files.max_by { |path| File.mtime(path) }.to_s)
+RUBY
+  )"
+  [[ -n "${root_gem}" ]] || fail "no precompiled gem built in repository root for platform ${platform}"
+
+  mkdir -p pkg
+  pkg_gem="pkg/$(basename "${root_gem}")"
+  mv "${root_gem}" "${pkg_gem}"
+  echo "${pkg_gem}"
+}
+
+backup_root=""
+declare -a staged_paths=()
+
+backup_path_for() {
+  local path="$1"
+  local sanitized
+  sanitized="${path#/}"
+  sanitized="${sanitized//\//__}"
+  echo "${backup_root}/${sanitized}.bak"
+}
+
+cleanup_staged_files() {
+  if [[ -n "${backup_root}" && -d "${backup_root}" ]]; then
+    if (( ${#staged_paths[@]} > 0 )); then
+      local path
+      local backup_path
+      for path in "${staged_paths[@]}"; do
+        backup_path="$(backup_path_for "${path}")"
+        if [[ -f "${backup_path}" ]]; then
+          cp "${backup_path}" "${path}"
+        else
+          rm -f "${path}"
+        fi
+      done
+    fi
+    rm -rf "${backup_root}"
+  fi
+}
+
+trap cleanup_staged_files EXIT
+
+stage_binary() {
+  local source="$1"
+  local destination="$2"
+  local backup_path
+
+  [[ -f "${source}" ]] || fail "missing compiled artifact: ${source}"
+
+  mkdir -p "$(dirname "${destination}")"
+
+  backup_path="$(backup_path_for "${destination}")"
+  if [[ -f "${destination}" ]]; then
+    cp "${destination}" "${backup_path}"
+  fi
+
+  cp "${source}" "${destination}"
+  staged_paths+=("${destination}")
+}
+
+stage_precompiled_extensions() {
+  local native_source="$1"
+  local rust_source="$2"
+  local dlext="$3"
+
+  stage_binary "${native_source}" "lib/lda-ruby/lda.${dlext}"
+  stage_binary "${rust_source}" "lib/lda_ruby_rust.${dlext}"
+}
+
+default_platform() {
+  ruby -rrubygems -e 'puts Gem::Platform.local.to_s'
+}
+
+ensure_platform_matches_host() {
+  local requested_platform="$1"
+  local host_platform="$2"
+
+  if [[ "${requested_platform}" != "${host_platform}" ]]; then
+    fail "requested platform (${requested_platform}) does not match host platform (${host_platform}); cross-platform precompiled builds are not supported by this script"
+  fi
+}
+
+detect_native_extension() {
+  local dlext="$1"
+  local primary="ext/lda-ruby/lda.${dlext}"
+  if [[ -f "${primary}" ]]; then
+    echo "${primary}"
+    return 0
+  fi
+
+  local discovered
+  discovered="$(find ext/lda-ruby -maxdepth 4 -type f -name "lda.${dlext}" | head -n1)"
+  [[ -n "${discovered}" ]] || return 1
+  echo "${discovered}"
+}
+
+detect_rust_extension() {
+  local dlext="$1"
+  local candidate
+  for candidate in \
+    "ext/lda-ruby-rust/target/release/lda_ruby_rust.${dlext}" \
+    "ext/lda-ruby-rust/target/release/liblda_ruby_rust.${dlext}"; do
+    if [[ -f "${candidate}" ]]; then
+      echo "${candidate}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+verify_precompiled_metadata() {
+  local gem_file="$1"
+  local expected_platform="$2"
+
+  ruby - "${gem_file}" "${expected_platform}" <<'RUBY'
+    require "rubygems"
+    require "rubygems/package"
+
+    gem_file = ARGV.fetch(0)
+    expected_platform = ARGV.fetch(1)
+
+    spec = Gem::Package.new(gem_file).spec
+    actual_platform = spec.platform.to_s
+
+    abort("expected a platform gem, got #{actual_platform.inspect}") if actual_platform == Gem::Platform::RUBY
+    unless actual_platform == expected_platform
+      abort("platform mismatch: expected #{expected_platform.inspect}, got #{actual_platform.inspect}")
+    end
+
+    unless spec.extensions.empty?
+      abort("expected precompiled gem to have no extensions, got #{spec.extensions.inspect}")
+    end
+
+    required_patterns = [
+      %r{\Alib/lda-ruby/lda\.(so|bundle|dylib|dll)\z},
+      %r{\Alib/lda_ruby_rust\.(so|bundle|dylib|dll)\z}
+    ]
+    missing = required_patterns.reject { |pattern| spec.files.any? { |path| pattern.match?(path) } }
+    unless missing.empty?
+      abort("missing precompiled binaries in gem files: #{missing.map(&:source).join(', ')}")
+    end
+
+    if spec.files.any? { |path| path.start_with?("ext/lda-ruby-rust/target/") }
+      abort("Rust target artifacts leaked into precompiled gem")
+    end
+RUBY
+}
+
+run_precompiled_smoke_modes() {
+  local gem_home="$1"
+
+  GEM_HOME="${gem_home}" \
+    GEM_PATH="${gem_home}" \
+    EXPECTED_GEM_HOME_PREFIX="${gem_home}" \
+    EXPECTED_BACKEND="rust" \
+    SMOKE_MODE="auto" \
+    ruby ./bin/packaged-gem-smoke.rb
+
+  GEM_HOME="${gem_home}" \
+    GEM_PATH="${gem_home}" \
+    EXPECTED_GEM_HOME_PREFIX="${gem_home}" \
+    EXPECTED_BACKEND="pure_ruby" \
+    SMOKE_MODE="pure" \
+    LDA_RUBY_BACKEND="pure" \
+    ruby ./bin/packaged-gem-smoke.rb
+
+  GEM_HOME="${gem_home}" \
+    GEM_PATH="${gem_home}" \
+    EXPECTED_GEM_HOME_PREFIX="${gem_home}" \
+    EXPECTED_BACKEND="native" \
+    SMOKE_MODE="native" \
+    LDA_RUBY_BACKEND="native" \
+    ruby ./bin/packaged-gem-smoke.rb
+
+  GEM_HOME="${gem_home}" \
+    GEM_PATH="${gem_home}" \
+    EXPECTED_GEM_HOME_PREFIX="${gem_home}" \
+    EXPECTED_BACKEND="rust" \
+    SMOKE_MODE="rust" \
+    LDA_RUBY_BACKEND="rust" \
+    ruby ./bin/packaged-gem-smoke.rb
+}
+
+run_runtime_checks() {
+  local gem_file="$1"
+  local temp_root
+  local install_log
+  local gem_home
+  local runtime_flags
+
+  temp_root="$(mktemp -d)"
+  install_log="$(mktemp)"
+  gem_home="${temp_root}/gemhome"
+  mkdir -p "${gem_home}"
+
+  if ! env \
+    "CC=/__missing__/cc" \
+    "CXX=/__missing__/cxx" \
+    "MAKE=/__missing__/make" \
+    "CARGO=/__missing__/cargo" \
+    "GEM_HOME=${gem_home}" \
+    "GEM_PATH=${gem_home}" \
+    gem install --local "${gem_file}" --no-document >"${install_log}" 2>&1; then
+    cat "${install_log}" >&2
+    rm -f "${install_log}"
+    rm -rf "${temp_root}"
+    fail "installing precompiled gem failed"
+  fi
+
+  runtime_flags="$(
+    env \
+      "GEM_HOME=${gem_home}" \
+      "GEM_PATH=${gem_home}" \
+      ruby -e 'require "lda-ruby"; puts "RUST=#{Lda::RUST_EXTENSION_LOADED} NATIVE=#{Lda::NATIVE_EXTENSION_LOADED}"'
+  )"
+  echo "${runtime_flags}"
+  echo "${runtime_flags}" | grep -q "RUST=true" || fail "expected Rust extension to load from precompiled gem"
+  echo "${runtime_flags}" | grep -q "NATIVE=true" || fail "expected native extension to load from precompiled gem"
+
+  run_precompiled_smoke_modes "${gem_home}"
+
+  rm -f "${install_log}"
+  rm -rf "${temp_root}"
+}
+
+tag=""
+platform=""
+skip_preflight="${SKIP_PREFLIGHT:-0}"
+skip_runtime_checks="${SKIP_RUNTIME_CHECKS:-0}"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --tag)
+      [[ $# -ge 2 ]] || fail "--tag requires a value"
+      tag="$2"
+      shift 2
+      ;;
+    --platform)
+      [[ $# -ge 2 ]] || fail "--platform requires a value"
+      platform="$2"
+      shift 2
+      ;;
+    --skip-preflight)
+      skip_preflight=1
+      shift
+      ;;
+    --skip-runtime-checks)
+      skip_runtime_checks=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      fail "unknown argument: $1"
+      ;;
+  esac
+done
+
+if [[ -z "${platform}" ]]; then
+  platform="$(default_platform)"
+fi
+
+host_platform="$(default_platform)"
+ensure_platform_matches_host "${platform}" "${host_platform}"
+
+version_check_cmd=(./bin/check-version-sync)
+if [[ -n "${tag}" ]]; then
+  version_check_cmd+=(--tag "${tag}")
+fi
+run_step "version sync checks" "${version_check_cmd[@]}"
+
+if [[ "${skip_preflight}" == "1" ]]; then
+  echo "==> release preflight skipped (SKIP_PREFLIGHT=1 or --skip-preflight)"
+else
+  run_step "release preflight" ./bin/release-preflight
+fi
+
+run_step "build native and Rust extensions" bundle exec rake compile compile_rust
+
+dlext="$(ruby -rrbconfig -e 'print RbConfig::CONFIG.fetch("DLEXT")')"
+native_source="$(detect_native_extension "${dlext}")" || fail "failed to locate compiled native extension artifact"
+rust_source="$(detect_rust_extension "${dlext}")" || fail "failed to locate compiled Rust extension artifact"
+
+backup_root="$(mktemp -d)"
+run_step "stage precompiled extension binaries" stage_precompiled_extensions "${native_source}" "${rust_source}" "${dlext}"
+
+echo "==> build precompiled gem (${platform})"
+gem_file="$(build_precompiled_gem "${platform}")"
+[[ -n "${gem_file}" ]] || fail "no precompiled gem found under pkg/ for platform ${platform}"
+
+run_step "verify precompiled gem metadata" verify_precompiled_metadata "${gem_file}" "${platform}"
+
+if [[ "${skip_runtime_checks}" == "1" ]]; then
+  echo "==> precompiled runtime checks skipped (SKIP_RUNTIME_CHECKS=1 or --skip-runtime-checks)"
+else
+  run_step "precompiled gem runtime smoke checks" run_runtime_checks "${gem_file}"
+fi
+
+checksum_file="${gem_file}.sha256"
+if command -v sha256sum >/dev/null 2>&1; then
+  sha256sum "${gem_file}" > "${checksum_file}"
+elif command -v shasum >/dev/null 2>&1; then
+  shasum -a 256 "${gem_file}" > "${checksum_file}"
+else
+  fail "neither sha256sum nor shasum is available"
+fi
+
+echo "Built precompiled gem: ${gem_file}"
+echo "Wrote checksum: ${checksum_file}"
