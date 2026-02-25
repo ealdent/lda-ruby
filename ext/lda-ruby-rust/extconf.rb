@@ -51,7 +51,14 @@ module Lda
     def build_and_stage!
       cargo = ENV.fetch("CARGO", "cargo")
       Dir.chdir(__dir__) do
-        system(cargo, "build", "--release") or raise "cargo build --release failed"
+        env = rust_build_env
+        success =
+          if env.empty?
+            system(cargo, "build", "--release")
+          else
+            system(env, cargo, "build", "--release")
+          end
+        success or raise "cargo build --release failed"
       end
 
       source = File.join(__dir__, "target", "release", rust_cdylib_filename)
@@ -75,6 +82,22 @@ module Lda
         end
 
       "liblda_ruby_rust.#{extension}"
+    end
+
+    def rust_build_env
+      host_os = RbConfig::CONFIG.fetch("host_os")
+      return {} unless host_os.match?(/darwin/)
+
+      dynamic_lookup_flag = "-C link-arg=-Wl,-undefined,dynamic_lookup"
+      existing = ENV.fetch("RUSTFLAGS", "")
+      merged =
+        if existing.include?(dynamic_lookup_flag)
+          existing
+        else
+          [existing, dynamic_lookup_flag].reject(&:empty?).join(" ")
+        end
+
+      { "RUSTFLAGS" => merged }
     end
 
     def write_noop_makefile

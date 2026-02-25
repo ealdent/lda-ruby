@@ -60,6 +60,7 @@ For an interactive shell with Rust toolchain + bindgen dependencies:
 
 - `bundle exec rake compile` builds the native extension.
 - `bundle exec rake compile_rust` builds the experimental Rust extension and stages a Ruby-loadable artifact (`lda_ruby_rust.<dlext>`).
+  - On macOS, build tasks automatically add the Rust linker flag for Ruby extension `dynamic_lookup`.
 - `bundle exec rake test` rebuilds the extension, then runs tests.
 - `bundle exec rake build` builds the gem package.
 - `bundle exec ruby -Ilib:test test/backend_compatibility_test.rb` runs backend compatibility fixtures.

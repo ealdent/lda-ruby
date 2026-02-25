@@ -94,6 +94,7 @@ Delivered:
 - precompiled artifact builder + runtime validator (`bin/release-precompiled-artifacts`)
 - gemspec precompiled variant support (`LDA_RUBY_GEM_VARIANT=precompiled`)
 - precompiled platform compatibility/publish policy (`docs/precompiled-platform-policy.md`)
+- macOS Rust build linker guardrail (`dynamic_lookup`) for precompiled packaging paths
 - tag-driven release workflow (`.github/workflows/release.yml`)
 - maintainer release runbook (`docs/release-runbook.md`)
 - CI jobs for packaged-gem fallback, rust-enabled checks, and manifest checks
