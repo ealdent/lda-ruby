@@ -6,6 +6,7 @@ class ReleaseScriptsTest < Test::Unit::TestCase
     @repo_root = File.expand_path("..", __dir__)
     @check_version_sync = File.join(@repo_root, "bin", "check-version-sync")
     @release_prepare = File.join(@repo_root, "bin", "release-prepare")
+    @verify_rubygems_api_key = File.join(@repo_root, "bin", "verify-rubygems-api-key")
   end
 
   def test_check_version_sync_passes_for_repository_versions
@@ -50,5 +51,17 @@ class ReleaseScriptsTest < Test::Unit::TestCase
     baseline.each do |path, original|
       assert_equal(original, File.read(path), "#{path} changed during dry-run")
     end
+  end
+
+  def test_verify_rubygems_api_key_help
+    stdout, stderr, status = Open3.capture3(@verify_rubygems_api_key, "--help", chdir: @repo_root)
+    assert(status.success?, "stdout=#{stdout}\nstderr=#{stderr}")
+    assert_match(/Usage: \.\/bin\/verify-rubygems-api-key/, stdout)
+  end
+
+  def test_verify_rubygems_api_key_rejects_unknown_argument
+    _stdout, stderr, status = Open3.capture3(@verify_rubygems_api_key, "--unknown-flag", chdir: @repo_root)
+    assert(!status.success?, "expected verify-rubygems-api-key to fail for unknown arguments")
+    assert_match(/unknown argument/, stderr)
   end
 end

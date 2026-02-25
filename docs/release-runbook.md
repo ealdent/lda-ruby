@@ -34,7 +34,7 @@ Authoritative platform/support policy is maintained in `docs/precompiled-platfor
 
 GitHub repository secret:
 
-- `RUBYGEMS_API_KEY`: API key with push rights for `lda-ruby`.
+- `RUBYGEMS_API_KEY`: API key with push rights for `lda-ruby` and non-interactive publish support (no OTP prompt during `gem push`).
 
 GitHub Actions environment:
 
@@ -69,7 +69,15 @@ GitHub Actions environment:
 
    Note: `release-precompiled-artifacts` only supports building for the current host platform (no cross-compilation).
 
-5. Commit and merge to `master`.
+5. Verify RubyGems API key behavior before tagging:
+
+   ```bash
+   ./bin/verify-rubygems-api-key
+   ```
+
+   This check intentionally attempts a duplicate push of an existing gem version. A duplicate-rejected response is expected and confirms non-interactive auth works.
+
+6. Commit and merge to `master`.
 
 ## Dry-Run Path (No Publish)
 
@@ -95,6 +103,15 @@ Optional local dry-run equivalent:
 ./bin/release-artifacts --tag v0.4.0
 ./bin/release-precompiled-artifacts --tag v0.4.0 --skip-preflight
 ```
+
+## Known Publish Incident (`v0.4.0`)
+
+- date: 2026-02-25
+- release runs:
+  - `https://github.com/ealdent/lda-ruby/actions/runs/22383716372`
+  - `https://github.com/ealdent/lda-ruby/actions/runs/22383849236` (attempt 1 + rerun attempt 2)
+- result: artifact build stages passed, `publish to RubyGems` failed with OTP-required auth (`You have enabled multifactor authentication but no OTP code provided.`)
+- current unblock: rotate `release` environment secret `RUBYGEMS_API_KEY` to a CI-safe key, then rerun the failed release workflow.
 
 ## Publish Path (Tag-Driven)
 
@@ -151,7 +168,7 @@ If an incorrect gem is published:
 - `cargo not found` in rust-enabled checks: ensure Rust toolchain is installed or run in Docker.
 - `libclang` not found while building precompiled gems: install LLVM/libclang and set `LIBCLANG_PATH` if needed.
 - Linux `Install Rust bindgen dependencies` can take several minutes on fresh runners due apt package index and package installs.
-- RubyGems publish asks for OTP (`You have enabled multi-factor authentication but no OTP code provided`): rotate `RUBYGEMS_API_KEY` to an API key that supports non-interactive CI pushes for MFA-enabled accounts.
+- RubyGems publish asks for OTP (`You have enabled multi-factor authentication but no OTP code provided`): run `./bin/verify-rubygems-api-key`, then rotate `RUBYGEMS_API_KEY` to a CI-safe key if OTP is requested.
 - macOS Rust link errors (`symbol(s) not found` for Ruby APIs): ensure build path preserves `-C link-arg=-Wl,-undefined,dynamic_lookup` in `RUSTFLAGS`.
 - Tag/version mismatch: run `./bin/check-version-sync --tag vX.Y.Z`.
 - Artifact mismatch during release: rebuild with `./bin/release-artifacts --tag vX.Y.Z`.

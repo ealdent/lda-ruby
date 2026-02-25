@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+usage() {
+  cat <<'USAGE'
+Usage: ./bin/verify-rubygems-api-key [--gem GEM_NAME] [--key API_KEY]
+
+Verifies that a RubyGems API key supports non-interactive pushes by:
+1) fetching the latest released GEM_NAME artifact from RubyGems
+2) attempting a duplicate push of that existing artifact
+
+Expected outcome for a CI-safe key:
+- push is authenticated and rejected as duplicate (non-zero exit)
+
+Failure mode this catches:
+- OTP prompt on push (key cannot be used non-interactively in CI)
+USAGE
+}
+
+load_api_key_from_credentials() {
+  ruby -ryaml -e '
+    path = File.expand_path("~/.gem/credentials")
+    unless File.file?(path)
+      exit 0
+    end
+
+    data = YAML.load_file(path)
+    unless data.is_a?(Hash)
+      exit 0
+    end
+
+    key = data[:rubygems_api_key] || data[":rubygems_api_key"] || data["rubygems_api_key"]
+    print(key.to_s)
+  '
+}
+
+gem_name="lda-ruby"
+api_key="${RUBYGEMS_API_KEY:-}"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --gem)
+      [[ $# -ge 2 ]] || fail "--gem requires a value"
+      gem_name="$2"
+      shift 2
+      ;;
+    --key)
+      [[ $# -ge 2 ]] || fail "--key requires a value"
+      api_key="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      fail "unknown argument: $1"
+      ;;
+  esac
+done
+
+if [[ -z "${api_key}" ]]; then
+  api_key="$(load_api_key_from_credentials)"
+fi
+[[ -n "${api_key}" ]] || fail "missing RubyGems API key; set RUBYGEMS_API_KEY or ~/.gem/credentials"
+
+tmp_dir="$(mktemp -d)"
+cleanup() {
+  rm -rf "${tmp_dir}"
+}
+trap cleanup EXIT
+
+echo "==> Fetching latest ${gem_name} artifact from RubyGems"
+(
+  cd "${tmp_dir}"
+  gem fetch "${gem_name}" >/dev/null
+)
+
+gem_file="$(ls -1 "${tmp_dir}/${gem_name}"-*.gem 2>/dev/null | head -n1 || true)"
+[[ -n "${gem_file}" ]] || fail "failed to fetch gem artifact for ${gem_name}"
+
+echo "==> Fetched $(basename "${gem_file}")"
+
+mkdir -p "${tmp_dir}/home/.gem"
+cat > "${tmp_dir}/home/.gem/credentials" <<CREDENTIALS
+---
+:rubygems_api_key: ${api_key}
+CREDENTIALS
+chmod 0600 "${tmp_dir}/home/.gem/credentials"
+
+echo "==> Attempting duplicate push (expected to fail as already published)"
+push_log="${tmp_dir}/push.log"
+set +e
+HOME="${tmp_dir}/home" gem push "${gem_file}" >"${push_log}" 2>&1
+push_status=$?
+set -e
+
+cat "${push_log}"
+
+if grep -Eiq "Please enter OTP code|no OTP code provided|enabled multi-factor authentication" "${push_log}"; then
+  fail "API key requires interactive OTP and is not CI-safe for release workflow"
+fi
+
+if grep -Eiq "Repushing of gem versions is not allowed|already been pushed|cannot repush|A gem with this name and version" "${push_log}"; then
+  echo "RubyGems API key supports non-interactive pushes (duplicate upload rejected as expected)."
+  exit 0
+fi
+
+if [[ "${push_status}" -eq 0 ]]; then
+  fail "unexpected successful push of existing artifact"
+fi
+
+fail "could not verify RubyGems API key behavior from push output above"

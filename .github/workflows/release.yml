@@ -205,7 +205,18 @@ jobs:
 
           for gem_file in "${gem_files[@]}"; do
             echo "Pushing ${gem_file}"
-            gem push "${gem_file}"
+            push_log="$(mktemp)"
+            set +e
+            gem push "${gem_file}" 2>&1 | tee "${push_log}"
+            push_status=$?
+            set -e
+
+            if [[ "${push_status}" -ne 0 ]]; then
+              if grep -Eiq "Please enter OTP code|no OTP code provided|enabled multi-factor authentication" "${push_log}"; then
+                echo "::error::RubyGems API key requires OTP. Update release environment secret RUBYGEMS_API_KEY with a CI-safe key."
+              fi
+              exit "${push_status}"
+            fi
           done
 
   publish_github_release:
