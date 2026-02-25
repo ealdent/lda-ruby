@@ -165,6 +165,40 @@ jobs:
       - name: Run packaged gem manifest checks
         run: ./bin/test-packaged-gem-manifest
 
+  precompiled-gem-build:
+    name: precompiled gem build / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust bindgen dependencies (Linux)
+        if: ${{ runner.os == 'Linux' }}
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-dev pkg-config
+
+      - name: Install Rust bindgen dependencies (macOS)
+        if: ${{ runner.os == 'macOS' }}
+        run: |
+          brew install llvm
+          echo "LIBCLANG_PATH=$(brew --prefix llvm)/lib" >> "${GITHUB_ENV}"
+
+      - name: Build and verify precompiled gem
+        run: ./bin/release-precompiled-artifacts --skip-preflight
+
   rust-scaffold:
     name: rust scaffold / ubuntu-latest
     runs-on: ubuntu-latest

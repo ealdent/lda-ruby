@@ -32,7 +32,7 @@ task :compile_rust do
   end
 
   Dir.chdir(RUST_EXT_DIR) do
-    sh cargo, "build", "--release"
+    sh rust_build_env, cargo, "build", "--release"
   end
 
   staged_path = stage_rust_extension_for_ruby
@@ -78,4 +78,20 @@ def rust_cdylib_filename
     end
 
   "liblda_ruby_rust.#{extension}"
+end
+
+def rust_build_env
+  host_os = RbConfig::CONFIG.fetch("host_os")
+  return {} unless host_os.match?(/darwin/)
+
+  dynamic_lookup_flag = "-C link-arg=-Wl,-undefined,dynamic_lookup"
+  existing = ENV.fetch("RUSTFLAGS", "")
+  merged =
+    if existing.include?(dynamic_lookup_flag)
+      existing
+    else
+      [existing, dynamic_lookup_flag].reject(&:empty?).join(" ")
+    end
+
+  { "RUSTFLAGS" => merged }
 end

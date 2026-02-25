@@ -109,10 +109,62 @@ jobs:
             pkg/lda-ruby-*.gem.sha256
           if-no-files-found: error
 
+  build_precompiled_artifacts:
+    name: build precompiled artifacts / ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: x86_64-linux
+            label: linux-x86_64
+          - os: macos-15-intel
+            platform: x86_64-darwin
+            label: macos-x86_64
+          - os: macos-14
+            platform: arm64-darwin
+            label: macos-arm64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust bindgen dependencies (Linux)
+        if: ${{ runner.os == 'Linux' }}
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-dev pkg-config
+
+      - name: Install Rust bindgen dependencies (macOS)
+        if: ${{ runner.os == 'macOS' }}
+        run: |
+          brew install llvm
+          echo "LIBCLANG_PATH=$(brew --prefix llvm)/lib" >> "${GITHUB_ENV}"
+
+      - name: Build and verify precompiled gem
+        run: ./bin/release-precompiled-artifacts --tag "${{ needs.validate.outputs.release_tag }}" --platform "${{ matrix.platform }}" --skip-preflight
+
+      - name: Upload precompiled artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-precompiled-${{ matrix.platform }}
+          path: |
+            pkg/lda-ruby-*-${{ matrix.platform }}.gem
+            pkg/lda-ruby-*-${{ matrix.platform }}.gem.sha256
+          if-no-files-found: error
+
   publish_rubygems:
     name: publish to RubyGems
     runs-on: ubuntu-latest
-    needs: [validate, build_artifacts]
+    needs: [validate, build_artifacts, build_precompiled_artifacts]
     if: ${{ needs.validate.outputs.publish == 'true' }}
     environment:
       name: release
@@ -120,8 +172,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: release-artifacts
+          pattern: release-*
           path: dist
+          merge-multiple: true
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -143,12 +196,22 @@ jobs:
           CREDENTIALS
           chmod 0600 "${HOME}/.gem/credentials"
 
-          gem push dist/lda-ruby-*.gem --key rubygems_api_key
+          shopt -s nullglob
+          gem_files=(dist/lda-ruby-*.gem)
+          if [[ "${#gem_files[@]}" -eq 0 ]]; then
+            echo "No release gem artifacts found in dist/"
+            exit 1
+          fi
+
+          for gem_file in "${gem_files[@]}"; do
+            echo "Pushing ${gem_file}"
+            gem push "${gem_file}" --key rubygems_api_key
+          done
 
   publish_github_release:
     name: publish GitHub release
     runs-on: ubuntu-latest
-    needs: [validate, build_artifacts, publish_rubygems]
+    needs: [validate, build_artifacts, build_precompiled_artifacts, publish_rubygems]
     if: ${{ needs.validate.outputs.publish == 'true' }}
     permissions:
       contents: write
@@ -158,8 +221,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: release-artifacts
+          pattern: release-*
           path: dist
+          merge-multiple: true
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2

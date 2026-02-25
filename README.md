@@ -60,6 +60,7 @@ For an interactive shell with Rust toolchain + bindgen dependencies:
 
 - `bundle exec rake compile` builds the native extension.
 - `bundle exec rake compile_rust` builds the experimental Rust extension and stages a Ruby-loadable artifact (`lda_ruby_rust.<dlext>`).
+  - On macOS, build tasks automatically add the Rust linker flag for Ruby extension `dynamic_lookup`.
 - `bundle exec rake test` rebuilds the extension, then runs tests.
 - `bundle exec rake build` builds the gem package.
 - `bundle exec ruby -Ilib:test test/backend_compatibility_test.rb` runs backend compatibility fixtures.
@@ -73,6 +74,8 @@ For an interactive shell with Rust toolchain + bindgen dependencies:
 - `./bin/check-version-sync` verifies version parity between `VERSION.yml`, `lib/lda-ruby/version.rb`, and expected release tag.
 - `./bin/release-prepare 0.4.0` updates version/changelog files for a new release version.
 - `./bin/release-artifacts --tag v0.4.0` runs release checks, builds the source gem, and writes SHA256 checksums.
+- `./bin/release-precompiled-artifacts --tag v0.4.0 --platform x86_64-linux --skip-preflight` builds a precompiled platform gem and verifies install/runtime smoke checks.
+  - The `--platform` value must match the current host platform.
 
 Benchmark environment variables:
 - `BENCH_RUNS` (default: `3`)
@@ -93,6 +96,18 @@ Rust build policy is controlled by `LDA_RUBY_RUST_BUILD`:
 Examples:
 - `LDA_RUBY_RUST_BUILD=always gem install lda-ruby`
 - `LDA_RUBY_RUST_BUILD=never bundle exec rake compile`
+
+### Precompiled platform gems
+
+Releases publish a source gem plus precompiled platform gems for:
+- `x86_64-linux`
+- `x86_64-darwin`
+- `arm64-darwin`
+
+On these platforms, installation should not require local C/Rust toolchains.
+Other platforms install from source gem and use the existing install-time fallback policy.
+
+For artifact strategy, compatibility targets, and rollout/deprecation rules, see `docs/precompiled-platform-policy.md`.
 
 ### Backend selection
 
@@ -138,3 +153,5 @@ For a Ruby 3.2+/3.3+ porting proposal, see `docs/porting-strategy.md`.
 For the latest implementation status and exact resume instructions, see `docs/modernization-handoff.md`.
 
 For release steps and rollback guidance, see `docs/release-runbook.md`.
+
+For precompiled gem strategy and compatibility policy, see `docs/precompiled-platform-policy.md`.

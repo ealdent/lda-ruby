@@ -4,10 +4,22 @@ This document is the canonical handoff state for continuing the Ruby 3.2+/3.3+ m
 
 ## Snapshot
 
-- Snapshot date: 2026-02-22
-- Active branch: `codex/experiment-ruby3-modernization`
-- Branch head at snapshot: `61d61e8` (pre-Phase 5A release automation implementation)
-- Repo status at snapshot: clean working tree
+- Snapshot date: 2026-02-25
+- Active branch: `codex/modernization`
+- Branch head at snapshot: `7f9b101` (`Fix macOS Rust extension linking for precompiled builds`)
+- Repo status at snapshot: clean working tree on `codex/modernization` (in sync with `origin/codex/modernization`)
+- Latest release dry-run validation (GitHub Actions):
+  - date: 2026-02-25
+  - workflow run: `release.yml` run `22382692416` (`workflow_dispatch`, `publish=false`)
+  - result: success (`validate release candidate`, `build release artifacts`, and all `build precompiled artifacts` matrix targets)
+  - publish jobs skipped by design (`publish=false`)
+- Open pull request:
+  - `codex/modernization` -> `master`
+  - PR `#18`: `https://github.com/ealdent/lda-ruby/pull/18`
+- Latest PR CI validation (GitHub Actions):
+  - date: 2026-02-25
+  - workflow run: `CI` run `22383301379` (trigger: `pull_request` for PR `#18`)
+  - result: success (all checks green, including `precompiled gem build` matrix and install policy/rust runtime jobs)
 
 ## Project Goal
 
@@ -78,7 +90,7 @@ Open in Phase 4:
 
 ### Phase 5 (packaging/release)
 
-Status: Phase 5A complete (source-gem release automation), Phase 5B pending.
+Status: Phase 5A complete (source-gem release automation), Phase 5B complete for initial Linux/macOS precompiled gems.
 
 Delivered:
 
@@ -91,14 +103,23 @@ Delivered:
 - version/tag parity guard (`bin/check-version-sync`)
 - deterministic release preparation helper (`bin/release-prepare`)
 - release artifact builder with checksum output (`bin/release-artifacts`)
+- precompiled artifact builder + runtime validator (`bin/release-precompiled-artifacts`)
+- gemspec precompiled variant support (`LDA_RUBY_GEM_VARIANT=precompiled`)
+- precompiled platform compatibility/publish policy (`docs/precompiled-platform-policy.md`)
+- macOS Rust build linker guardrail (`dynamic_lookup`) for precompiled packaging paths
 - tag-driven release workflow (`.github/workflows/release.yml`)
 - maintainer release runbook (`docs/release-runbook.md`)
 - CI jobs for packaged-gem fallback, rust-enabled checks, and manifest checks
+- CI precompiled gem build guardrail job (`precompiled-gem-build`)
+- release workflow matrix for precompiled gems:
+  - `x86_64-linux`
+  - `x86_64-darwin`
+  - `arm64-darwin`
 
 Open in Phase 5:
 
-- native/precompiled gem publishing workflow is not implemented yet (Phase 5B)
-- platform strategy (initial Linux/macOS target matrix, packaging format, and rollout guardrails) still needs implementation
+- optional expansion of precompiled targets (for example Windows and/or musl Linux)
+- tighter post-publish verification/alerting for multi-artifact release runs
 
 ## Validation Commands
 
@@ -115,6 +136,7 @@ Packaging/release checks:
 - `./bin/test-packaged-gem-rust-enabled`
 - `SKIP_DOCKER=1 ./bin/release-preflight`
 - `./bin/release-artifacts --tag v0.4.0`
+- `./bin/release-precompiled-artifacts --tag v0.4.0 --skip-preflight`
 
 Optional full Docker matrix:
 
@@ -133,6 +155,7 @@ Performance tracking:
 - packaged gem fallback checks (`packaged-gem-fallback`)
 - packaged gem rust-enabled checks (`packaged-gem-rust-enabled`)
 - packaged gem manifest checks (`packaged-gem-manifest`)
+- precompiled gem build checks (`precompiled-gem-build`)
 - rust scaffold check (`rust-scaffold`)
 - release validation/build/publish pipeline on `v*` tags (`release.yml`)
 
@@ -140,26 +163,28 @@ Performance tracking:
 
 Priority 1:
 
-- implement Phase 5B native/precompiled gem build+publish pipeline (initial Linux/macOS targets)
-- define publish artifact strategy (single platform gems vs. split package set) and compatibility policy
-
-Priority 2:
-
 - decide whether to keep current hybrid rust-kernel architecture or move more orchestration into Rust
 - if moving deeper into Rust, define parity guardrails and benchmark thresholds before refactors
 
+Priority 2:
+
+- evaluate additional precompiled targets (Windows and/or musl Linux)
+- add explicit post-publish verification checks for all uploaded release artifacts
+
 Priority 3:
 
-- extend release runbook with Phase 5B precompiled-gem troubleshooting once packaging strategy lands
+- define automated alerts/notifications for release artifact publish failures
 
 ## Resume Instructions For A New Conversation
 
-1. Check out `codex/experiment-ruby3-modernization`.
+1. Check out `codex/modernization`.
 2. Open this file first: `docs/modernization-handoff.md`.
 3. Run `SKIP_DOCKER=1 ./bin/release-preflight`.
 4. Review `docs/release-runbook.md` for release flow/rollback details.
-5. Continue with `Priority 1` items under "Remaining Work Queue" (Phase 5B precompiled gems).
+5. Validate precompiled packaging locally for your host:
+   - `./bin/release-precompiled-artifacts --tag "$(./bin/check-version-sync --print-tag)" --skip-preflight`
+6. Continue with `Priority 1` items under "Remaining Work Queue".
 
 If you want the next assistant to continue immediately, use:
 
-"Open `docs/modernization-handoff.md`, validate with `SKIP_DOCKER=1 ./bin/release-preflight`, and start implementing Phase 5B precompiled gem packaging."
+"Open `docs/modernization-handoff.md`, validate with `SKIP_DOCKER=1 ./bin/release-preflight`, run `./bin/release-precompiled-artifacts --skip-preflight`, and continue the remaining modernization queue."
