@@ -21,8 +21,10 @@ This document is the canonical handoff state for continuing the Ruby 3.2+/3.3+ m
   - `release.yml` run `22383716372`: failed at RubyGems publish (`No such API key`)
   - `release.yml` run `22383849236`: failed at RubyGems publish (`OTP code required`)
   - rerun attempt (`22383849236`, attempt 2): failed at RubyGems publish (`OTP code required`)
-- Current release blocker:
-  - release environment secret `RUBYGEMS_API_KEY` points to a key that prompts for OTP, which is incompatible with non-interactive CI `gem push`
+  - rerun attempt (`22383849236`, attempt 3): success (RubyGems publish + GitHub release publish complete)
+- Release status:
+  - `v0.4.0` published to RubyGems (source + precompiled Linux/macOS gems)
+  - GitHub release `v0.4.0` published with gem + `.sha256` assets
 
 ## Project Goal
 
@@ -93,7 +95,7 @@ Open in Phase 4:
 
 ### Phase 5 (packaging/release)
 
-Status: Phase 5A complete (source-gem release automation), Phase 5B complete for initial Linux/macOS precompiled gems, with `v0.4.0` publish currently blocked by RubyGems CI credential policy.
+Status: Phase 5A complete (source-gem release automation), Phase 5B complete for initial Linux/macOS precompiled gems.
 
 Delivered:
 
@@ -122,7 +124,6 @@ Delivered:
 
 Open in Phase 5:
 
-- rotate `release` environment `RUBYGEMS_API_KEY` to a CI-safe key and complete `v0.4.0` publish rerun
 - optional expansion of precompiled targets (for example Windows and/or musl Linux)
 - tighter post-publish verification/alerting for multi-artifact release runs
 
@@ -169,8 +170,6 @@ Performance tracking:
 
 Priority 1:
 
-- unblock `v0.4.0` release publish by rotating `release` environment `RUBYGEMS_API_KEY` to a CI-safe non-OTP key
-- rerun `release.yml` run `22383849236` and verify RubyGems + GitHub release publication
 - decide whether to keep current hybrid rust-kernel architecture or move more orchestration into Rust
 - if moving deeper into Rust, define parity guardrails and benchmark thresholds before refactors
 
@@ -187,16 +186,12 @@ Priority 3:
 
 1. Check out `master`.
 2. Open this file first: `docs/modernization-handoff.md`.
-3. Run `./bin/verify-rubygems-api-key`.
-4. If OTP is requested, rotate `release` environment secret `RUBYGEMS_API_KEY` to a CI-safe key.
-5. Re-run failed release workflow run `22383849236` and approve the `release` environment gate.
-6. Confirm RubyGems `0.4.0` source + platform gems and GitHub release `v0.4.0` are published.
-7. Run `SKIP_DOCKER=1 ./bin/release-preflight`.
-8. Review `docs/release-runbook.md` for release flow/rollback details.
-9. Validate precompiled packaging locally for your host:
+3. Run `SKIP_DOCKER=1 ./bin/release-preflight`.
+4. Review `docs/release-runbook.md` for release flow/rollback details.
+5. Validate precompiled packaging locally for your host:
    - `./bin/release-precompiled-artifacts --tag "$(./bin/check-version-sync --print-tag)" --skip-preflight`
-10. Continue with remaining `Priority 1` modernization items.
+6. Continue with remaining `Priority 1` modernization items.
 
 If you want the next assistant to continue immediately, use:
 
-"Open `docs/modernization-handoff.md`, run `./bin/verify-rubygems-api-key`, unblock the `v0.4.0` publish rerun, then continue the remaining modernization queue."
+"Open `docs/modernization-handoff.md`, validate with `SKIP_DOCKER=1 ./bin/release-preflight`, run `./bin/release-precompiled-artifacts --skip-preflight`, and continue the remaining modernization queue."

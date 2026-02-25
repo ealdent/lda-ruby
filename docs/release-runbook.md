@@ -109,9 +109,10 @@ Optional local dry-run equivalent:
 - date: 2026-02-25
 - release runs:
   - `https://github.com/ealdent/lda-ruby/actions/runs/22383716372`
-  - `https://github.com/ealdent/lda-ruby/actions/runs/22383849236` (attempt 1 + rerun attempt 2)
+  - `https://github.com/ealdent/lda-ruby/actions/runs/22383849236` (attempt 1 + rerun attempt 2 + rerun attempt 3)
 - result: artifact build stages passed, `publish to RubyGems` failed with OTP-required auth (`You have enabled multifactor authentication but no OTP code provided.`)
-- current unblock: rotate `release` environment secret `RUBYGEMS_API_KEY` to a CI-safe key, then rerun the failed release workflow.
+- recovery action: rotated `release` environment secret `RUBYGEMS_API_KEY` to a CI-safe key and reran run `22383849236`.
+- recovery result: rerun attempt 3 succeeded; RubyGems `0.4.0` and GitHub release `v0.4.0` published.
 
 ## Publish Path (Tag-Driven)
 
