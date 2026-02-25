@@ -82,6 +82,13 @@ Behavior:
 - does not push to RubyGems
 - does not create a GitHub release
 
+Latest verified dry-run reference:
+
+- date: 2026-02-25
+- workflow run: `https://github.com/ealdent/lda-ruby/actions/runs/22382692416`
+- dispatch parameters: `release_tag=v0.4.0`, `publish=false`
+- result: success across `validate`, `build_artifacts`, and full `build_precompiled_artifacts` matrix
+
 Optional local dry-run equivalent:
 
 ```bash
@@ -143,6 +150,7 @@ If an incorrect gem is published:
 - `Could not find 'bundler'`: install the Bundler version pinned in `Gemfile.lock`.
 - `cargo not found` in rust-enabled checks: ensure Rust toolchain is installed or run in Docker.
 - `libclang` not found while building precompiled gems: install LLVM/libclang and set `LIBCLANG_PATH` if needed.
+- Linux `Install Rust bindgen dependencies` can take several minutes on fresh runners due apt package index and package installs.
 - macOS Rust link errors (`symbol(s) not found` for Ruby APIs): ensure build path preserves `-C link-arg=-Wl,-undefined,dynamic_lookup` in `RUSTFLAGS`.
 - Tag/version mismatch: run `./bin/check-version-sync --tag vX.Y.Z`.
 - Artifact mismatch during release: rebuild with `./bin/release-artifacts --tag vX.Y.Z`.

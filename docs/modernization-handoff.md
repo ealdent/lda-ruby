@@ -6,8 +6,13 @@ This document is the canonical handoff state for continuing the Ruby 3.2+/3.3+ m
 
 - Snapshot date: 2026-02-25
 - Active branch: `codex/modernization`
-- Branch head at snapshot: `HEAD` (post-Phase 5B precompiled packaging implementation)
-- Repo status at snapshot: working tree includes Phase 5B hardening updates pending commit
+- Branch head at snapshot: `7f9b101` (`Fix macOS Rust extension linking for precompiled builds`)
+- Repo status at snapshot: clean working tree on `codex/modernization` (in sync with `origin/codex/modernization`)
+- Latest release dry-run validation (GitHub Actions):
+  - date: 2026-02-25
+  - workflow run: `release.yml` run `22382692416` (`workflow_dispatch`, `publish=false`)
+  - result: success (`validate release candidate`, `build release artifacts`, and all `build precompiled artifacts` matrix targets)
+  - publish jobs skipped by design (`publish=false`)
 
 ## Project Goal
 
