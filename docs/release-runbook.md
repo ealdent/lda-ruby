@@ -151,6 +151,7 @@ If an incorrect gem is published:
 - `cargo not found` in rust-enabled checks: ensure Rust toolchain is installed or run in Docker.
 - `libclang` not found while building precompiled gems: install LLVM/libclang and set `LIBCLANG_PATH` if needed.
 - Linux `Install Rust bindgen dependencies` can take several minutes on fresh runners due apt package index and package installs.
+- RubyGems publish asks for OTP (`You have enabled multi-factor authentication but no OTP code provided`): rotate `RUBYGEMS_API_KEY` to an API key that supports non-interactive CI pushes for MFA-enabled accounts.
 - macOS Rust link errors (`symbol(s) not found` for Ruby APIs): ensure build path preserves `-C link-arg=-Wl,-undefined,dynamic_lookup` in `RUSTFLAGS`.
 - Tag/version mismatch: run `./bin/check-version-sync --tag vX.Y.Z`.
 - Artifact mismatch during release: rebuild with `./bin/release-artifacts --tag vX.Y.Z`.
