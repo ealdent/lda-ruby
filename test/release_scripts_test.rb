@@ -7,6 +7,7 @@ class ReleaseScriptsTest < Test::Unit::TestCase
     @check_version_sync = File.join(@repo_root, "bin", "check-version-sync")
     @release_prepare = File.join(@repo_root, "bin", "release-prepare")
     @verify_rubygems_api_key = File.join(@repo_root, "bin", "verify-rubygems-api-key")
+    @verify_release_publish = File.join(@repo_root, "bin", "verify-release-publish")
   end
 
   def test_check_version_sync_passes_for_repository_versions
@@ -63,5 +64,30 @@ class ReleaseScriptsTest < Test::Unit::TestCase
     _stdout, stderr, status = Open3.capture3(@verify_rubygems_api_key, "--unknown-flag", chdir: @repo_root)
     assert(!status.success?, "expected verify-rubygems-api-key to fail for unknown arguments")
     assert_match(/unknown argument/, stderr)
+  end
+
+  def test_verify_release_publish_help
+    stdout, stderr, status = Open3.capture3(@verify_release_publish, "--help", chdir: @repo_root)
+    assert(status.success?, "stdout=#{stdout}\nstderr=#{stderr}")
+    assert_match(/Usage: \.\/bin\/verify-release-publish/, stdout)
+  end
+
+  def test_verify_release_publish_rejects_unknown_argument
+    _stdout, stderr, status = Open3.capture3(@verify_release_publish, "--unknown-flag", chdir: @repo_root)
+    assert(!status.success?, "expected verify-release-publish to fail for unknown arguments")
+    assert_match(/unknown argument/, stderr)
+  end
+
+  def test_verify_release_publish_rejects_invalid_tag_format
+    _stdout, stderr, status = Open3.capture3(
+      @verify_release_publish,
+      "--tag",
+      "0.4.0",
+      "--skip-rubygems",
+      "--skip-github",
+      chdir: @repo_root
+    )
+    assert(!status.success?, "expected verify-release-publish to fail for invalid tag format")
+    assert_match(/tag must be in format vX\.Y\.Z/, stderr)
   end
 end

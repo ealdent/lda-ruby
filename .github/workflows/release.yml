@@ -244,3 +244,26 @@ jobs:
             dist/lda-ruby-*.gem
             dist/lda-ruby-*.gem.sha256
           generate_release_notes: true
+
+  verify_published_artifacts:
+    name: verify published artifacts
+    runs-on: ubuntu-latest
+    needs: [validate, publish_rubygems, publish_github_release]
+    if: ${{ needs.validate.outputs.publish == 'true' }}
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: false
+
+      - name: Verify RubyGems and GitHub release artifacts
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./bin/verify-release-publish --tag "${{ needs.validate.outputs.release_tag }}"

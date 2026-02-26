@@ -1,0 +1,205 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+usage() {
+  cat <<'USAGE'
+Usage: ./bin/verify-release-publish [--tag vX.Y.Z] [--gem GEM_NAME] [--github-repo OWNER/REPO] [--github-token TOKEN] [--skip-rubygems] [--skip-github]
+
+Verifies published release artifacts for a version tag by checking:
+1) RubyGems version entries include source + expected precompiled platforms
+2) GitHub release by tag includes expected gem and checksum assets
+
+Defaults:
+- --gem lda-ruby
+- --tag inferred from ./bin/check-version-sync --print-tag when available
+- --github-repo from GITHUB_REPOSITORY
+- --github-token from GITHUB_TOKEN
+USAGE
+}
+
+verify_rubygems() {
+  local gem_name="$1"
+  local version="$2"
+
+  echo "==> Verifying RubyGems entries for ${gem_name} ${version}"
+  local response
+  response="$(curl -fsSL "https://rubygems.org/api/v1/versions/${gem_name}.json")" || fail "failed to query RubyGems versions API"
+
+  local platforms
+  platforms="$({
+    ruby -rjson -e '
+      target = ARGV.fetch(0)
+      entries = JSON.parse(STDIN.read)
+      matches = entries.select { |entry| entry["number"] == target }
+      matches.each { |entry| puts((entry["platform"] || "ruby").to_s) }
+    ' "${version}" | sort -u
+  } <<<"${response}")"
+
+  [[ -n "${platforms}" ]] || fail "RubyGems has no entries for ${gem_name} ${version}"
+
+  local expected_platforms
+  expected_platforms=(ruby x86_64-linux x86_64-darwin arm64-darwin)
+
+  local missing=()
+  local platform
+  for platform in "${expected_platforms[@]}"; do
+    if ! printf '%s\n' "${platforms}" | grep -Fxq "${platform}"; then
+      missing+=("${platform}")
+    fi
+  done
+
+  if [[ "${#missing[@]}" -gt 0 ]]; then
+    fail "RubyGems is missing platform entries for ${gem_name} ${version}: ${missing[*]}"
+  fi
+
+  echo "RubyGems platforms: $(printf '%s\n' "${platforms}" | tr '\n' ' ' | sed -E 's/[[:space:]]+$//')"
+}
+
+verify_github_release() {
+  local gem_name="$1"
+  local tag="$2"
+  local version="$3"
+  local github_repo="$4"
+  local github_token="$5"
+
+  [[ -n "${github_repo}" ]] || fail "--github-repo is required (or set GITHUB_REPOSITORY)"
+  [[ -n "${github_token}" ]] || fail "--github-token is required (or set GITHUB_TOKEN)"
+
+  echo "==> Verifying GitHub release assets for ${github_repo} ${tag}"
+  local response
+  response="$(curl -fsSL \
+    -H "Authorization: Bearer ${github_token}" \
+    -H "Accept: application/vnd.github+json" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    "https://api.github.com/repos/${github_repo}/releases/tags/${tag}")" || fail "failed to query GitHub release API"
+
+  local release_state
+  release_state="$(ruby -rjson -e '
+    release = JSON.parse(STDIN.read)
+    puts [release["draft"], release["prerelease"], release["published_at"].to_s].join("\t")
+  ' <<<"${response}")"
+
+  local draft prerelease published_at
+  IFS=$'\t' read -r draft prerelease published_at <<<"${release_state}"
+
+  [[ "${draft}" != "true" ]] || fail "GitHub release ${tag} is still a draft"
+  [[ "${prerelease}" != "true" ]] || fail "GitHub release ${tag} is marked prerelease"
+  [[ -n "${published_at}" ]] || fail "GitHub release ${tag} has no published_at timestamp"
+
+  local assets
+  assets="$({
+    ruby -rjson -e '
+      release = JSON.parse(STDIN.read)
+      release.fetch("assets", []).each { |asset| puts asset["name"] }
+    ' | sort -u
+  } <<<"${response}")"
+
+  [[ -n "${assets}" ]] || fail "GitHub release ${tag} has no attached assets"
+
+  local expected_assets
+  expected_assets=(
+    "${gem_name}-${version}.gem"
+    "${gem_name}-${version}.gem.sha256"
+    "${gem_name}-${version}-x86_64-linux.gem"
+    "${gem_name}-${version}-x86_64-linux.gem.sha256"
+    "${gem_name}-${version}-x86_64-darwin.gem"
+    "${gem_name}-${version}-x86_64-darwin.gem.sha256"
+    "${gem_name}-${version}-arm64-darwin.gem"
+    "${gem_name}-${version}-arm64-darwin.gem.sha256"
+  )
+
+  local missing=()
+  local asset
+  for asset in "${expected_assets[@]}"; do
+    if ! printf '%s\n' "${assets}" | grep -Fxq "${asset}"; then
+      missing+=("${asset}")
+    fi
+  done
+
+  if [[ "${#missing[@]}" -gt 0 ]]; then
+    fail "GitHub release ${tag} is missing assets: ${missing[*]}"
+  fi
+
+  local asset_count
+  asset_count="$(printf '%s\n' "${assets}" | sed '/^$/d' | wc -l | tr -d ' ')"
+  echo "GitHub release assets verified (${asset_count} assets)."
+}
+
+tag=""
+gem_name="lda-ruby"
+github_repo="${GITHUB_REPOSITORY:-}"
+github_token="${GITHUB_TOKEN:-}"
+skip_rubygems=0
+skip_github=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --tag)
+      [[ $# -ge 2 ]] || fail "--tag requires a value"
+      tag="$2"
+      shift 2
+      ;;
+    --gem)
+      [[ $# -ge 2 ]] || fail "--gem requires a value"
+      gem_name="$2"
+      shift 2
+      ;;
+    --github-repo)
+      [[ $# -ge 2 ]] || fail "--github-repo requires a value"
+      github_repo="$2"
+      shift 2
+      ;;
+    --github-token)
+      [[ $# -ge 2 ]] || fail "--github-token requires a value"
+      github_token="$2"
+      shift 2
+      ;;
+    --skip-rubygems)
+      skip_rubygems=1
+      shift
+      ;;
+    --skip-github)
+      skip_github=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      fail "unknown argument: $1"
+      ;;
+  esac
+done
+
+if [[ -z "${tag}" ]] && [[ -x "./bin/check-version-sync" ]]; then
+  tag="$(./bin/check-version-sync --print-tag)"
+fi
+
+[[ -n "${tag}" ]] || fail "--tag is required (or run from repository root with ./bin/check-version-sync available)"
+[[ "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "tag must be in format vX.Y.Z: ${tag}"
+
+if [[ "${skip_rubygems}" == "1" && "${skip_github}" == "1" ]]; then
+  fail "at least one verification target must be enabled"
+fi
+
+version="${tag#v}"
+
+if [[ "${skip_rubygems}" != "1" ]]; then
+  verify_rubygems "${gem_name}" "${version}"
+else
+  echo "==> Skipping RubyGems verification (--skip-rubygems)"
+fi
+
+if [[ "${skip_github}" != "1" ]]; then
+  verify_github_release "${gem_name}" "${tag}" "${version}" "${github_repo}" "${github_token}"
+else
+  echo "==> Skipping GitHub release verification (--skip-github)"
+fi
+
+echo "Release publish verification passed for ${gem_name} ${tag}."

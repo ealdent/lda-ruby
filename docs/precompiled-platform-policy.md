@@ -47,6 +47,7 @@ Release automation requirements:
 - `.github/workflows/release.yml` builds source + precompiled artifacts.
 - Release workflow matrix must include all release-blocking precompiled targets.
 - Publish jobs push all built gems and attach checksums to GitHub releases.
+- Post-publish verification job must validate RubyGems entries and GitHub release assets for the tagged version.
 
 Continuous integration guardrail:
 

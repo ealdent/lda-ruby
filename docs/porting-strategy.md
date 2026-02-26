@@ -71,7 +71,10 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Release artifact helper added (`bin/release-artifacts`) to build source gem artifacts with SHA256 checksums.
 - Precompiled platform artifact helper added (`bin/release-precompiled-artifacts`) to build + validate native gems.
 - Tag-driven release workflow added (`.github/workflows/release.yml`) with dry-run support and environment-gated publish jobs.
+- RubyGems credential preflight helper added (`bin/verify-rubygems-api-key`) for CI-safe publish key validation.
+- Post-publish verification helper added (`bin/verify-release-publish`) to validate RubyGems + GitHub release artifacts by tag.
 - CI precompiled guardrail job added (`precompiled-gem-build`) for Linux/macOS packaging checks.
+- Release workflow post-publish verification job added (`verify_published_artifacts`).
 - Maintainer release runbook added (`docs/release-runbook.md`) with publish and rollback/yank procedures.
 - Precompiled platform support policy added (`docs/precompiled-platform-policy.md`).
 

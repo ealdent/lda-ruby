@@ -132,10 +132,12 @@ Optional local dry-run equivalent:
    - `build_precompiled_artifacts` (linux + macOS matrix)
    - environment-gated `publish_rubygems`
    - environment-gated `publish_github_release`
+   - `verify_published_artifacts`
 4. Approve the protected `release` environment when prompted.
 5. Confirm published outputs:
    - RubyGems shows `lda-ruby` `0.4.0` source gem and platform gems
    - GitHub release `v0.4.0` exists with all gem and `.sha256` attachments
+   - workflow job `verify_published_artifacts` succeeds
 
 ## Rollback and Recovery
 
@@ -170,6 +172,7 @@ If an incorrect gem is published:
 - `libclang` not found while building precompiled gems: install LLVM/libclang and set `LIBCLANG_PATH` if needed.
 - Linux `Install Rust bindgen dependencies` can take several minutes on fresh runners due apt package index and package installs.
 - RubyGems publish asks for OTP (`You have enabled multi-factor authentication but no OTP code provided`): run `./bin/verify-rubygems-api-key`, then rotate `RUBYGEMS_API_KEY` to a CI-safe key if OTP is requested.
+- Post-publish verification fails: run `./bin/verify-release-publish --tag vX.Y.Z` and fix missing RubyGems entries or GitHub release assets before considering the release complete.
 - macOS Rust link errors (`symbol(s) not found` for Ruby APIs): ensure build path preserves `-C link-arg=-Wl,-undefined,dynamic_lookup` in `RUSTFLAGS`.
 - Tag/version mismatch: run `./bin/check-version-sync --tag vX.Y.Z`.
 - Artifact mismatch during release: rebuild with `./bin/release-artifacts --tag vX.Y.Z`.

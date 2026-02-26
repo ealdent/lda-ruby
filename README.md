@@ -73,6 +73,7 @@ For an interactive shell with Rust toolchain + bindgen dependencies:
 - `./bin/release-preflight` runs unit tests + packaged-gem validation stack; set `SKIP_DOCKER=1` to skip Docker matrix checks.
 - `./bin/check-version-sync` verifies version parity between `VERSION.yml`, `lib/lda-ruby/version.rb`, and expected release tag.
 - `./bin/verify-rubygems-api-key` validates that your RubyGems API key can push non-interactively (required for CI release publishes).
+- `./bin/verify-release-publish --tag v0.4.0` verifies published RubyGems + GitHub release assets for a release tag.
 - `./bin/release-prepare 0.4.0` updates version/changelog files for a new release version.
 - `./bin/release-artifacts --tag v0.4.0` runs release checks, builds the source gem, and writes SHA256 checksums.
 - `./bin/release-precompiled-artifacts --tag v0.4.0 --platform x86_64-linux --skip-preflight` builds a precompiled platform gem and verifies install/runtime smoke checks.

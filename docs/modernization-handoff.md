@@ -107,6 +107,7 @@ Delivered:
 - single-command local gate (`bin/release-preflight`)
 - version/tag parity guard (`bin/check-version-sync`)
 - RubyGems CI credential preflight helper (`bin/verify-rubygems-api-key`)
+- post-publish artifact verification helper (`bin/verify-release-publish`)
 - deterministic release preparation helper (`bin/release-prepare`)
 - release artifact builder with checksum output (`bin/release-artifacts`)
 - precompiled artifact builder + runtime validator (`bin/release-precompiled-artifacts`)
@@ -125,7 +126,7 @@ Delivered:
 Open in Phase 5:
 
 - optional expansion of precompiled targets (for example Windows and/or musl Linux)
-- tighter post-publish verification/alerting for multi-artifact release runs
+- automated alerts/notifications for release artifact publish failures
 
 ## Validation Commands
 
@@ -138,6 +139,7 @@ Packaging/release checks:
 
 - `./bin/check-version-sync`
 - `./bin/verify-rubygems-api-key`
+- `./bin/verify-release-publish --tag v0.4.0`
 - `./bin/test-packaged-gem-manifest`
 - `./bin/test-packaged-gem-fallback`
 - `./bin/test-packaged-gem-rust-enabled`
@@ -165,6 +167,7 @@ Performance tracking:
 - precompiled gem build checks (`precompiled-gem-build`)
 - rust scaffold check (`rust-scaffold`)
 - release validation/build/publish pipeline on `v*` tags (`release.yml`)
+- post-publish artifact verification (`verify_published_artifacts` in `release.yml`)
 
 ## Remaining Work Queue
 
@@ -176,7 +179,6 @@ Priority 1:
 Priority 2:
 
 - evaluate additional precompiled targets (Windows and/or musl Linux)
-- add explicit post-publish verification checks for all uploaded release artifacts
 
 Priority 3:
 
