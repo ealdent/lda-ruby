@@ -87,11 +87,12 @@ Delivered:
   - topic-document probability
   - seeded initialization
 - trusted kernel-output fast path enabled in rust mode
+- Rust-side EM orchestration path (`Lda::RustBackend.run_em`) with deterministic Ruby fallback reuse via precomputed EM inputs
 - parity/compatibility test coverage and rust runtime CI
 
 Open in Phase 4:
 
-- optional deeper Rust ownership of orchestration logic (current design still intentionally delegates control flow through Ruby fallback scaffolding)
+- optional deeper Rust ownership beyond EM orchestration (for example corpus/settings lifecycle and additional control-plane logic)
 
 ### Phase 5 (packaging/release)
 
@@ -174,7 +175,7 @@ Performance tracking:
 Priority 1:
 
 - decide whether to keep current hybrid rust-kernel architecture or move more orchestration into Rust
-- if moving deeper into Rust, define parity guardrails and benchmark thresholds before refactors
+- if moving deeper into Rust beyond the current EM-orchestration fast path, define parity guardrails and benchmark thresholds before refactors
 
 Priority 2:
 

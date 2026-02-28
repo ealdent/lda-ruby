@@ -125,7 +125,7 @@ For artifact strategy, compatibility targets, and rollout/deprecation rules, see
 
 `em("seeded")` is supported by both native and pure backends for deterministic fixture-oriented runs.
 
-Rust status: the extension hook layer is scaffolded in `ext/lda-ruby-rust`. Current Rust kernels include batched per-iteration corpus inference, batched per-document inference, topic-weights-per-word, topic-term-count accumulation, topic-term normalization/log-beta finalization, gamma-shift convergence reduction, topic-document average log-probability computation, and seeded topic-term initialization when `backend: :rust` is active; remaining model math still delegates to the pure Ruby backend. CI now runs dedicated rust-runtime checks and numeric parity fixtures against the pure backend.
+Rust status: the extension hook layer is scaffolded in `ext/lda-ruby-rust`. Current Rust kernels include batched per-iteration corpus inference, batched per-document inference, topic-weights-per-word, topic-term-count accumulation, topic-term normalization/log-beta finalization, gamma-shift convergence reduction, topic-document average log-probability computation, seeded topic-term initialization, and a Rust-side EM orchestration path (`run_em`) when `backend: :rust` is active. The Rust backend still keeps the pure Ruby implementation as a compatibility fallback path if Rust orchestration is unavailable or returns invalid output. CI runs dedicated rust-runtime checks and numeric parity fixtures against the pure backend.
 `compile_rust` and `LDA_RUBY_RUST_BUILD=always` require a Rust toolchain plus Ruby development headers and `libclang`.
 Gem packaging excludes local Rust build artifacts (`ext/lda-ruby-rust/target/**`) so local cargo outputs do not leak into published gems.
 

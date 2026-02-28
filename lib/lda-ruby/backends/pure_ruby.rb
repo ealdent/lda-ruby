@@ -46,61 +46,31 @@ module Lda
       end
 
       def em(start)
-        return nil if @corpus.nil? || @corpus.num_docs.zero?
+        em_input = build_em_input(start)
+        return nil if em_input.nil?
 
-        topics = Integer(num_topics)
-        raise ArgumentError, "num_topics must be greater than zero" if topics <= 0
+        run_em_iterations(em_input)
+        nil
+      end
 
-        terms = max_term_index + 1
-        raise ArgumentError, "corpus must contain terms" if terms <= 0
+      # Returns an EM input snapshot that can be reused by Rust orchestration
+      # and Ruby fallback paths without re-sampling random initialization.
+      def rust_em_input(start)
+        build_em_input(start)
+      end
 
-        document_words = @corpus.documents.map { |document| document.words.map(&:to_i) }
-        document_counts = @corpus.documents.map { |document| document.counts.map(&:to_f) }
+      def em_from_input(em_input)
+        return nil if em_input.nil?
 
-        @beta_probabilities =
-          if start.to_s.strip.casecmp("seeded").zero? || start.to_s.strip.casecmp("deterministic").zero?
-            seeded_topic_term_probabilities(topics, terms, document_words, document_counts)
-          else
-            initial_topic_term_probabilities(topics, terms)
-          end
+        run_em_iterations(em_input)
+        nil
+      end
 
-        document_totals = document_counts.map { |counts| counts.sum.to_f }
-        document_lengths = document_words.map(&:length)
-
-        previous_gamma = nil
-
-        Integer(em_max_iter).times do
-          if @trusted_kernel_outputs && @corpus_iteration_kernel
-            current_gamma, current_phi, topic_term_counts = infer_corpus_iteration(
-              nil,
-              document_words,
-              document_counts,
-              document_totals,
-              document_lengths,
-              topics,
-              terms
-            )
-          else
-            topic_term_counts = Array.new(topics) { Array.new(terms, MIN_PROBABILITY) }
-            current_gamma, current_phi, topic_term_counts = infer_corpus_iteration(
-              topic_term_counts,
-              document_words,
-              document_counts,
-              document_totals,
-              document_lengths,
-              topics,
-              terms
-            )
-          end
-
-          @beta_probabilities, @beta_log = finalize_topic_term_counts(topic_term_counts)
-          @gamma = current_gamma
-          @phi = current_phi
-
-          break if previous_gamma && average_gamma_shift(previous_gamma, current_gamma) <= Float(em_convergence)
-
-          previous_gamma = current_gamma
-        end
+      def apply_em_state(beta_probabilities:, beta_log:, gamma:, phi:)
+        @beta_probabilities = beta_probabilities
+        @beta_log = beta_log
+        @gamma = gamma
+        @phi = phi
 
         nil
       end
@@ -146,6 +116,82 @@ module Lda
       end
 
       private
+
+      def build_em_input(start)
+        return nil if @corpus.nil? || @corpus.num_docs.zero?
+
+        topics = Integer(num_topics)
+        raise ArgumentError, "num_topics must be greater than zero" if topics <= 0
+
+        terms = max_term_index + 1
+        raise ArgumentError, "corpus must contain terms" if terms <= 0
+
+        document_words = @corpus.documents.map { |document| document.words.map(&:to_i) }
+        document_counts = @corpus.documents.map { |document| document.counts.map(&:to_f) }
+
+        initial_beta_probabilities =
+          if start.to_s.strip.casecmp("seeded").zero? || start.to_s.strip.casecmp("deterministic").zero?
+            seeded_topic_term_probabilities(topics, terms, document_words, document_counts)
+          else
+            initial_topic_term_probabilities(topics, terms)
+          end
+
+        {
+          topics: topics,
+          terms: terms,
+          document_words: document_words,
+          document_counts: document_counts,
+          document_totals: document_counts.map { |counts| counts.sum.to_f },
+          document_lengths: document_words.map(&:length),
+          initial_beta_probabilities: initial_beta_probabilities,
+          min_probability: MIN_PROBABILITY
+        }
+      end
+
+      def run_em_iterations(em_input)
+        topics = em_input.fetch(:topics)
+        terms = em_input.fetch(:terms)
+        document_words = em_input.fetch(:document_words)
+        document_counts = em_input.fetch(:document_counts)
+        document_totals = em_input.fetch(:document_totals)
+        document_lengths = em_input.fetch(:document_lengths)
+
+        @beta_probabilities = em_input.fetch(:initial_beta_probabilities)
+        previous_gamma = nil
+
+        Integer(em_max_iter).times do
+          if @trusted_kernel_outputs && @corpus_iteration_kernel
+            current_gamma, current_phi, topic_term_counts = infer_corpus_iteration(
+              nil,
+              document_words,
+              document_counts,
+              document_totals,
+              document_lengths,
+              topics,
+              terms
+            )
+          else
+            topic_term_counts = Array.new(topics) { Array.new(terms, MIN_PROBABILITY) }
+            current_gamma, current_phi, topic_term_counts = infer_corpus_iteration(
+              topic_term_counts,
+              document_words,
+              document_counts,
+              document_totals,
+              document_lengths,
+              topics,
+              terms
+            )
+          end
+
+          @beta_probabilities, @beta_log = finalize_topic_term_counts(topic_term_counts)
+          @gamma = current_gamma
+          @phi = current_phi
+
+          break if previous_gamma && average_gamma_shift(previous_gamma, current_gamma) <= Float(em_convergence)
+
+          previous_gamma = current_gamma
+        end
+      end
 
       def max_term_index
         return -1 if @corpus.nil? || @corpus.documents.empty?
