@@ -396,7 +396,7 @@ fn infer_corpus_iteration_internal(
         let gamma_initial = vec![init_alpha_value + (total / topics as f64); topics];
 
         let (gamma_d, phi_d) = infer_document_internal(
-            beta_probabilities.as_slice(),
+            beta_probabilities,
             gamma_initial.as_slice(),
             words.as_slice(),
             counts.as_slice(),
