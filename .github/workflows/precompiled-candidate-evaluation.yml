@@ -21,6 +21,12 @@ jobs:
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install Rust GNU toolchain for RubyInstaller ABI
+        shell: pwsh
+        run: |
+          rustup toolchain install stable-x86_64-pc-windows-gnu
+          "RUSTUP_TOOLCHAIN=stable-x86_64-pc-windows-gnu" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Resolve cargo path for bash steps
         shell: pwsh
         run: |
