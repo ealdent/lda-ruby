@@ -90,6 +90,9 @@ jobs:
       - name: Run compatibility tests in rust mode
         run: bundle exec ruby -Ilib:test test/backend_compatibility_test.rb
 
+      - name: Run rust orchestration tests
+        run: bundle exec ruby -Ilib:test test/rust_orchestration_test.rb
+
       - name: Run full model tests in rust mode
         run: bundle exec ruby -Ilib:test test/lda_ruby_test.rb
 

@@ -97,6 +97,84 @@ class RustOrchestrationTest < Test::Unit::TestCase
     assert_nested_close(seeded, deterministic, 1e-12)
   end
 
+  def test_run_em_with_start_seed_random_matches_explicit_random_initialization
+    omit("run_em_with_start_seed unavailable") unless Lda::RustBackend.respond_to?(:run_em_with_start_seed)
+    omit("random_topic_term_probabilities unavailable") unless Lda::RustBackend.respond_to?(:random_topic_term_probabilities)
+
+    random_seed = 12_345
+    explicit_seed = Lda::RustBackend.random_topic_term_probabilities(
+      @topics,
+      @terms,
+      @min_probability,
+      random_seed
+    )
+
+    explicit = Lda::RustBackend.run_em(
+      explicit_seed,
+      @document_words,
+      @document_counts,
+      @max_iter,
+      @convergence,
+      @em_max_iter,
+      @em_convergence,
+      @init_alpha,
+      @min_probability
+    )
+
+    with_start = Lda::RustBackend.run_em_with_start_seed(
+      "random",
+      @document_words,
+      @document_counts,
+      @topics,
+      @terms,
+      @max_iter,
+      @convergence,
+      @em_max_iter,
+      @em_convergence,
+      @init_alpha,
+      @min_probability,
+      random_seed
+    )
+
+    assert_nested_close(explicit, with_start, 1e-12)
+  end
+
+  def test_run_em_with_start_seed_keeps_seeded_start_seed_independent
+    omit("run_em_with_start_seed unavailable") unless Lda::RustBackend.respond_to?(:run_em_with_start_seed)
+
+    left = Lda::RustBackend.run_em_with_start_seed(
+      "seeded",
+      @document_words,
+      @document_counts,
+      @topics,
+      @terms,
+      @max_iter,
+      @convergence,
+      @em_max_iter,
+      @em_convergence,
+      @init_alpha,
+      @min_probability,
+      101
+    )
+
+    right = Lda::RustBackend.run_em_with_start_seed(
+      "seeded",
+      @document_words,
+      @document_counts,
+      @topics,
+      @terms,
+      @max_iter,
+      @convergence,
+      @em_max_iter,
+      @em_convergence,
+      @init_alpha,
+      @min_probability,
+      202
+    )
+
+    assert_nested_close(left, right, 1e-12)
+  end
+
   private
 
   def assert_nested_close(left, right, tolerance)

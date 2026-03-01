@@ -7,5 +7,6 @@ docker build -f Dockerfile.rust -t "${IMAGE_NAME}" .
 docker run --rm -v "$(pwd)":/workspace -w /workspace "${IMAGE_NAME}" bash -lc \
   "bundle exec rake compile compile_rust \
   && LDA_RUBY_BACKEND=rust bundle exec ruby -Ilib:test test/backend_compatibility_test.rb \
+  && LDA_RUBY_BACKEND=rust bundle exec ruby -Ilib:test test/rust_orchestration_test.rb \
   && LDA_RUBY_BACKEND=rust bundle exec ruby -Ilib:test test/lda_ruby_test.rb \
   && LDA_RUBY_BACKEND=rust bundle exec ruby -Ilib:test test/simple_pipeline_test.rb"

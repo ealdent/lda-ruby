@@ -40,6 +40,36 @@ fn normalize_in_place(weights: &mut [f64]) {
     }
 }
 
+struct XorShift64 {
+    state: u64,
+}
+
+impl XorShift64 {
+    fn new(seed: i64) -> Self {
+        let mut state = seed as u64;
+        if state == 0 {
+            state = 0x9E37_79B9_7F4A_7C15;
+        }
+
+        Self { state }
+    }
+
+    fn next_u64(&mut self) -> u64 {
+        let mut x = self.state;
+        x ^= x >> 12;
+        x ^= x << 25;
+        x ^= x >> 27;
+        self.state = x;
+        x.wrapping_mul(0x2545_F491_4F6C_DD1D)
+    }
+
+    fn next_f64_unit(&mut self) -> f64 {
+        // Keep 53 random bits to map uniformly into [0, 1).
+        let value = self.next_u64() >> 11;
+        value as f64 / ((1_u64 << 53) as f64)
+    }
+}
+
 fn compute_topic_weights(
     beta_probabilities: &[Vec<f64>],
     gamma: &[f64],
@@ -268,6 +298,32 @@ fn seeded_topic_term_probabilities(
     topic_term_counts
 }
 
+fn random_topic_term_probabilities(
+    topics: usize,
+    terms: usize,
+    min_probability: f64,
+    random_seed: i64,
+) -> Vec<Vec<f64>> {
+    if topics == 0 || terms == 0 {
+        return Vec::new();
+    }
+
+    let floor = floor_value(min_probability);
+    let mut rng = XorShift64::new(random_seed);
+    let mut matrix = Vec::with_capacity(topics);
+
+    for _ in 0..topics {
+        let mut weights = Vec::with_capacity(terms);
+        for _ in 0..terms {
+            weights.push(rng.next_f64_unit() + floor);
+        }
+        normalize_in_place(&mut weights);
+        matrix.push(weights);
+    }
+
+    matrix
+}
+
 fn infer_document_internal(
     beta_probabilities: &[Vec<f64>],
     gamma_initial: &[f64],
@@ -445,6 +501,10 @@ fn start_uses_seeded_initialization(start: &str) -> bool {
     normalized == "seeded" || normalized == "deterministic"
 }
 
+fn start_uses_random_initialization(start: &str) -> bool {
+    start.trim().eq_ignore_ascii_case("random")
+}
+
 fn run_em(
     mut beta_probabilities: Vec<Vec<f64>>,
     document_words: Vec<Vec<usize>>,
@@ -517,6 +577,53 @@ fn run_em_with_start(
     init_alpha: f64,
     min_probability: f64,
 ) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
+    let initial_beta =
+        if start_uses_seeded_initialization(start.as_str()) || start_uses_random_initialization(start.as_str()) {
+            seeded_topic_term_probabilities(
+                document_words.clone(),
+                document_counts.clone(),
+                topics,
+                terms,
+                min_probability,
+            )
+        } else {
+            // Unknown start modes default to seeded initialization for a stable fallback.
+            seeded_topic_term_probabilities(
+                document_words.clone(),
+                document_counts.clone(),
+                topics,
+                terms,
+                min_probability,
+            )
+        };
+
+    run_em(
+        initial_beta,
+        document_words,
+        document_counts,
+        max_iter,
+        convergence,
+        em_max_iter,
+        em_convergence,
+        init_alpha,
+        min_probability,
+    )
+}
+
+fn run_em_with_start_seed(
+    start: String,
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    topics: usize,
+    terms: usize,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+    random_seed: i64,
+) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
     let initial_beta = if start_uses_seeded_initialization(start.as_str()) {
         seeded_topic_term_probabilities(
             document_words.clone(),
@@ -525,8 +632,9 @@ fn run_em_with_start(
             terms,
             min_probability,
         )
+    } else if start_uses_random_initialization(start.as_str()) {
+        random_topic_term_probabilities(topics, terms, min_probability, random_seed)
     } else {
-        // The Ruby adapter currently uses this entrypoint for deterministic starts.
         // Unknown start modes default to seeded initialization for a stable fallback.
         seeded_topic_term_probabilities(
             document_words.clone(),
@@ -585,8 +693,15 @@ fn init() -> Result<(), Error> {
         "seeded_topic_term_probabilities",
         function!(seeded_topic_term_probabilities, 5),
     )?;
+    rust_backend_module.define_singleton_method(
+        "random_topic_term_probabilities",
+        function!(random_topic_term_probabilities, 4),
+    )?;
     rust_backend_module.define_singleton_method("run_em", function!(run_em, 9))?;
-    rust_backend_module.define_singleton_method("run_em_with_start", function!(run_em_with_start, 11))?;
+    rust_backend_module
+        .define_singleton_method("run_em_with_start", function!(run_em_with_start, 11))?;
+    rust_backend_module
+        .define_singleton_method("run_em_with_start_seed", function!(run_em_with_start_seed, 12))?;
 
     Ok(())
 }

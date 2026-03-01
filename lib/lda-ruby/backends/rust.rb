@@ -99,7 +99,8 @@ module Lda
 
       def rust_orchestrated_em(start)
         if rust_start_orchestration_mode?(start)
-          return rust_orchestrated_em_with_start(start)
+          start_orchestrated = rust_orchestrated_em_with_start(start)
+          return true if start_orchestrated
         end
 
         rust_orchestrated_em_with_beta(start)
@@ -107,24 +108,48 @@ module Lda
 
       def rust_orchestrated_em_with_start(start)
         return false unless defined?(::Lda::RustBackend)
-        return false unless ::Lda::RustBackend.respond_to?(:run_em_with_start)
+
+        random_start = rust_random_start_mode?(start)
+        if random_start
+          return false unless ::Lda::RustBackend.respond_to?(:run_em_with_start_seed)
+        else
+          return false unless ::Lda::RustBackend.respond_to?(:run_em_with_start)
+        end
 
         em_input = rust_em_corpus_input
         return true if em_input.nil?
 
-        output = ::Lda::RustBackend.run_em_with_start(
-          start.to_s,
-          em_input.fetch(:document_words),
-          em_input.fetch(:document_counts),
-          Integer(em_input.fetch(:topics)),
-          Integer(em_input.fetch(:terms)),
-          Integer(max_iter),
-          Float(convergence),
-          Integer(em_max_iter),
-          Float(em_convergence),
-          Float(init_alpha),
-          Float(em_input.fetch(:min_probability))
-        )
+        output =
+          if random_start
+            ::Lda::RustBackend.run_em_with_start_seed(
+              start.to_s,
+              em_input.fetch(:document_words),
+              em_input.fetch(:document_counts),
+              Integer(em_input.fetch(:topics)),
+              Integer(em_input.fetch(:terms)),
+              Integer(max_iter),
+              Float(convergence),
+              Integer(em_max_iter),
+              Float(em_convergence),
+              Float(init_alpha),
+              Float(em_input.fetch(:min_probability)),
+              Integer(next_random_seed)
+            )
+          else
+            ::Lda::RustBackend.run_em_with_start(
+              start.to_s,
+              em_input.fetch(:document_words),
+              em_input.fetch(:document_counts),
+              Integer(em_input.fetch(:topics)),
+              Integer(em_input.fetch(:terms)),
+              Integer(max_iter),
+              Float(convergence),
+              Integer(em_max_iter),
+              Float(em_convergence),
+              Float(init_alpha),
+              Float(em_input.fetch(:min_probability))
+            )
+          end
 
         unless valid_rust_em_output?(
           output,
@@ -231,7 +256,11 @@ module Lda
 
       def rust_start_orchestration_mode?(start)
         normalized = start.to_s.strip.downcase
-        normalized == "seeded" || normalized == "deterministic"
+        normalized == "seeded" || normalized == "deterministic" || normalized == "random"
+      end
+
+      def rust_random_start_mode?(start)
+        start.to_s.strip.downcase == "random"
       end
 
       def valid_rust_em_output?(output, document_lengths, topics, terms)
