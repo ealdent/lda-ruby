@@ -121,8 +121,10 @@ Delivered:
 - precompiled artifact builder + runtime validator (`bin/release-precompiled-artifacts`)
 - gemspec precompiled variant support (`LDA_RUBY_GEM_VARIANT=precompiled`)
 - precompiled platform compatibility/publish policy (`docs/precompiled-platform-policy.md`)
+- precompiled target expansion tracker (`docs/precompiled-target-evaluation.md`)
 - macOS Rust build linker guardrail (`dynamic_lookup`) for precompiled packaging paths
 - tag-driven release workflow (`.github/workflows/release.yml`)
+- release failure alert workflow (`.github/workflows/release-failure-alert.yml`)
 - maintainer release runbook (`docs/release-runbook.md`)
 - CI jobs for packaged-gem fallback, rust-enabled checks, and manifest checks
 - CI precompiled gem build guardrail job (`precompiled-gem-build`)
@@ -180,6 +182,7 @@ Performance tracking:
 - benchmark guardrail check (`benchmark-guardrail`)
 - release validation/build/publish pipeline on `v*` tags (`release.yml`)
 - post-publish artifact verification (`verify_published_artifacts` in `release.yml`)
+- release-failure issue alerting (`release-failure-alert`)
 
 ## Remaining Work Queue
 
@@ -194,7 +197,7 @@ Priority 2:
 
 Priority 3:
 
-- define automated alerts/notifications for release artifact publish failures
+- monitor and tune release-failure issue alerting (`.github/workflows/release-failure-alert.yml`)
 
 ## Resume Instructions For A New Conversation
 

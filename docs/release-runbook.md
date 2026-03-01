@@ -138,6 +138,7 @@ Candidate expansion workflow:
    - environment-gated `publish_rubygems`
    - environment-gated `publish_github_release`
    - `verify_published_artifacts`
+   - on `release.yml` failure, `.github/workflows/release-failure-alert.yml` opens a triage issue
 4. Approve the protected `release` environment when prompted.
 5. Confirm published outputs:
    - RubyGems shows `lda-ruby` `0.4.0` source gem and platform gems
