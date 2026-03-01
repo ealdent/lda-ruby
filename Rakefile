@@ -27,7 +27,7 @@ end
 desc "Build experimental Rust extension (requires cargo)"
 task :compile_rust do
   cargo = ENV.fetch("CARGO", "cargo")
-  unless system("command -v #{cargo} >/dev/null 2>&1")
+  unless system(cargo, "--version", out: File::NULL, err: File::NULL)
     abort "cargo not found in PATH. Install Rust toolchain or skip compile_rust."
   end
 
