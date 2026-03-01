@@ -92,6 +92,7 @@ Delivered:
 - Rust-side random-start orchestration path (`Lda::RustBackend.run_em_with_start_seed`) using explicit seed-controlled random initialization (`Lda::RustBackend.random_topic_term_probabilities`)
 - Rust-managed corpus session lifecycle (`Lda::RustBackend.create_corpus_session` / `drop_corpus_session`) with session-based start-aware EM orchestration (`run_em_on_session_with_start_seed`) wired in `Lda::Backends::Rust`
 - Rust-managed session settings lifecycle (`configure_corpus_session`) with settings-aware orchestration (`run_em_on_session_start`) wired in `Lda::Backends::Rust`
+- Rust session execution refactor to shared session corpus storage + borrowed orchestration helpers, eliminating deep corpus clone overhead on each session EM run
 - parity/compatibility test coverage and rust runtime CI
 
 Open in Phase 4:
@@ -161,6 +162,7 @@ Performance tracking:
 - `./bin/benchmark-backends`
 - `./bin/check-rust-benchmark`
 - `docs/rust-orchestration-guardrails.md`
+- CI currently enforces `BENCH_RUST_TO_PURE_MAX_RATIO=0.75` in `benchmark-guardrail`
 
 ## CI Jobs Expected
 

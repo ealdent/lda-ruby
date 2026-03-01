@@ -60,11 +60,12 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Rust-side seed-controlled random-start orchestration path added (`Lda::RustBackend.run_em_with_start_seed` + `random_topic_term_probabilities`) so random initialization can stay in Rust while preserving deterministic replay from an explicit seed.
 - Rust-side corpus session lifecycle added (`create_corpus_session`/`drop_corpus_session`) and `Lda::Backends::Rust` now prefers session-based EM orchestration (`run_em_on_session_with_start_seed`) before array-based fallback paths.
 - Rust-side session settings lifecycle added (`configure_corpus_session`) and `Lda::Backends::Rust` now prefers settings-aware session orchestration (`run_em_on_session_start`) before parameter-heavy session and array-based fallbacks.
+- Rust session orchestration now runs on shared Rust-side corpus session data via borrowed execution helpers, avoiding deep corpus array cloning on each session EM call.
 - Dockerized rust runtime workflow added for local parity with CI (`Dockerfile.rust`, `bin/docker-test-rust`).
 - Gem packaging now excludes local Rust cargo build artifacts (`target/**`) for clean release builds.
 - Backend benchmark driver added (`bin/benchmark-backends`) to track pure/native/rust runtime deltas.
 - Rust orchestration guardrail policy documented (`docs/rust-orchestration-guardrails.md`) with benchmark threshold checker (`bin/check-rust-benchmark`).
-- CI benchmark guardrail job added (`benchmark-guardrail`) to enforce Rust/pure runtime ratio on Ubuntu.
+- CI benchmark guardrail job added (`benchmark-guardrail`) to enforce Rust/pure runtime ratio on Ubuntu (currently `BENCH_RUST_TO_PURE_MAX_RATIO=0.75`).
 - Source install path now has explicit Rust build policy via `LDA_RUBY_RUST_BUILD=auto|always|never`.
 - Docker install-policy matrix script added (`bin/docker-test-install-policies`) to verify source install behavior across environments.
 - CI now runs install-policy matrix checks on Ubuntu.

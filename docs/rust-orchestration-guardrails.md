@@ -25,6 +25,7 @@ Default benchmark policy:
 
 - `BENCH_RUST_TO_PURE_MAX_RATIO=0.75`
   - i.e., Rust mean runtime must be no worse than 75% of pure mean runtime on the benchmark fixture/config.
+- CI benchmark guardrail job enforces the same ratio with `BENCH_RUNS=1` for runtime stability.
 
 Configurable environment knobs:
 

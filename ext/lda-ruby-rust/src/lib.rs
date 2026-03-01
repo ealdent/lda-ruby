@@ -1,7 +1,7 @@
 use magnus::{define_module, function, Error, Module, Object};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
 fn available() -> bool {
     true
@@ -54,10 +54,14 @@ struct SessionConfig {
     min_probability: f64,
 }
 
-struct CorpusSession {
+struct CorpusSessionData {
     document_words: Vec<Vec<usize>>,
     document_counts: Vec<Vec<f64>>,
     terms: usize,
+}
+
+struct CorpusSession {
+    data: Arc<CorpusSessionData>,
     config: Option<SessionConfig>,
 }
 
@@ -291,9 +295,9 @@ fn topic_document_probability(
     output
 }
 
-fn seeded_topic_term_probabilities(
-    document_words: Vec<Vec<usize>>,
-    document_counts: Vec<Vec<f64>>,
+fn seeded_topic_term_probabilities_internal(
+    document_words: &[Vec<usize>],
+    document_counts: &[Vec<f64>],
     topics: usize,
     terms: usize,
     min_probability: f64,
@@ -333,6 +337,22 @@ fn seeded_topic_term_probabilities(
     topic_term_counts
 }
 
+fn seeded_topic_term_probabilities(
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    topics: usize,
+    terms: usize,
+    min_probability: f64,
+) -> Vec<Vec<f64>> {
+    seeded_topic_term_probabilities_internal(
+        document_words.as_slice(),
+        document_counts.as_slice(),
+        topics,
+        terms,
+        min_probability,
+    )
+}
+
 fn random_topic_term_probabilities(
     topics: usize,
     terms: usize,
@@ -366,9 +386,11 @@ fn create_corpus_session(
 ) -> i64 {
     let session_id = NEXT_CORPUS_SESSION_ID.fetch_add(1, Ordering::Relaxed);
     let session = CorpusSession {
-        document_words,
-        document_counts,
-        terms,
+        data: Arc::new(CorpusSessionData {
+            document_words,
+            document_counts,
+            terms,
+        }),
         config: None,
     };
 
@@ -448,26 +470,22 @@ fn run_em_on_session_with_start_seed(
 
     let session_key = session_id as u64;
     let session_data = match corpus_sessions().lock() {
-        Ok(sessions) => sessions.get(&session_key).map(|session| {
-            (
-                session.document_words.clone(),
-                session.document_counts.clone(),
-                session.terms,
-            )
-        }),
+        Ok(sessions) => sessions
+            .get(&session_key)
+            .map(|session| Arc::clone(&session.data)),
         Err(_) => None,
     };
 
-    let Some((document_words, document_counts, terms)) = session_data else {
+    let Some(session_data) = session_data else {
         return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
     };
 
-    run_em_with_start_seed(
-        start,
-        document_words,
-        document_counts,
+    run_em_with_start_seed_internal(
+        start.as_str(),
+        session_data.document_words.as_slice(),
+        session_data.document_counts.as_slice(),
         topics,
-        terms,
+        session_data.terms,
         max_iter,
         convergence,
         em_max_iter,
@@ -491,16 +509,14 @@ fn run_em_on_session_start(
     let session_data = match corpus_sessions().lock() {
         Ok(sessions) => sessions.get(&session_key).map(|session| {
             (
-                session.document_words.clone(),
-                session.document_counts.clone(),
-                session.terms,
+                Arc::clone(&session.data),
                 session.config.clone(),
             )
         }),
         Err(_) => None,
     };
 
-    let Some((document_words, document_counts, terms, config)) = session_data else {
+    let Some((session_data, config)) = session_data else {
         return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
     };
 
@@ -508,12 +524,12 @@ fn run_em_on_session_start(
         return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
     };
 
-    run_em_with_start_seed(
-        start,
-        document_words,
-        document_counts,
+    run_em_with_start_seed_internal(
+        start.as_str(),
+        session_data.document_words.as_slice(),
+        session_data.document_counts.as_slice(),
         config.topics,
-        terms,
+        session_data.terms,
         config.max_iter,
         config.convergence,
         config.em_max_iter,
@@ -705,10 +721,10 @@ fn start_uses_random_initialization(start: &str) -> bool {
     start.trim().eq_ignore_ascii_case("random")
 }
 
-fn run_em(
+fn run_em_internal(
     mut beta_probabilities: Vec<Vec<f64>>,
-    document_words: Vec<Vec<usize>>,
-    document_counts: Vec<Vec<f64>>,
+    document_words: &[Vec<usize>],
+    document_counts: &[Vec<f64>],
     max_iter: i64,
     convergence: f64,
     em_max_iter: i64,
@@ -731,8 +747,8 @@ fn run_em(
     for _ in 0..em_max_iter_value {
         let (current_gamma, current_phi, topic_term_counts) = infer_corpus_iteration_internal(
             beta_probabilities.as_slice(),
-            document_words.as_slice(),
-            document_counts.as_slice(),
+            document_words,
+            document_counts,
             max_iter,
             convergence,
             min_probability,
@@ -764,6 +780,76 @@ fn run_em(
     (beta_probabilities, beta_log, gamma, phi)
 }
 
+fn run_em(
+    beta_probabilities: Vec<Vec<f64>>,
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
+    run_em_internal(
+        beta_probabilities,
+        document_words.as_slice(),
+        document_counts.as_slice(),
+        max_iter,
+        convergence,
+        em_max_iter,
+        em_convergence,
+        init_alpha,
+        min_probability,
+    )
+}
+
+fn run_em_with_start_internal(
+    start: &str,
+    document_words: &[Vec<usize>],
+    document_counts: &[Vec<f64>],
+    topics: usize,
+    terms: usize,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
+    let initial_beta =
+        if start_uses_seeded_initialization(start) || start_uses_random_initialization(start) {
+            seeded_topic_term_probabilities_internal(
+                document_words,
+                document_counts,
+                topics,
+                terms,
+                min_probability,
+            )
+        } else {
+            // Unknown start modes default to seeded initialization for a stable fallback.
+            seeded_topic_term_probabilities_internal(
+                document_words,
+                document_counts,
+                topics,
+                terms,
+                min_probability,
+            )
+        };
+
+    run_em_internal(
+        initial_beta,
+        document_words,
+        document_counts,
+        max_iter,
+        convergence,
+        em_max_iter,
+        em_convergence,
+        init_alpha,
+        min_probability,
+    )
+}
+
 fn run_em_with_start(
     start: String,
     document_words: Vec<Vec<usize>>,
@@ -777,27 +863,57 @@ fn run_em_with_start(
     init_alpha: f64,
     min_probability: f64,
 ) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
-    let initial_beta =
-        if start_uses_seeded_initialization(start.as_str()) || start_uses_random_initialization(start.as_str()) {
-            seeded_topic_term_probabilities(
-                document_words.clone(),
-                document_counts.clone(),
-                topics,
-                terms,
-                min_probability,
-            )
-        } else {
-            // Unknown start modes default to seeded initialization for a stable fallback.
-            seeded_topic_term_probabilities(
-                document_words.clone(),
-                document_counts.clone(),
-                topics,
-                terms,
-                min_probability,
-            )
-        };
+    run_em_with_start_internal(
+        start.as_str(),
+        document_words.as_slice(),
+        document_counts.as_slice(),
+        topics,
+        terms,
+        max_iter,
+        convergence,
+        em_max_iter,
+        em_convergence,
+        init_alpha,
+        min_probability,
+    )
+}
 
-    run_em(
+fn run_em_with_start_seed_internal(
+    start: &str,
+    document_words: &[Vec<usize>],
+    document_counts: &[Vec<f64>],
+    topics: usize,
+    terms: usize,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+    random_seed: i64,
+) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
+    let initial_beta = if start_uses_seeded_initialization(start) {
+        seeded_topic_term_probabilities_internal(
+            document_words,
+            document_counts,
+            topics,
+            terms,
+            min_probability,
+        )
+    } else if start_uses_random_initialization(start) {
+        random_topic_term_probabilities(topics, terms, min_probability, random_seed)
+    } else {
+        // Unknown start modes default to seeded initialization for a stable fallback.
+        seeded_topic_term_probabilities_internal(
+            document_words,
+            document_counts,
+            topics,
+            terms,
+            min_probability,
+        )
+    };
+
+    run_em_internal(
         initial_beta,
         document_words,
         document_counts,
@@ -824,37 +940,19 @@ fn run_em_with_start_seed(
     min_probability: f64,
     random_seed: i64,
 ) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
-    let initial_beta = if start_uses_seeded_initialization(start.as_str()) {
-        seeded_topic_term_probabilities(
-            document_words.clone(),
-            document_counts.clone(),
-            topics,
-            terms,
-            min_probability,
-        )
-    } else if start_uses_random_initialization(start.as_str()) {
-        random_topic_term_probabilities(topics, terms, min_probability, random_seed)
-    } else {
-        // Unknown start modes default to seeded initialization for a stable fallback.
-        seeded_topic_term_probabilities(
-            document_words.clone(),
-            document_counts.clone(),
-            topics,
-            terms,
-            min_probability,
-        )
-    };
-
-    run_em(
-        initial_beta,
-        document_words,
-        document_counts,
+    run_em_with_start_seed_internal(
+        start.as_str(),
+        document_words.as_slice(),
+        document_counts.as_slice(),
+        topics,
+        terms,
         max_iter,
         convergence,
         em_max_iter,
         em_convergence,
         init_alpha,
         min_probability,
+        random_seed,
     )
 }
 
