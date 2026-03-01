@@ -4,6 +4,7 @@ module Lda
   module Backends
     class Rust < Base
       SETTINGS = %i[max_iter convergence em_max_iter em_convergence num_topics init_alpha est_alpha verbose].freeze
+      MIN_PROBABILITY = 1e-12
 
       def self.available?
         return false unless defined?(::Lda::RUST_EXTENSION_LOADED) && ::Lda::RUST_EXTENSION_LOADED
@@ -71,8 +72,9 @@ module Lda
       end
 
       def em(start)
-        rust_before_em(start)
-        return nil if rust_orchestrated_em(start.to_s)
+        start_mode = start.to_s
+        rust_before_em(start_mode)
+        return nil if rust_orchestrated_em(start_mode)
 
         @fallback.em(start)
       end
@@ -96,6 +98,62 @@ module Lda
       private
 
       def rust_orchestrated_em(start)
+        if rust_start_orchestration_mode?(start)
+          return rust_orchestrated_em_with_start(start)
+        end
+
+        rust_orchestrated_em_with_beta(start)
+      end
+
+      def rust_orchestrated_em_with_start(start)
+        return false unless defined?(::Lda::RustBackend)
+        return false unless ::Lda::RustBackend.respond_to?(:run_em_with_start)
+
+        em_input = rust_em_corpus_input
+        return true if em_input.nil?
+
+        output = ::Lda::RustBackend.run_em_with_start(
+          start.to_s,
+          em_input.fetch(:document_words),
+          em_input.fetch(:document_counts),
+          Integer(em_input.fetch(:topics)),
+          Integer(em_input.fetch(:terms)),
+          Integer(max_iter),
+          Float(convergence),
+          Integer(em_max_iter),
+          Float(em_convergence),
+          Float(init_alpha),
+          Float(em_input.fetch(:min_probability))
+        )
+
+        unless valid_rust_em_output?(
+          output,
+          em_input.fetch(:document_lengths),
+          em_input.fetch(:topics),
+          em_input.fetch(:terms)
+        )
+          @fallback.em(start)
+          return true
+        end
+
+        beta_probabilities, beta_log, gamma, phi = output
+        @fallback.apply_em_state(
+          beta_probabilities: beta_probabilities,
+          beta_log: beta_log,
+          gamma: gamma,
+          phi: phi
+        )
+        true
+      rescue StandardError
+        if defined?(em_input) && em_input
+          @fallback.em(start)
+          return true
+        end
+
+        false
+      end
+
+      def rust_orchestrated_em_with_beta(start)
         return false unless defined?(::Lda::RustBackend)
         return false unless ::Lda::RustBackend.respond_to?(:run_em)
 
@@ -139,6 +197,41 @@ module Lda
         end
 
         false
+      end
+
+      def rust_em_corpus_input
+        return nil if @corpus.nil? || @corpus.num_docs.zero?
+
+        topics = Integer(num_topics)
+        raise ArgumentError, "num_topics must be greater than zero" if topics <= 0
+
+        terms = max_term_index + 1
+        raise ArgumentError, "corpus must contain terms" if terms <= 0
+
+        document_words = @corpus.documents.map { |document| document.words.map(&:to_i) }
+        document_counts = @corpus.documents.map { |document| document.counts.map(&:to_f) }
+
+        {
+          topics: topics,
+          terms: terms,
+          document_words: document_words,
+          document_counts: document_counts,
+          document_lengths: document_words.map(&:length),
+          min_probability: MIN_PROBABILITY
+        }
+      end
+
+      def max_term_index
+        return -1 if @corpus.nil? || @corpus.documents.empty?
+
+        @corpus.documents
+          .flat_map(&:words)
+          .max || -1
+      end
+
+      def rust_start_orchestration_mode?(start)
+        normalized = start.to_s.strip.downcase
+        normalized == "seeded" || normalized == "deterministic"
       end
 
       def valid_rust_em_output?(output, document_lengths, topics, terms)

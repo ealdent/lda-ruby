@@ -440,6 +440,11 @@ fn infer_corpus_iteration(
     )
 }
 
+fn start_uses_seeded_initialization(start: &str) -> bool {
+    let normalized = start.trim().to_ascii_lowercase();
+    normalized == "seeded" || normalized == "deterministic"
+}
+
 fn run_em(
     mut beta_probabilities: Vec<Vec<f64>>,
     document_words: Vec<Vec<usize>>,
@@ -499,6 +504,52 @@ fn run_em(
     (beta_probabilities, beta_log, gamma, phi)
 }
 
+fn run_em_with_start(
+    start: String,
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    topics: usize,
+    terms: usize,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
+    let initial_beta = if start_uses_seeded_initialization(start.as_str()) {
+        seeded_topic_term_probabilities(
+            document_words.clone(),
+            document_counts.clone(),
+            topics,
+            terms,
+            min_probability,
+        )
+    } else {
+        // The Ruby adapter currently uses this entrypoint for deterministic starts.
+        // Unknown start modes default to seeded initialization for a stable fallback.
+        seeded_topic_term_probabilities(
+            document_words.clone(),
+            document_counts.clone(),
+            topics,
+            terms,
+            min_probability,
+        )
+    };
+
+    run_em(
+        initial_beta,
+        document_words,
+        document_counts,
+        max_iter,
+        convergence,
+        em_max_iter,
+        em_convergence,
+        init_alpha,
+        min_probability,
+    )
+}
+
 #[magnus::init]
 fn init() -> Result<(), Error> {
     let lda_module = define_module("Lda")?;
@@ -535,6 +586,7 @@ fn init() -> Result<(), Error> {
         function!(seeded_topic_term_probabilities, 5),
     )?;
     rust_backend_module.define_singleton_method("run_em", function!(run_em, 9))?;
+    rust_backend_module.define_singleton_method("run_em_with_start", function!(run_em_with_start, 11))?;
 
     Ok(())
 }
