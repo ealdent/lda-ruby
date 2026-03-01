@@ -59,7 +59,6 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build musl precompiled candidate artifact (Alpine container)
-        id: musl_build
         run: |
           docker run --rm \
             -v "${PWD}:/workspace" \
@@ -72,16 +71,14 @@ jobs:
               platform="$(ruby -rrubygems -e '"'"'"'"'"'"'"'"'puts Gem::Platform.local.to_s.sub(/-darwin-[0-9]+\z/, "-darwin")'"'"'"'"'"'"'"'"')"
               libclang_path="$(dirname "$(find /usr/lib -name libclang.so | head -n1)")"
               export LIBCLANG_PATH="${libclang_path}"
-              echo "${platform}" > /workspace/pkg/musl-platform.txt
               bundle install
               ./bin/release-precompiled-artifacts --platform "${platform}" --skip-preflight --skip-runtime-checks
             '
-          echo "platform=$(cat pkg/musl-platform.txt)" >> "${GITHUB_OUTPUT}"
 
       - name: Upload candidate artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: precompiled-candidate-${{ steps.musl_build.outputs.platform }}
+          name: precompiled-candidate-linux-musl
           path: |
-            pkg/lda-ruby-*-${{ steps.musl_build.outputs.platform }}.gem
-            pkg/lda-ruby-*-${{ steps.musl_build.outputs.platform }}.gem.sha256
+            pkg/lda-ruby-*-linux-musl.gem
+            pkg/lda-ruby-*-linux-musl.gem.sha256
