@@ -60,7 +60,8 @@ When adding a new precompiled platform:
 1. Add target to release workflow matrix.
 2. Add or update CI coverage for that platform family.
 3. Update this policy and the release runbook support matrix.
-4. Validate a dry-run release with `workflow_dispatch` before shipping.
+4. Record feasibility evidence and rollout notes in `docs/precompiled-target-evaluation.md`.
+5. Validate a dry-run release with `workflow_dispatch` before shipping.
 
 When deprecating a precompiled platform:
 

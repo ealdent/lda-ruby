@@ -190,7 +190,7 @@ Priority 1:
 
 Priority 2:
 
-- evaluate additional precompiled targets (Windows and/or musl Linux)
+- evaluate additional precompiled targets (Windows and/or musl Linux) using `docs/precompiled-target-evaluation.md`
 
 Priority 3:
 

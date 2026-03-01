@@ -2,7 +2,7 @@
 
 This runbook defines the maintainer workflow for shipping `lda-ruby` source and precompiled platform gem releases.
 
-Authoritative platform/support policy is maintained in `docs/precompiled-platform-policy.md`.
+Authoritative platform/support policy is maintained in `docs/precompiled-platform-policy.md`; expansion feasibility notes live in `docs/precompiled-target-evaluation.md`.
 
 ## Scope
 
