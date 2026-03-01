@@ -125,7 +125,14 @@ module Lda
 
         random_seed = Integer(next_random_seed)
         output =
-          if ::Lda::RustBackend.respond_to?(:run_em_on_session_start) && ensure_rust_corpus_session_config
+          if ::Lda::RustBackend.respond_to?(:run_em_on_session)
+            ::Lda::RustBackend.run_em_on_session(
+              Integer(@rust_corpus_session_id),
+              start.to_s,
+              *current_rust_session_config_signature,
+              random_seed
+            )
+          elsif ::Lda::RustBackend.respond_to?(:run_em_on_session_start) && ensure_rust_corpus_session_config
             ::Lda::RustBackend.run_em_on_session_start(
               Integer(@rust_corpus_session_id),
               start.to_s,

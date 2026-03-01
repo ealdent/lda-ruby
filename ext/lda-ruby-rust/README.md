@@ -25,6 +25,7 @@ Current scope:
   - `Lda::RustBackend.run_em(initial_beta, document_words, document_counts, max_iter, convergence, em_max_iter, em_convergence, init_alpha, min_probability)`
   - `Lda::RustBackend.run_em_with_start(start, document_words, document_counts, topics, terms, max_iter, convergence, em_max_iter, em_convergence, init_alpha, min_probability)`
   - `Lda::RustBackend.run_em_with_start_seed(start, document_words, document_counts, topics, terms, max_iter, convergence, em_max_iter, em_convergence, init_alpha, min_probability, random_seed)`
+  - `Lda::RustBackend.run_em_on_session(session_id, start, topics, max_iter, convergence, em_max_iter, em_convergence, init_alpha, min_probability, random_seed)`
   - `Lda::RustBackend.run_em_on_session_start(session_id, start, random_seed)`
   - `Lda::RustBackend.run_em_on_session_with_start_seed(session_id, start, topics, max_iter, convergence, em_max_iter, em_convergence, init_alpha, min_probability, random_seed)`
 
@@ -41,6 +42,7 @@ Hot-path kernels currently executed in Rust when `backend: :rust` is active:
 - EM outer-loop orchestration with convergence checks (`run_em`)
 - start-aware deterministic EM orchestration (`run_em_with_start` for `seeded`/`deterministic`)
 - start-aware seeded and random EM orchestration with explicit seed control (`run_em_with_start_seed`)
+- unified session-settings orchestration (`run_em_on_session`) that applies settings and executes EM in one call
 - session-based EM orchestration against Rust-managed corpus lifecycle (`create_corpus_session` + `run_em_on_session_with_start_seed`)
 - settings-aware session orchestration (`configure_corpus_session` + `run_em_on_session_start`)
 

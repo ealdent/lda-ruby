@@ -43,7 +43,7 @@ fn normalize_in_place(weights: &mut [f64]) {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 struct SessionConfig {
     topics: usize,
     max_iter: i64,
@@ -492,6 +492,64 @@ fn run_em_on_session_with_start_seed(
         em_convergence,
         init_alpha,
         min_probability,
+        random_seed,
+    )
+}
+
+fn run_em_on_session(
+    session_id: i64,
+    start: String,
+    topics: usize,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+    random_seed: i64,
+) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
+    if session_id <= 0 || topics == 0 {
+        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    }
+
+    let desired_config = SessionConfig {
+        topics,
+        max_iter,
+        convergence,
+        em_max_iter,
+        em_convergence,
+        init_alpha,
+        min_probability,
+    };
+
+    let session_key = session_id as u64;
+    let session_data = match corpus_sessions().lock() {
+        Ok(mut sessions) => {
+            let Some(session) = sessions.get_mut(&session_key) else {
+                return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+            };
+
+            if session.config.as_ref() != Some(&desired_config) {
+                session.config = Some(desired_config.clone());
+            }
+
+            Arc::clone(&session.data)
+        }
+        Err(_) => return (Vec::new(), Vec::new(), Vec::new(), Vec::new()),
+    };
+
+    run_em_with_start_seed_internal(
+        start.as_str(),
+        session_data.document_words.as_slice(),
+        session_data.document_counts.as_slice(),
+        desired_config.topics,
+        session_data.terms,
+        desired_config.max_iter,
+        desired_config.convergence,
+        desired_config.em_max_iter,
+        desired_config.em_convergence,
+        desired_config.init_alpha,
+        desired_config.min_probability,
         random_seed,
     )
 }
@@ -1011,6 +1069,7 @@ fn init() -> Result<(), Error> {
         "run_em_on_session_with_start_seed",
         function!(run_em_on_session_with_start_seed, 10),
     )?;
+    rust_backend_module.define_singleton_method("run_em_on_session", function!(run_em_on_session, 10))?;
     rust_backend_module
         .define_singleton_method("run_em_on_session_start", function!(run_em_on_session_start, 3))?;
 

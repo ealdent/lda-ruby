@@ -332,6 +332,86 @@ class RustOrchestrationTest < Test::Unit::TestCase
     assert_equal true, Lda::RustBackend.drop_corpus_session(session_id)
   end
 
+  def test_run_em_on_session_applies_settings_and_matches_direct_seeded_start
+    omit("create_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:create_corpus_session)
+    omit("drop_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:drop_corpus_session)
+    omit("run_em_on_session unavailable") unless Lda::RustBackend.respond_to?(:run_em_on_session)
+    omit("run_em_with_start_seed unavailable") unless Lda::RustBackend.respond_to?(:run_em_with_start_seed)
+
+    session_id = Lda::RustBackend.create_corpus_session(@document_words, @document_counts, @terms)
+    assert_operator session_id, :>, 0
+
+    direct = Lda::RustBackend.run_em_with_start_seed(
+      "seeded",
+      @document_words,
+      @document_counts,
+      @topics,
+      @terms,
+      @max_iter,
+      @convergence,
+      @em_max_iter,
+      @em_convergence,
+      @init_alpha,
+      @min_probability,
+      8181
+    )
+
+    via_session = Lda::RustBackend.run_em_on_session(
+      session_id,
+      "seeded",
+      @topics,
+      @max_iter,
+      @convergence,
+      @em_max_iter,
+      @em_convergence,
+      @init_alpha,
+      @min_probability,
+      8181
+    )
+
+    assert_nested_close(direct, via_session, 1e-12)
+    assert_equal true, Lda::RustBackend.drop_corpus_session(session_id)
+  end
+
+  def test_run_em_on_session_reconfigures_topic_count
+    omit("create_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:create_corpus_session)
+    omit("drop_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:drop_corpus_session)
+    omit("run_em_on_session unavailable") unless Lda::RustBackend.respond_to?(:run_em_on_session)
+
+    session_id = Lda::RustBackend.create_corpus_session(@document_words, @document_counts, @terms)
+    assert_operator session_id, :>, 0
+
+    two_topics = Lda::RustBackend.run_em_on_session(
+      session_id,
+      "seeded",
+      2,
+      @max_iter,
+      @convergence,
+      @em_max_iter,
+      @em_convergence,
+      @init_alpha,
+      @min_probability,
+      5151
+    )
+    assert_equal 2, two_topics[0].size
+
+    four_topics = Lda::RustBackend.run_em_on_session(
+      session_id,
+      "seeded",
+      4,
+      @max_iter,
+      @convergence,
+      @em_max_iter,
+      @em_convergence,
+      @init_alpha,
+      @min_probability,
+      5151
+    )
+    assert_equal 4, four_topics[0].size
+
+    assert_equal true, Lda::RustBackend.drop_corpus_session(session_id)
+  end
+
   def test_rust_backend_corpus_session_lifecycle_no_leak
     omit("corpus_session_count unavailable") unless Lda::RustBackend.respond_to?(:corpus_session_count)
 

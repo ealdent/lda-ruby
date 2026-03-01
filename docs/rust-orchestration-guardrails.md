@@ -12,7 +12,7 @@ Required tests:
 Current parity expectations:
 
 - Rust vs pure backend fixture parity remains exact within existing tolerances used by tests.
-- Session-based orchestration paths (`run_em_on_session_with_start_seed`, `run_em_on_session_start`) must match direct non-session orchestration for equivalent settings/seeds.
+- Session-based orchestration paths (`run_em_on_session`, `run_em_on_session_with_start_seed`, `run_em_on_session_start`) must match direct non-session orchestration for equivalent settings/seeds.
 - Rust backend corpus/session lifecycle must not leak session count across corpus replacement.
 
 ## Benchmark guardrail
