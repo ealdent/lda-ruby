@@ -106,7 +106,7 @@ Optional local dry-run equivalent:
 
 Candidate expansion workflow:
 
-- For Priority 2 platform evaluation (for example Windows candidate artifacts), run `.github/workflows/precompiled-candidate-evaluation.yml` via `workflow_dispatch`.
+- For Priority 2 platform evaluation (Windows and musl candidate artifacts), run `.github/workflows/precompiled-candidate-evaluation.yml` via `workflow_dispatch`.
 - Record outcome artifacts/logs in `docs/precompiled-target-evaluation.md`.
 
 ## Known Publish Incident (`v0.4.0`)

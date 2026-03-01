@@ -49,3 +49,32 @@ jobs:
           path: |
             pkg/lda-ruby-*-${{ steps.platform.outputs.platform }}.gem
             pkg/lda-ruby-*-${{ steps.platform.outputs.platform }}.gem.sha256
+
+  musl-precompiled-candidate:
+    name: precompiled candidate / alpine-musl / ruby-system
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build musl precompiled candidate artifact (Alpine container)
+        run: |
+          docker run --rm \
+            -v "${PWD}:/workspace" \
+            -w /workspace \
+            alpine:3.20 \
+            sh -lc '
+              set -euo pipefail
+              apk add --no-cache bash build-base git ruby ruby-dev ruby-bundler rust cargo clang llvm-dev pkgconf
+              bundle install
+              ./bin/release-precompiled-artifacts --platform x86_64-linux-musl --skip-preflight --skip-runtime-checks
+            '
+
+      - name: Upload candidate artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: precompiled-candidate-x86_64-linux-musl
+          path: |
+            pkg/lda-ruby-*-x86_64-linux-musl.gem
+            pkg/lda-ruby-*-x86_64-linux-musl.gem.sha256

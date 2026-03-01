@@ -43,7 +43,7 @@ Feasibility notes:
 
 Required validation to promote:
 
-1. Introduce a musl-native build lane (for example Alpine-based builder workflow) that can build both native and Rust extensions.
+1. Run the manual candidate workflow `.github/workflows/precompiled-candidate-evaluation.yml` (musl job) and collect artifacts/logs.
 2. Verify packaged gem metadata/platform and runtime smoke checks on musl.
 3. Add the lane to release dry-run matrix before making musl release-blocking.
 
