@@ -59,6 +59,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build musl precompiled candidate artifact (Alpine container)
+        id: musl_build
         run: |
           docker run --rm \
             -v "${PWD}:/workspace" \
@@ -66,15 +67,21 @@ jobs:
             alpine:3.20 \
             sh -lc '
               set -euo pipefail
-              apk add --no-cache bash build-base git ruby ruby-dev ruby-bundler rust cargo clang llvm-dev pkgconf
+              apk add --no-cache bash build-base git ruby ruby-dev ruby-bundler rust cargo clang llvm-dev clang17-libclang pkgconf
+              mkdir -p /workspace/pkg
+              platform="$(ruby -rrubygems -e '"'"'"'"'"'"'"'"'puts Gem::Platform.local.to_s.sub(/-darwin-[0-9]+\z/, "-darwin")'"'"'"'"'"'"'"'"')"
+              libclang_path="$(dirname "$(find /usr/lib -name libclang.so | head -n1)")"
+              export LIBCLANG_PATH="${libclang_path}"
+              echo "${platform}" > /workspace/pkg/musl-platform.txt
               bundle install
-              ./bin/release-precompiled-artifacts --platform x86_64-linux-musl --skip-preflight --skip-runtime-checks
+              ./bin/release-precompiled-artifacts --platform "${platform}" --skip-preflight --skip-runtime-checks
             '
+          echo "platform=$(cat pkg/musl-platform.txt)" >> "${GITHUB_OUTPUT}"
 
       - name: Upload candidate artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: precompiled-candidate-x86_64-linux-musl
+          name: precompiled-candidate-${{ steps.musl_build.outputs.platform }}
           path: |
-            pkg/lda-ruby-*-x86_64-linux-musl.gem
-            pkg/lda-ruby-*-x86_64-linux-musl.gem.sha256
+            pkg/lda-ruby-*-${{ steps.musl_build.outputs.platform }}.gem
+            pkg/lda-ruby-*-${{ steps.musl_build.outputs.platform }}.gem.sha256

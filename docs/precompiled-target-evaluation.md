@@ -40,10 +40,12 @@ Feasibility notes:
 - Current artifact script rejects cross-platform builds, so a musl artifact requires either:
   - a musl-hosted builder, or
   - a dedicated musl-native build container/workflow path treated as host-equivalent for packaging.
+- Local validation signal (2026-03-01): Alpine container dry-run succeeded for host-matching `aarch64-linux-musl` with:
+  - `./bin/release-precompiled-artifacts --platform <detected-musl-platform> --skip-preflight --skip-runtime-checks`
 
 Required validation to promote:
 
-1. Run the manual candidate workflow `.github/workflows/precompiled-candidate-evaluation.yml` (musl job) and collect artifacts/logs.
+1. Run the manual candidate workflow `.github/workflows/precompiled-candidate-evaluation.yml` (musl job, auto-detected musl platform) and collect artifacts/logs.
 2. Verify packaged gem metadata/platform and runtime smoke checks on musl.
 3. Add the lane to release dry-run matrix before making musl release-blocking.
 
