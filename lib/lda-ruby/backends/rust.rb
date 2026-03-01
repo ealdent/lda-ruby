@@ -119,9 +119,7 @@ module Lda
 
       def rust_orchestrated_em_with_session(start)
         return false unless defined?(::Lda::RustBackend)
-        return false unless @rust_corpus_session_id
-        return false unless @rust_corpus_terms
-        return false unless @rust_document_lengths
+        return false unless ensure_rust_corpus_session
 
         random_seed = Integer(next_random_seed)
         output =
@@ -354,6 +352,27 @@ module Lda
         @rust_corpus_terms = nil
         @rust_document_lengths = nil
         @rust_corpus_session_config_signature = nil
+      end
+
+      def ensure_rust_corpus_session
+        has_session = @rust_corpus_session_id && @rust_corpus_terms && @rust_document_lengths
+        if has_session
+          if defined?(::Lda::RustBackend) && ::Lda::RustBackend.respond_to?(:corpus_session_exists)
+            return true if ::Lda::RustBackend.corpus_session_exists(Integer(@rust_corpus_session_id))
+
+            @rust_corpus_session_id = nil
+            @rust_corpus_terms = nil
+            @rust_document_lengths = nil
+            @rust_corpus_session_config_signature = nil
+          else
+            return true
+          end
+        end
+
+        register_rust_corpus_session
+        @rust_corpus_session_id && @rust_corpus_terms && @rust_document_lengths
+      rescue StandardError
+        false
       end
 
       def release_rust_corpus_session

@@ -79,6 +79,18 @@ fn corpus_session_count() -> i64 {
     }
 }
 
+fn corpus_session_exists(session_id: i64) -> bool {
+    if session_id <= 0 {
+        return false;
+    }
+
+    let session_key = session_id as u64;
+    match corpus_sessions().lock() {
+        Ok(sessions) => sessions.contains_key(&session_key),
+        Err(_) => false,
+    }
+}
+
 struct XorShift64 {
     state: u64,
 }
@@ -1022,6 +1034,7 @@ fn init() -> Result<(), Error> {
     rust_backend_module.define_singleton_method("available?", function!(available, 0))?;
     rust_backend_module.define_singleton_method("abi_version", function!(abi_version, 0))?;
     rust_backend_module.define_singleton_method("corpus_session_count", function!(corpus_session_count, 0))?;
+    rust_backend_module.define_singleton_method("corpus_session_exists", function!(corpus_session_exists, 1))?;
     rust_backend_module.define_singleton_method("before_em", function!(before_em, 3))?;
     rust_backend_module.define_singleton_method(
         "topic_weights_for_word",

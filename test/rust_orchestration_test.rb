@@ -430,6 +430,28 @@ class RustOrchestrationTest < Test::Unit::TestCase
     backend&.corpus = nil
   end
 
+  def test_rust_backend_recreates_missing_session_before_em
+    omit("corpus_session_count unavailable") unless Lda::RustBackend.respond_to?(:corpus_session_count)
+    omit("drop_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:drop_corpus_session)
+
+    backend = Lda::Backends::Rust.new(random_seed: 1234)
+    backend.corpus = Lda::TextCorpus.new(FIXTURE_DOCUMENTS)
+    backend.num_topics = @topics
+
+    session_id = backend.instance_variable_get(:@rust_corpus_session_id)
+    assert_operator session_id, :>, 0
+    assert_equal true, Lda::RustBackend.drop_corpus_session(session_id)
+
+    backend.em("seeded")
+    assert_equal @topics, backend.gamma.first.size
+
+    recreated_session_id = backend.instance_variable_get(:@rust_corpus_session_id)
+    assert_operator recreated_session_id, :>, 0
+    assert_not_equal session_id, recreated_session_id
+  ensure
+    backend&.corpus = nil
+  end
+
   def test_configure_corpus_session_reconfigures_topic_count
     omit("create_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:create_corpus_session)
     omit("drop_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:drop_corpus_session)

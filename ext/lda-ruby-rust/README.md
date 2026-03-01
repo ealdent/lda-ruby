@@ -9,6 +9,7 @@ Current scope:
   - `Lda::RustBackend.available?`
   - `Lda::RustBackend.abi_version`
   - `Lda::RustBackend.corpus_session_count`
+  - `Lda::RustBackend.corpus_session_exists(session_id)`
   - `Lda::RustBackend.before_em(start, num_docs, num_terms)`
   - `Lda::RustBackend.topic_weights_for_word(beta, gamma, word_index, min_probability)`
   - `Lda::RustBackend.accumulate_topic_term_counts(topic_term_counts, phi_d, words, counts)`

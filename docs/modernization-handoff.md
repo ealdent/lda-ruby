@@ -94,6 +94,7 @@ Delivered:
 - Rust-managed session settings lifecycle (`configure_corpus_session`) with settings-aware orchestration (`run_em_on_session_start`) wired in `Lda::Backends::Rust`
 - Rust session execution refactor to shared session corpus storage + borrowed orchestration helpers, eliminating deep corpus clone overhead on each session EM run
 - unified Rust session orchestration API (`run_em_on_session`) that applies settings + runs EM in one call, now preferred by `Lda::Backends::Rust`
+- `Lda::Backends::Rust` now re-registers missing Rust corpus sessions before EM to preserve session-based orchestration when sessions are dropped externally
 - parity/compatibility test coverage and rust runtime CI
 
 Open in Phase 4:
