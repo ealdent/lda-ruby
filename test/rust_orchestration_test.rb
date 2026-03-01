@@ -350,6 +350,50 @@ class RustOrchestrationTest < Test::Unit::TestCase
     backend&.corpus = nil
   end
 
+  def test_configure_corpus_session_reconfigures_topic_count
+    omit("create_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:create_corpus_session)
+    omit("drop_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:drop_corpus_session)
+    omit("configure_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:configure_corpus_session)
+    omit("run_em_on_session_start unavailable") unless Lda::RustBackend.respond_to?(:run_em_on_session_start)
+
+    session_id = Lda::RustBackend.create_corpus_session(@document_words, @document_counts, @terms)
+    assert_operator session_id, :>, 0
+
+    assert_equal true, Lda::RustBackend.configure_corpus_session(
+      session_id, 2, @max_iter, @convergence, @em_max_iter, @em_convergence, @init_alpha, @min_probability
+    )
+    two_topics = Lda::RustBackend.run_em_on_session_start(session_id, "seeded", 303)
+    assert_equal 2, two_topics[0].size
+
+    assert_equal true, Lda::RustBackend.configure_corpus_session(
+      session_id, 4, @max_iter, @convergence, @em_max_iter, @em_convergence, @init_alpha, @min_probability
+    )
+    four_topics = Lda::RustBackend.run_em_on_session_start(session_id, "seeded", 303)
+    assert_equal 4, four_topics[0].size
+
+    assert_equal true, Lda::RustBackend.drop_corpus_session(session_id)
+  end
+
+  def test_rust_backend_session_config_tracks_setting_changes
+    backend = Lda::Backends::Rust.new(random_seed: 1234)
+    backend.corpus = Lda::TextCorpus.new(FIXTURE_DOCUMENTS)
+    backend.verbose = false
+    backend.max_iter = 12
+    backend.em_max_iter = 18
+    backend.convergence = 1e-5
+    backend.em_convergence = 1e-4
+
+    backend.num_topics = 2
+    backend.em("seeded")
+    assert_equal 2, backend.gamma.first.size
+
+    backend.num_topics = 4
+    backend.em("seeded")
+    assert_equal 4, backend.gamma.first.size
+  ensure
+    backend&.corpus = nil
+  end
+
   private
 
   def assert_nested_close(left, right, tolerance)
