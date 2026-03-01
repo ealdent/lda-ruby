@@ -99,7 +99,7 @@ Delivered:
 
 Open in Phase 4:
 
-- optional deeper Rust ownership beyond settings-aware session orchestration (for example additional control-plane logic and lifecycle APIs)
+- optional deeper Rust ownership beyond current unified session orchestration (for example additional control-plane logic and lifecycle APIs)
 
 ### Phase 5 (packaging/release)
 
@@ -185,8 +185,8 @@ Performance tracking:
 
 Priority 1:
 
-- decide whether to keep current hybrid rust-kernel architecture or move more orchestration into Rust
-- if moving deeper into Rust beyond current settings-aware session orchestration, enforce and periodically tighten `docs/rust-orchestration-guardrails.md`
+- continue periodic Rust-orchestration benchmark guardrail tightening (`docs/rust-orchestration-guardrails.md`) as performance data remains stable
+- keep hybrid backend compatibility guarantees (Rust + native + pure fallback) while extending Rust orchestration only behind parity/guardrail checks
 
 Priority 2:
 
@@ -204,8 +204,8 @@ Priority 3:
 4. Review `docs/release-runbook.md` for release flow/rollback details.
 5. Validate precompiled packaging locally for your host:
    - `./bin/release-precompiled-artifacts --tag "$(./bin/check-version-sync --print-tag)" --skip-preflight`
-6. Continue with remaining `Priority 1` modernization items.
+6. Continue with remaining modernization queue (`Priority 2` then `Priority 3`).
 
 If you want the next assistant to continue immediately, use:
 
-"Open `docs/modernization-handoff.md`, validate with `SKIP_DOCKER=1 ./bin/release-preflight`, run `./bin/release-precompiled-artifacts --skip-preflight`, and continue the remaining modernization queue."
+"Open `docs/modernization-handoff.md`, validate with `SKIP_DOCKER=1 ./bin/release-preflight`, run `./bin/release-precompiled-artifacts --skip-preflight`, and continue the `Priority 2/3` modernization queue."
