@@ -158,7 +158,7 @@ fn normalize_topic_term_counts(
     (beta_probabilities, beta_log)
 }
 
-fn average_gamma_shift(previous_gamma: Vec<Vec<f64>>, current_gamma: Vec<Vec<f64>>) -> f64 {
+fn average_gamma_shift_internal(previous_gamma: &[Vec<f64>], current_gamma: &[Vec<f64>]) -> f64 {
     let mut sum = 0.0_f64;
     let mut count = 0_usize;
 
@@ -181,6 +181,10 @@ fn average_gamma_shift(previous_gamma: Vec<Vec<f64>>, current_gamma: Vec<Vec<f64
     } else {
         sum / count as f64
     }
+}
+
+fn average_gamma_shift(previous_gamma: Vec<Vec<f64>>, current_gamma: Vec<Vec<f64>>) -> f64 {
+    average_gamma_shift_internal(previous_gamma.as_slice(), current_gamma.as_slice())
 }
 
 fn topic_document_probability(
@@ -360,10 +364,10 @@ fn infer_document(
     output
 }
 
-fn infer_corpus_iteration(
-    beta_probabilities: Vec<Vec<f64>>,
-    document_words: Vec<Vec<usize>>,
-    document_counts: Vec<Vec<f64>>,
+fn infer_corpus_iteration_internal(
+    beta_probabilities: &[Vec<f64>],
+    document_words: &[Vec<usize>],
+    document_counts: &[Vec<f64>],
     max_iter: i64,
     convergence: f64,
     min_probability: f64,
@@ -392,7 +396,7 @@ fn infer_corpus_iteration(
         let gamma_initial = vec![init_alpha_value + (total / topics as f64); topics];
 
         let (gamma_d, phi_d) = infer_document_internal(
-            beta_probabilities.as_slice(),
+            beta_probabilities,
             gamma_initial.as_slice(),
             words.as_slice(),
             counts.as_slice(),
@@ -414,6 +418,85 @@ fn infer_corpus_iteration(
     }
 
     (gamma_matrix, phi_tensor, topic_term_counts)
+}
+
+fn infer_corpus_iteration(
+    beta_probabilities: Vec<Vec<f64>>,
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    max_iter: i64,
+    convergence: f64,
+    min_probability: f64,
+    init_alpha: f64,
+) -> (Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>, Vec<Vec<f64>>) {
+    infer_corpus_iteration_internal(
+        beta_probabilities.as_slice(),
+        document_words.as_slice(),
+        document_counts.as_slice(),
+        max_iter,
+        convergence,
+        min_probability,
+        init_alpha,
+    )
+}
+
+fn run_em(
+    mut beta_probabilities: Vec<Vec<f64>>,
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
+    let em_max_iter_value = if em_max_iter <= 0 { 0 } else { em_max_iter as usize };
+    let em_convergence_value = if em_convergence.is_finite() && em_convergence >= 0.0 {
+        em_convergence
+    } else {
+        1.0e-4
+    };
+
+    let mut previous_gamma: Option<Vec<Vec<f64>>> = None;
+    let mut beta_log: Vec<Vec<f64>> = Vec::new();
+    let mut gamma: Vec<Vec<f64>> = Vec::new();
+    let mut phi: Vec<Vec<Vec<f64>>> = Vec::new();
+
+    for _ in 0..em_max_iter_value {
+        let (current_gamma, current_phi, topic_term_counts) = infer_corpus_iteration_internal(
+            beta_probabilities.as_slice(),
+            document_words.as_slice(),
+            document_counts.as_slice(),
+            max_iter,
+            convergence,
+            min_probability,
+            init_alpha,
+        );
+
+        let (next_beta_probabilities, next_beta_log) =
+            normalize_topic_term_counts(topic_term_counts, min_probability);
+        let should_stop = previous_gamma
+            .as_ref()
+            .map(|prev| {
+                average_gamma_shift_internal(prev.as_slice(), current_gamma.as_slice())
+                    <= em_convergence_value
+            })
+            .unwrap_or(false);
+
+        beta_probabilities = next_beta_probabilities;
+        beta_log = next_beta_log;
+        gamma = current_gamma;
+        phi = current_phi;
+
+        if should_stop {
+            break;
+        }
+
+        previous_gamma = Some(gamma.clone());
+    }
+
+    (beta_probabilities, beta_log, gamma, phi)
 }
 
 #[magnus::init]
@@ -451,6 +534,7 @@ fn init() -> Result<(), Error> {
         "seeded_topic_term_probabilities",
         function!(seeded_topic_term_probabilities, 5),
     )?;
+    rust_backend_module.define_singleton_method("run_em", function!(run_em, 9))?;
 
     Ok(())
 }

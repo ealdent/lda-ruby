@@ -72,6 +72,8 @@ module Lda
 
       def em(start)
         rust_before_em(start)
+        return nil if rust_orchestrated_em(start.to_s)
+
         @fallback.em(start)
       end
 
@@ -92,6 +94,105 @@ module Lda
       end
 
       private
+
+      def rust_orchestrated_em(start)
+        return false unless defined?(::Lda::RustBackend)
+        return false unless ::Lda::RustBackend.respond_to?(:run_em)
+
+        em_input = @fallback.rust_em_input(start)
+        return true if em_input.nil?
+
+        output = ::Lda::RustBackend.run_em(
+          em_input.fetch(:initial_beta_probabilities),
+          em_input.fetch(:document_words),
+          em_input.fetch(:document_counts),
+          Integer(max_iter),
+          Float(convergence),
+          Integer(em_max_iter),
+          Float(em_convergence),
+          Float(init_alpha),
+          Float(em_input.fetch(:min_probability))
+        )
+
+        unless valid_rust_em_output?(
+          output,
+          em_input.fetch(:document_lengths),
+          em_input.fetch(:topics),
+          em_input.fetch(:terms)
+        )
+          @fallback.em_from_input(em_input)
+          return true
+        end
+
+        beta_probabilities, beta_log, gamma, phi = output
+        @fallback.apply_em_state(
+          beta_probabilities: beta_probabilities,
+          beta_log: beta_log,
+          gamma: gamma,
+          phi: phi
+        )
+        true
+      rescue StandardError
+        if defined?(em_input) && em_input
+          @fallback.em_from_input(em_input)
+          return true
+        end
+
+        false
+      end
+
+      def valid_rust_em_output?(output, document_lengths, topics, terms)
+        return false unless output.is_a?(Array)
+        return false unless output.size == 4
+
+        beta_probabilities, beta_log, gamma, phi = output
+
+        valid_topic_term_matrix?(beta_probabilities, topics, terms) &&
+          valid_topic_term_matrix?(beta_log, topics, terms) &&
+          valid_gamma_matrix?(gamma, document_lengths.size, topics) &&
+          valid_phi_tensor?(phi, document_lengths, topics)
+      end
+
+      def valid_topic_term_matrix?(matrix, topics, terms)
+        return false unless matrix.is_a?(Array)
+        return false unless matrix.size == topics
+
+        matrix.all? do |row|
+          row.is_a?(Array) &&
+            row.size == terms &&
+            row.all? { |value| finite_numeric?(value) }
+        end
+      end
+
+      def valid_gamma_matrix?(gamma, expected_docs, topics)
+        return false unless gamma.is_a?(Array)
+        return false unless gamma.size == expected_docs
+
+        gamma.all? do |row|
+          row.is_a?(Array) &&
+            row.size == topics &&
+            row.all? { |value| finite_numeric?(value) && value.positive? }
+        end
+      end
+
+      def valid_phi_tensor?(phi, document_lengths, topics)
+        return false unless phi.is_a?(Array)
+        return false unless phi.size == document_lengths.size
+
+        phi.each_with_index.all? do |doc_phi, doc_index|
+          doc_phi.is_a?(Array) &&
+            doc_phi.size == document_lengths[doc_index] &&
+            doc_phi.all? do |row|
+              row.is_a?(Array) &&
+                row.size == topics &&
+                row.all? { |value| finite_numeric?(value) }
+            end
+        end
+      end
+
+      def finite_numeric?(value)
+        value.is_a?(Numeric) && value.finite?
+      end
 
       def rust_before_em(start)
         return unless defined?(::Lda::RustBackend)
