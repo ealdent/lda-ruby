@@ -57,6 +57,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - `compile_rust` now stages a Ruby-loadable extension artifact to avoid `Init_` symbol mismatch from Cargo's `lib*` output naming.
 - Rust-side EM orchestration path added (`Lda::RustBackend.run_em`) while keeping Ruby fallback orchestration for compatibility.
 - Rust-side deterministic-start orchestration path added (`Lda::RustBackend.run_em_with_start`) so `seeded`/`deterministic` startup can stay in Rust while keeping Ruby fallback for compatibility.
+- Rust-side seed-controlled random-start orchestration path added (`Lda::RustBackend.run_em_with_start_seed` + `random_topic_term_probabilities`) so random initialization can stay in Rust while preserving deterministic replay from an explicit seed.
 - Dockerized rust runtime workflow added for local parity with CI (`Dockerfile.rust`, `bin/docker-test-rust`).
 - Gem packaging now excludes local Rust cargo build artifacts (`target/**`) for clean release builds.
 - Backend benchmark driver added (`bin/benchmark-backends`) to track pure/native/rust runtime deltas.

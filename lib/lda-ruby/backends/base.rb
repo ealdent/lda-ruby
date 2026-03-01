@@ -109,6 +109,10 @@ module Lda
 
       private
 
+      def next_random_seed
+        @random.rand(0..9_223_372_036_854_775_807)
+      end
+
       def normalize!(weights)
         total = weights.sum.to_f
 

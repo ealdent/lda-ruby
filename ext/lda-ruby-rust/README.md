@@ -17,8 +17,10 @@ Current scope:
   - `Lda::RustBackend.average_gamma_shift(previous_gamma, current_gamma)`
   - `Lda::RustBackend.topic_document_probability(phi_tensor, document_counts, num_topics, min_probability)`
   - `Lda::RustBackend.seeded_topic_term_probabilities(document_words, document_counts, topics, terms, min_probability)`
+  - `Lda::RustBackend.random_topic_term_probabilities(topics, terms, min_probability, random_seed)`
   - `Lda::RustBackend.run_em(initial_beta, document_words, document_counts, max_iter, convergence, em_max_iter, em_convergence, init_alpha, min_probability)`
   - `Lda::RustBackend.run_em_with_start(start, document_words, document_counts, topics, terms, max_iter, convergence, em_max_iter, em_convergence, init_alpha, min_probability)`
+  - `Lda::RustBackend.run_em_with_start_seed(start, document_words, document_counts, topics, terms, max_iter, convergence, em_max_iter, em_convergence, init_alpha, min_probability, random_seed)`
 
 Hot-path kernels currently executed in Rust when `backend: :rust` is active:
 - topic weights for a word across topics
@@ -29,8 +31,10 @@ Hot-path kernels currently executed in Rust when `backend: :rust` is active:
 - gamma convergence shift reduction between EM iterations
 - topic-document average log-probability computation
 - seeded topic-term initialization
+- random topic-term initialization with explicit seed control
 - EM outer-loop orchestration with convergence checks (`run_em`)
 - start-aware deterministic EM orchestration (`run_em_with_start` for `seeded`/`deterministic`)
+- start-aware seeded and random EM orchestration with explicit seed control (`run_em_with_start_seed`)
 
 Remaining numeric LDA kernels are still provided by the pure Ruby backend and will move incrementally.
 
