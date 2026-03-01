@@ -1,0 +1,51 @@
+name: precompiled-candidate-evaluation
+
+on:
+  workflow_dispatch:
+
+jobs:
+  windows-precompiled-candidate:
+    name: precompiled candidate / windows-latest / ruby-3.3
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install LLVM (bindgen dependency)
+        uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: "18.1.8"
+
+      - name: Detect local gem platform
+        id: platform
+        shell: bash
+        run: |
+          platform="$(ruby -rrubygems -e 'puts Gem::Platform.local.to_s.sub(/-darwin-[0-9]+\z/, "-darwin")')"
+          echo "platform=${platform}" >> "${GITHUB_OUTPUT}"
+          echo "Detected platform: ${platform}"
+
+      - name: Build precompiled candidate artifact (no preflight/runtime checks)
+        shell: bash
+        run: |
+          ./bin/release-precompiled-artifacts \
+            --platform "${{ steps.platform.outputs.platform }}" \
+            --skip-preflight \
+            --skip-runtime-checks
+
+      - name: Upload candidate artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: precompiled-candidate-${{ steps.platform.outputs.platform }}
+          path: |
+            pkg/lda-ruby-*-${{ steps.platform.outputs.platform }}.gem
+            pkg/lda-ruby-*-${{ steps.platform.outputs.platform }}.gem.sha256

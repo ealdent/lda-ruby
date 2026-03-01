@@ -25,11 +25,10 @@ Feasibility notes:
 
 Required validation to promote:
 
-1. Add a Windows precompiled build lane in CI (non-release) that runs:
-   - `./bin/release-precompiled-artifacts --skip-preflight --skip-runtime-checks`
-   - then Windows-specific packaged-gem runtime checks.
+1. Run the manual candidate workflow `.github/workflows/precompiled-candidate-evaluation.yml` (windows job) and collect artifacts/logs.
 2. Confirm produced gem platform identifier matches the intended Windows platform (`Gem::Platform.local` on runner).
-3. Run one release dry-run with the new matrix target before making it release-blocking.
+3. Add Windows-specific packaged-gem runtime checks.
+4. Run one release dry-run with the new matrix target before making it release-blocking.
 
 ## Candidate: musl Linux (`x86_64-linux-musl`)
 
