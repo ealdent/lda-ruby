@@ -1,5 +1,9 @@
 #include "utils.h"
 
+#ifdef _WIN32
+#include <direct.h>
+#endif
+
 /*
  * given log(a) and log(b), return log(a + b)
  *
@@ -85,7 +89,11 @@ double log_gamma(double x)
 
 void make_directory(char* name)
 {
+#ifdef _WIN32
+    _mkdir(name);
+#else
     mkdir(name, S_IRUSR|S_IWUSR|S_IXUSR);
+#endif
 }
 
 
