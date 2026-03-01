@@ -61,7 +61,9 @@ jobs:
 
           $bindgenArgs = ($includeDirs | ForEach-Object { "-I$_" }) -join " "
           "BINDGEN_EXTRA_CLANG_ARGS_x86_64-pc-windows-gnu=$bindgenArgs" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          Write-Host "Configured BINDGEN_EXTRA_CLANG_ARGS_x86_64-pc-windows-gnu: $bindgenArgs"
+          "BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_windows_gnu=$bindgenArgs" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "BINDGEN_EXTRA_CLANG_ARGS=$bindgenArgs" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Configured bindgen extra clang args: $bindgenArgs"
 
       - name: Detect local gem platform
         id: platform
