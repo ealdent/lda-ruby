@@ -90,11 +90,16 @@ Delivered:
 - Rust-side EM orchestration path (`Lda::RustBackend.run_em`) with deterministic Ruby fallback reuse via precomputed EM inputs
 - Rust-side start-aware deterministic orchestration path (`Lda::RustBackend.run_em_with_start`) for `seeded`/`deterministic` EM starts, with random-start compatibility retained via Ruby-initialized fallback path
 - Rust-side random-start orchestration path (`Lda::RustBackend.run_em_with_start_seed`) using explicit seed-controlled random initialization (`Lda::RustBackend.random_topic_term_probabilities`)
+- Rust-managed corpus session lifecycle (`Lda::RustBackend.create_corpus_session` / `drop_corpus_session`) with session-based start-aware EM orchestration (`run_em_on_session_with_start_seed`) wired in `Lda::Backends::Rust`
+- Rust-managed session settings lifecycle (`configure_corpus_session`) with settings-aware orchestration (`run_em_on_session_start`) wired in `Lda::Backends::Rust`
+- Rust session execution refactor to shared session corpus storage + borrowed orchestration helpers, eliminating deep corpus clone overhead on each session EM run
+- unified Rust session orchestration API (`run_em_on_session`) that applies settings + runs EM in one call, now preferred by `Lda::Backends::Rust`
+- `Lda::Backends::Rust` now re-registers missing Rust corpus sessions before EM to preserve session-based orchestration when sessions are dropped externally
 - parity/compatibility test coverage and rust runtime CI
 
 Open in Phase 4:
 
-- optional deeper Rust ownership beyond start-aware EM orchestration (for example corpus/settings lifecycle and additional control-plane logic)
+- optional deeper Rust ownership beyond current unified session orchestration (for example additional control-plane logic and lifecycle APIs)
 
 ### Phase 5 (packaging/release)
 
@@ -116,8 +121,10 @@ Delivered:
 - precompiled artifact builder + runtime validator (`bin/release-precompiled-artifacts`)
 - gemspec precompiled variant support (`LDA_RUBY_GEM_VARIANT=precompiled`)
 - precompiled platform compatibility/publish policy (`docs/precompiled-platform-policy.md`)
+- precompiled target expansion tracker (`docs/precompiled-target-evaluation.md`)
 - macOS Rust build linker guardrail (`dynamic_lookup`) for precompiled packaging paths
 - tag-driven release workflow (`.github/workflows/release.yml`)
+- release failure alert workflow (`.github/workflows/release-failure-alert.yml`)
 - maintainer release runbook (`docs/release-runbook.md`)
 - CI jobs for packaged-gem fallback, rust-enabled checks, and manifest checks
 - CI precompiled gem build guardrail job (`precompiled-gem-build`)
@@ -157,6 +164,9 @@ Optional full Docker matrix:
 Performance tracking:
 
 - `./bin/benchmark-backends`
+- `./bin/check-rust-benchmark`
+- `docs/rust-orchestration-guardrails.md`
+- CI currently enforces `BENCH_RUST_TO_PURE_MAX_RATIO=0.75` in `benchmark-guardrail`
 
 ## CI Jobs Expected
 
@@ -169,23 +179,25 @@ Performance tracking:
 - packaged gem manifest checks (`packaged-gem-manifest`)
 - precompiled gem build checks (`precompiled-gem-build`)
 - rust scaffold check (`rust-scaffold`)
+- benchmark guardrail check (`benchmark-guardrail`)
 - release validation/build/publish pipeline on `v*` tags (`release.yml`)
 - post-publish artifact verification (`verify_published_artifacts` in `release.yml`)
+- release-failure issue alerting (`release-failure-alert`)
 
 ## Remaining Work Queue
 
 Priority 1:
 
-- decide whether to keep current hybrid rust-kernel architecture or move more orchestration into Rust
-- if moving deeper into Rust beyond current start-aware orchestration, define parity guardrails and benchmark thresholds before refactors
+- continue periodic Rust-orchestration benchmark guardrail tightening (`docs/rust-orchestration-guardrails.md`) as performance data remains stable
+- keep hybrid backend compatibility guarantees (Rust + native + pure fallback) while extending Rust orchestration only behind parity/guardrail checks
 
 Priority 2:
 
-- evaluate additional precompiled targets (Windows and/or musl Linux)
+- evaluate additional precompiled targets (Windows and/or musl Linux) using `docs/precompiled-target-evaluation.md`
 
 Priority 3:
 
-- define automated alerts/notifications for release artifact publish failures
+- monitor and tune release-failure issue alerting (`.github/workflows/release-failure-alert.yml`)
 
 ## Resume Instructions For A New Conversation
 
@@ -195,8 +207,8 @@ Priority 3:
 4. Review `docs/release-runbook.md` for release flow/rollback details.
 5. Validate precompiled packaging locally for your host:
    - `./bin/release-precompiled-artifacts --tag "$(./bin/check-version-sync --print-tag)" --skip-preflight`
-6. Continue with remaining `Priority 1` modernization items.
+6. Continue with remaining modernization queue (`Priority 2` then `Priority 3`).
 
 If you want the next assistant to continue immediately, use:
 
-"Open `docs/modernization-handoff.md`, validate with `SKIP_DOCKER=1 ./bin/release-preflight`, run `./bin/release-precompiled-artifacts --skip-preflight`, and continue the remaining modernization queue."
+"Open `docs/modernization-handoff.md`, validate with `SKIP_DOCKER=1 ./bin/release-preflight`, run `./bin/release-precompiled-artifacts --skip-preflight`, and continue the `Priority 2/3` modernization queue."

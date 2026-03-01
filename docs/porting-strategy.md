@@ -58,9 +58,16 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Rust-side EM orchestration path added (`Lda::RustBackend.run_em`) while keeping Ruby fallback orchestration for compatibility.
 - Rust-side deterministic-start orchestration path added (`Lda::RustBackend.run_em_with_start`) so `seeded`/`deterministic` startup can stay in Rust while keeping Ruby fallback for compatibility.
 - Rust-side seed-controlled random-start orchestration path added (`Lda::RustBackend.run_em_with_start_seed` + `random_topic_term_probabilities`) so random initialization can stay in Rust while preserving deterministic replay from an explicit seed.
+- Rust-side corpus session lifecycle added (`create_corpus_session`/`drop_corpus_session`) and `Lda::Backends::Rust` now prefers session-based EM orchestration (`run_em_on_session_with_start_seed`) before array-based fallback paths.
+- Rust-side session settings lifecycle added (`configure_corpus_session`) and `Lda::Backends::Rust` now prefers settings-aware session orchestration (`run_em_on_session_start`) before parameter-heavy session and array-based fallbacks.
+- Rust session orchestration now runs on shared Rust-side corpus session data via borrowed execution helpers, avoiding deep corpus array cloning on each session EM call.
+- Unified Rust session API added (`run_em_on_session`) to apply settings and execute EM in one call; `Lda::Backends::Rust` now prefers this single-call session path before legacy session fallbacks.
+- `Lda::Backends::Rust` now auto-recreates missing Rust corpus sessions before EM, reducing fallback to array-based orchestration when sessions are externally dropped.
 - Dockerized rust runtime workflow added for local parity with CI (`Dockerfile.rust`, `bin/docker-test-rust`).
 - Gem packaging now excludes local Rust cargo build artifacts (`target/**`) for clean release builds.
 - Backend benchmark driver added (`bin/benchmark-backends`) to track pure/native/rust runtime deltas.
+- Rust orchestration guardrail policy documented (`docs/rust-orchestration-guardrails.md`) with benchmark threshold checker (`bin/check-rust-benchmark`).
+- CI benchmark guardrail job added (`benchmark-guardrail`) to enforce Rust/pure runtime ratio on Ubuntu (currently `BENCH_RUST_TO_PURE_MAX_RATIO=0.75`).
 - Source install path now has explicit Rust build policy via `LDA_RUBY_RUST_BUILD=auto|always|never`.
 - Docker install-policy matrix script added (`bin/docker-test-install-policies`) to verify source install behavior across environments.
 - CI now runs install-policy matrix checks on Ubuntu.
@@ -78,6 +85,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Post-publish verification helper added (`bin/verify-release-publish`) to validate RubyGems + GitHub release artifacts by tag.
 - CI precompiled guardrail job added (`precompiled-gem-build`) for Linux/macOS packaging checks.
 - Release workflow post-publish verification job added (`verify_published_artifacts`).
+- Release failure alert workflow added (`.github/workflows/release-failure-alert.yml`) to open issue alerts when `release.yml` fails.
 - Maintainer release runbook added (`docs/release-runbook.md`) with publish and rollback/yank procedures.
 - Precompiled platform support policy added (`docs/precompiled-platform-policy.md`).
 

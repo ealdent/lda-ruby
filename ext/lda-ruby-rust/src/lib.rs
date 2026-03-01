@@ -1,4 +1,7 @@
 use magnus::{define_module, function, Error, Module, Object};
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
 
 fn available() -> bool {
     true
@@ -37,6 +40,54 @@ fn normalize_in_place(weights: &mut [f64]) {
 
     for weight in weights {
         *weight /= total;
+    }
+}
+
+#[derive(Clone, PartialEq)]
+struct SessionConfig {
+    topics: usize,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+}
+
+struct CorpusSessionData {
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    terms: usize,
+}
+
+struct CorpusSession {
+    data: Arc<CorpusSessionData>,
+    config: Option<SessionConfig>,
+}
+
+static CORPUS_SESSIONS: OnceLock<Mutex<HashMap<u64, CorpusSession>>> = OnceLock::new();
+static NEXT_CORPUS_SESSION_ID: AtomicU64 = AtomicU64::new(1);
+
+fn corpus_sessions() -> &'static Mutex<HashMap<u64, CorpusSession>> {
+    CORPUS_SESSIONS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn corpus_session_count() -> i64 {
+    match corpus_sessions().lock() {
+        Ok(sessions) => sessions.len() as i64,
+        Err(_) => 0,
+    }
+}
+
+fn corpus_session_exists(session_id: i64) -> bool {
+    if session_id <= 0 {
+        return false;
+    }
+
+    let session_key = session_id as u64;
+    match corpus_sessions().lock() {
+        Ok(sessions) => sessions.contains_key(&session_key),
+        Err(_) => false,
     }
 }
 
@@ -256,9 +307,9 @@ fn topic_document_probability(
     output
 }
 
-fn seeded_topic_term_probabilities(
-    document_words: Vec<Vec<usize>>,
-    document_counts: Vec<Vec<f64>>,
+fn seeded_topic_term_probabilities_internal(
+    document_words: &[Vec<usize>],
+    document_counts: &[Vec<f64>],
     topics: usize,
     terms: usize,
     min_probability: f64,
@@ -298,6 +349,22 @@ fn seeded_topic_term_probabilities(
     topic_term_counts
 }
 
+fn seeded_topic_term_probabilities(
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    topics: usize,
+    terms: usize,
+    min_probability: f64,
+) -> Vec<Vec<f64>> {
+    seeded_topic_term_probabilities_internal(
+        document_words.as_slice(),
+        document_counts.as_slice(),
+        topics,
+        terms,
+        min_probability,
+    )
+}
+
 fn random_topic_term_probabilities(
     topics: usize,
     terms: usize,
@@ -322,6 +389,225 @@ fn random_topic_term_probabilities(
     }
 
     matrix
+}
+
+fn create_corpus_session(
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    terms: usize,
+) -> i64 {
+    let session_id = NEXT_CORPUS_SESSION_ID.fetch_add(1, Ordering::Relaxed);
+    let session = CorpusSession {
+        data: Arc::new(CorpusSessionData {
+            document_words,
+            document_counts,
+            terms,
+        }),
+        config: None,
+    };
+
+    match corpus_sessions().lock() {
+        Ok(mut sessions) => {
+            sessions.insert(session_id, session);
+            session_id as i64
+        }
+        Err(_) => 0,
+    }
+}
+
+fn drop_corpus_session(session_id: i64) -> bool {
+    if session_id <= 0 {
+        return false;
+    }
+
+    let session_key = session_id as u64;
+    match corpus_sessions().lock() {
+        Ok(mut sessions) => sessions.remove(&session_key).is_some(),
+        Err(_) => false,
+    }
+}
+
+fn configure_corpus_session(
+    session_id: i64,
+    topics: usize,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+) -> bool {
+    if session_id <= 0 || topics == 0 {
+        return false;
+    }
+
+    let session_key = session_id as u64;
+    match corpus_sessions().lock() {
+        Ok(mut sessions) => {
+            let Some(session) = sessions.get_mut(&session_key) else {
+                return false;
+            };
+
+            session.config = Some(SessionConfig {
+                topics,
+                max_iter,
+                convergence,
+                em_max_iter,
+                em_convergence,
+                init_alpha,
+                min_probability,
+            });
+
+            true
+        }
+        Err(_) => false,
+    }
+}
+
+fn run_em_on_session_with_start_seed(
+    session_id: i64,
+    start: String,
+    topics: usize,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+    random_seed: i64,
+) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
+    if session_id <= 0 {
+        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    }
+
+    let session_key = session_id as u64;
+    let session_data = match corpus_sessions().lock() {
+        Ok(sessions) => sessions
+            .get(&session_key)
+            .map(|session| Arc::clone(&session.data)),
+        Err(_) => None,
+    };
+
+    let Some(session_data) = session_data else {
+        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    };
+
+    run_em_with_start_seed_internal(
+        start.as_str(),
+        session_data.document_words.as_slice(),
+        session_data.document_counts.as_slice(),
+        topics,
+        session_data.terms,
+        max_iter,
+        convergence,
+        em_max_iter,
+        em_convergence,
+        init_alpha,
+        min_probability,
+        random_seed,
+    )
+}
+
+fn run_em_on_session(
+    session_id: i64,
+    start: String,
+    topics: usize,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+    random_seed: i64,
+) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
+    if session_id <= 0 || topics == 0 {
+        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    }
+
+    let desired_config = SessionConfig {
+        topics,
+        max_iter,
+        convergence,
+        em_max_iter,
+        em_convergence,
+        init_alpha,
+        min_probability,
+    };
+
+    let session_key = session_id as u64;
+    let session_data = match corpus_sessions().lock() {
+        Ok(mut sessions) => {
+            let Some(session) = sessions.get_mut(&session_key) else {
+                return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+            };
+
+            if session.config.as_ref() != Some(&desired_config) {
+                session.config = Some(desired_config.clone());
+            }
+
+            Arc::clone(&session.data)
+        }
+        Err(_) => return (Vec::new(), Vec::new(), Vec::new(), Vec::new()),
+    };
+
+    run_em_with_start_seed_internal(
+        start.as_str(),
+        session_data.document_words.as_slice(),
+        session_data.document_counts.as_slice(),
+        desired_config.topics,
+        session_data.terms,
+        desired_config.max_iter,
+        desired_config.convergence,
+        desired_config.em_max_iter,
+        desired_config.em_convergence,
+        desired_config.init_alpha,
+        desired_config.min_probability,
+        random_seed,
+    )
+}
+
+fn run_em_on_session_start(
+    session_id: i64,
+    start: String,
+    random_seed: i64,
+) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
+    if session_id <= 0 {
+        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    }
+
+    let session_key = session_id as u64;
+    let session_data = match corpus_sessions().lock() {
+        Ok(sessions) => sessions.get(&session_key).map(|session| {
+            (
+                Arc::clone(&session.data),
+                session.config.clone(),
+            )
+        }),
+        Err(_) => None,
+    };
+
+    let Some((session_data, config)) = session_data else {
+        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    };
+
+    let Some(config) = config else {
+        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    };
+
+    run_em_with_start_seed_internal(
+        start.as_str(),
+        session_data.document_words.as_slice(),
+        session_data.document_counts.as_slice(),
+        config.topics,
+        session_data.terms,
+        config.max_iter,
+        config.convergence,
+        config.em_max_iter,
+        config.em_convergence,
+        config.init_alpha,
+        config.min_probability,
+        random_seed,
+    )
 }
 
 fn infer_document_internal(
@@ -505,10 +791,10 @@ fn start_uses_random_initialization(start: &str) -> bool {
     start.trim().eq_ignore_ascii_case("random")
 }
 
-fn run_em(
+fn run_em_internal(
     mut beta_probabilities: Vec<Vec<f64>>,
-    document_words: Vec<Vec<usize>>,
-    document_counts: Vec<Vec<f64>>,
+    document_words: &[Vec<usize>],
+    document_counts: &[Vec<f64>],
     max_iter: i64,
     convergence: f64,
     em_max_iter: i64,
@@ -531,8 +817,8 @@ fn run_em(
     for _ in 0..em_max_iter_value {
         let (current_gamma, current_phi, topic_term_counts) = infer_corpus_iteration_internal(
             beta_probabilities.as_slice(),
-            document_words.as_slice(),
-            document_counts.as_slice(),
+            document_words,
+            document_counts,
             max_iter,
             convergence,
             min_probability,
@@ -564,6 +850,76 @@ fn run_em(
     (beta_probabilities, beta_log, gamma, phi)
 }
 
+fn run_em(
+    beta_probabilities: Vec<Vec<f64>>,
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
+    run_em_internal(
+        beta_probabilities,
+        document_words.as_slice(),
+        document_counts.as_slice(),
+        max_iter,
+        convergence,
+        em_max_iter,
+        em_convergence,
+        init_alpha,
+        min_probability,
+    )
+}
+
+fn run_em_with_start_internal(
+    start: &str,
+    document_words: &[Vec<usize>],
+    document_counts: &[Vec<f64>],
+    topics: usize,
+    terms: usize,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
+    let initial_beta =
+        if start_uses_seeded_initialization(start) || start_uses_random_initialization(start) {
+            seeded_topic_term_probabilities_internal(
+                document_words,
+                document_counts,
+                topics,
+                terms,
+                min_probability,
+            )
+        } else {
+            // Unknown start modes default to seeded initialization for a stable fallback.
+            seeded_topic_term_probabilities_internal(
+                document_words,
+                document_counts,
+                topics,
+                terms,
+                min_probability,
+            )
+        };
+
+    run_em_internal(
+        initial_beta,
+        document_words,
+        document_counts,
+        max_iter,
+        convergence,
+        em_max_iter,
+        em_convergence,
+        init_alpha,
+        min_probability,
+    )
+}
+
 fn run_em_with_start(
     start: String,
     document_words: Vec<Vec<usize>>,
@@ -577,27 +933,57 @@ fn run_em_with_start(
     init_alpha: f64,
     min_probability: f64,
 ) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
-    let initial_beta =
-        if start_uses_seeded_initialization(start.as_str()) || start_uses_random_initialization(start.as_str()) {
-            seeded_topic_term_probabilities(
-                document_words.clone(),
-                document_counts.clone(),
-                topics,
-                terms,
-                min_probability,
-            )
-        } else {
-            // Unknown start modes default to seeded initialization for a stable fallback.
-            seeded_topic_term_probabilities(
-                document_words.clone(),
-                document_counts.clone(),
-                topics,
-                terms,
-                min_probability,
-            )
-        };
+    run_em_with_start_internal(
+        start.as_str(),
+        document_words.as_slice(),
+        document_counts.as_slice(),
+        topics,
+        terms,
+        max_iter,
+        convergence,
+        em_max_iter,
+        em_convergence,
+        init_alpha,
+        min_probability,
+    )
+}
 
-    run_em(
+fn run_em_with_start_seed_internal(
+    start: &str,
+    document_words: &[Vec<usize>],
+    document_counts: &[Vec<f64>],
+    topics: usize,
+    terms: usize,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+    random_seed: i64,
+) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
+    let initial_beta = if start_uses_seeded_initialization(start) {
+        seeded_topic_term_probabilities_internal(
+            document_words,
+            document_counts,
+            topics,
+            terms,
+            min_probability,
+        )
+    } else if start_uses_random_initialization(start) {
+        random_topic_term_probabilities(topics, terms, min_probability, random_seed)
+    } else {
+        // Unknown start modes default to seeded initialization for a stable fallback.
+        seeded_topic_term_probabilities_internal(
+            document_words,
+            document_counts,
+            topics,
+            terms,
+            min_probability,
+        )
+    };
+
+    run_em_internal(
         initial_beta,
         document_words,
         document_counts,
@@ -624,37 +1010,19 @@ fn run_em_with_start_seed(
     min_probability: f64,
     random_seed: i64,
 ) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
-    let initial_beta = if start_uses_seeded_initialization(start.as_str()) {
-        seeded_topic_term_probabilities(
-            document_words.clone(),
-            document_counts.clone(),
-            topics,
-            terms,
-            min_probability,
-        )
-    } else if start_uses_random_initialization(start.as_str()) {
-        random_topic_term_probabilities(topics, terms, min_probability, random_seed)
-    } else {
-        // Unknown start modes default to seeded initialization for a stable fallback.
-        seeded_topic_term_probabilities(
-            document_words.clone(),
-            document_counts.clone(),
-            topics,
-            terms,
-            min_probability,
-        )
-    };
-
-    run_em(
-        initial_beta,
-        document_words,
-        document_counts,
+    run_em_with_start_seed_internal(
+        start.as_str(),
+        document_words.as_slice(),
+        document_counts.as_slice(),
+        topics,
+        terms,
         max_iter,
         convergence,
         em_max_iter,
         em_convergence,
         init_alpha,
         min_probability,
+        random_seed,
     )
 }
 
@@ -665,6 +1033,8 @@ fn init() -> Result<(), Error> {
 
     rust_backend_module.define_singleton_method("available?", function!(available, 0))?;
     rust_backend_module.define_singleton_method("abi_version", function!(abi_version, 0))?;
+    rust_backend_module.define_singleton_method("corpus_session_count", function!(corpus_session_count, 0))?;
+    rust_backend_module.define_singleton_method("corpus_session_exists", function!(corpus_session_exists, 1))?;
     rust_backend_module.define_singleton_method("before_em", function!(before_em, 3))?;
     rust_backend_module.define_singleton_method(
         "topic_weights_for_word",
@@ -697,11 +1067,24 @@ fn init() -> Result<(), Error> {
         "random_topic_term_probabilities",
         function!(random_topic_term_probabilities, 4),
     )?;
+    rust_backend_module
+        .define_singleton_method("create_corpus_session", function!(create_corpus_session, 3))?;
+    rust_backend_module
+        .define_singleton_method("drop_corpus_session", function!(drop_corpus_session, 1))?;
+    rust_backend_module
+        .define_singleton_method("configure_corpus_session", function!(configure_corpus_session, 8))?;
     rust_backend_module.define_singleton_method("run_em", function!(run_em, 9))?;
     rust_backend_module
         .define_singleton_method("run_em_with_start", function!(run_em_with_start, 11))?;
     rust_backend_module
         .define_singleton_method("run_em_with_start_seed", function!(run_em_with_start_seed, 12))?;
+    rust_backend_module.define_singleton_method(
+        "run_em_on_session_with_start_seed",
+        function!(run_em_on_session_with_start_seed, 10),
+    )?;
+    rust_backend_module.define_singleton_method("run_em_on_session", function!(run_em_on_session, 10))?;
+    rust_backend_module
+        .define_singleton_method("run_em_on_session_start", function!(run_em_on_session_start, 3))?;
 
     Ok(())
 }

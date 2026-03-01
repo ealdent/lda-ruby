@@ -2,7 +2,7 @@
 
 This runbook defines the maintainer workflow for shipping `lda-ruby` source and precompiled platform gem releases.
 
-Authoritative platform/support policy is maintained in `docs/precompiled-platform-policy.md`.
+Authoritative platform/support policy is maintained in `docs/precompiled-platform-policy.md`; expansion feasibility notes live in `docs/precompiled-target-evaluation.md`.
 
 ## Scope
 
@@ -104,6 +104,11 @@ Optional local dry-run equivalent:
 ./bin/release-precompiled-artifacts --tag v0.4.0 --skip-preflight
 ```
 
+Candidate expansion workflow:
+
+- For Priority 2 platform evaluation (Windows and musl candidate artifacts), run `.github/workflows/precompiled-candidate-evaluation.yml` via `workflow_dispatch`.
+- Record outcome artifacts/logs in `docs/precompiled-target-evaluation.md`.
+
 ## Known Publish Incident (`v0.4.0`)
 
 - date: 2026-02-25
@@ -133,6 +138,7 @@ Optional local dry-run equivalent:
    - environment-gated `publish_rubygems`
    - environment-gated `publish_github_release`
    - `verify_published_artifacts`
+   - on `release.yml` failure, `.github/workflows/release-failure-alert.yml` opens a triage issue
 4. Approve the protected `release` environment when prompted.
 5. Confirm published outputs:
    - RubyGems shows `lda-ruby` `0.4.0` source gem and platform gems

@@ -223,3 +223,33 @@ jobs:
 
       - name: Check Rust extension scaffold
         run: cargo check --manifest-path ext/lda-ruby-rust/Cargo.toml
+
+  benchmark-guardrail:
+    name: benchmark guardrail / ubuntu-latest / ruby-3.3
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      BENCH_RUNS: "1"
+      BENCH_RUST_TO_PURE_MAX_RATIO: "0.75"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust bindgen dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-dev pkg-config
+
+      - name: Build native and Rust extensions
+        run: bundle exec rake compile compile_rust
+
+      - name: Run benchmark guardrail
+        run: ./bin/check-rust-benchmark
