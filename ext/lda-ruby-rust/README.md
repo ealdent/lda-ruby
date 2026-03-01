@@ -18,6 +18,7 @@ Current scope:
   - `Lda::RustBackend.topic_document_probability(phi_tensor, document_counts, num_topics, min_probability)`
   - `Lda::RustBackend.seeded_topic_term_probabilities(document_words, document_counts, topics, terms, min_probability)`
   - `Lda::RustBackend.run_em(initial_beta, document_words, document_counts, max_iter, convergence, em_max_iter, em_convergence, init_alpha, min_probability)`
+  - `Lda::RustBackend.run_em_with_start(start, document_words, document_counts, topics, terms, max_iter, convergence, em_max_iter, em_convergence, init_alpha, min_probability)`
 
 Hot-path kernels currently executed in Rust when `backend: :rust` is active:
 - topic weights for a word across topics
@@ -29,6 +30,7 @@ Hot-path kernels currently executed in Rust when `backend: :rust` is active:
 - topic-document average log-probability computation
 - seeded topic-term initialization
 - EM outer-loop orchestration with convergence checks (`run_em`)
+- start-aware deterministic EM orchestration (`run_em_with_start` for `seeded`/`deterministic`)
 
 Remaining numeric LDA kernels are still provided by the pure Ruby backend and will move incrementally.
 

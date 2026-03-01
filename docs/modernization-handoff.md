@@ -88,11 +88,12 @@ Delivered:
   - seeded initialization
 - trusted kernel-output fast path enabled in rust mode
 - Rust-side EM orchestration path (`Lda::RustBackend.run_em`) with deterministic Ruby fallback reuse via precomputed EM inputs
+- Rust-side start-aware deterministic orchestration path (`Lda::RustBackend.run_em_with_start`) for `seeded`/`deterministic` EM starts, with random-start compatibility retained via Ruby-initialized fallback path
 - parity/compatibility test coverage and rust runtime CI
 
 Open in Phase 4:
 
-- optional deeper Rust ownership beyond EM orchestration (for example corpus/settings lifecycle and additional control-plane logic)
+- optional deeper Rust ownership beyond deterministic EM orchestration (for example random-start initialization parity, corpus/settings lifecycle, and additional control-plane logic)
 
 ### Phase 5 (packaging/release)
 
@@ -175,7 +176,7 @@ Performance tracking:
 Priority 1:
 
 - decide whether to keep current hybrid rust-kernel architecture or move more orchestration into Rust
-- if moving deeper into Rust beyond the current EM-orchestration fast path, define parity guardrails and benchmark thresholds before refactors
+- if moving deeper into Rust beyond current deterministic-start orchestration, define parity guardrails and benchmark thresholds before refactors
 
 Priority 2:
 
