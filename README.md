@@ -66,6 +66,7 @@ For an interactive shell with Rust toolchain + bindgen dependencies:
 - `bundle exec ruby -Ilib:test test/backend_compatibility_test.rb` runs backend compatibility fixtures.
 - `LDA_RUBY_BACKEND=rust bundle exec ruby -Ilib:test test/backend_compatibility_test.rb` runs parity checks in rust mode.
 - `./bin/benchmark-backends` benchmarks available backends (`pure`, `native`, `rust`) and prints JSON.
+- `./bin/check-rust-benchmark` enforces the Rust/pure benchmark ratio guardrail (configurable via env vars).
 - `./bin/docker-test-install-policies` verifies packaged-gem install behavior for `LDA_RUBY_RUST_BUILD=auto|always|never`, including runtime EM smoke checks.
 - `./bin/test-packaged-gem-fallback` verifies packaged-gem fallback behavior without Cargo (auto/never succeed, always fails) plus runtime smoke checks.
 - `./bin/test-packaged-gem-rust-enabled` verifies packaged-gem behavior with Cargo available (auto/always enable Rust, never disables Rust) plus runtime smoke checks.

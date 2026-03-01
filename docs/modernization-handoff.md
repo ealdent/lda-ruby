@@ -159,6 +159,8 @@ Optional full Docker matrix:
 Performance tracking:
 
 - `./bin/benchmark-backends`
+- `./bin/check-rust-benchmark`
+- `docs/rust-orchestration-guardrails.md`
 
 ## CI Jobs Expected
 
@@ -171,6 +173,7 @@ Performance tracking:
 - packaged gem manifest checks (`packaged-gem-manifest`)
 - precompiled gem build checks (`precompiled-gem-build`)
 - rust scaffold check (`rust-scaffold`)
+- benchmark guardrail check (`benchmark-guardrail`)
 - release validation/build/publish pipeline on `v*` tags (`release.yml`)
 - post-publish artifact verification (`verify_published_artifacts` in `release.yml`)
 
@@ -179,7 +182,7 @@ Performance tracking:
 Priority 1:
 
 - decide whether to keep current hybrid rust-kernel architecture or move more orchestration into Rust
-- if moving deeper into Rust beyond current settings-aware session orchestration, define parity guardrails and benchmark thresholds before refactors
+- if moving deeper into Rust beyond current settings-aware session orchestration, enforce and periodically tighten `docs/rust-orchestration-guardrails.md`
 
 Priority 2:
 

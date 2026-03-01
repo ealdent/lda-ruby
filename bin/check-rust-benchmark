@@ -1,0 +1,82 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+require "open3"
+
+def usage
+  <<~USAGE
+    Usage: ./bin/check-rust-benchmark [--help]
+
+    Runs ./bin/benchmark-backends and enforces a Rust-to-pure mean-runtime ratio threshold.
+
+    Environment variables:
+      BENCH_RUNS                      Number of benchmark runs per backend (default: 5)
+      BENCH_START                     EM start mode (default: seeded)
+      BENCH_TOPICS                    Number of topics (default: 8)
+      BENCH_MAX_ITER                  Variational max iterations (default: 20)
+      BENCH_EM_MAX_ITER               EM max iterations (default: 40)
+      BENCH_RUST_TO_PURE_MAX_RATIO    Maximum allowed rust_mean/pure_mean ratio (default: 0.75)
+  USAGE
+end
+
+if ARGV.include?("--help")
+  puts usage
+  exit 0
+end
+
+unless ARGV.empty?
+  warn "Unknown argument: #{ARGV.first}\n\n#{usage}"
+  exit 1
+end
+
+repo_root = File.expand_path("..", __dir__)
+command = [File.join(repo_root, "bin", "benchmark-backends")]
+
+benchmark_env = {
+  "BENCH_RUNS" => ENV.fetch("BENCH_RUNS", "5"),
+  "BENCH_START" => ENV.fetch("BENCH_START", "seeded"),
+  "BENCH_TOPICS" => ENV.fetch("BENCH_TOPICS", "8"),
+  "BENCH_MAX_ITER" => ENV.fetch("BENCH_MAX_ITER", "20"),
+  "BENCH_EM_MAX_ITER" => ENV.fetch("BENCH_EM_MAX_ITER", "40")
+}
+threshold = Float(ENV.fetch("BENCH_RUST_TO_PURE_MAX_RATIO", "0.75"))
+
+stdout, stderr, status = Open3.capture3(benchmark_env, *command, chdir: repo_root)
+unless status.success?
+  warn "benchmark-backends failed"
+  warn stderr unless stderr.to_s.strip.empty?
+  exit status.exitstatus || 1
+end
+
+benchmark = JSON.parse(stdout)
+results = benchmark.fetch("results")
+pure = results.find { |row| row.fetch("backend") == "pure" }
+rust = results.find { |row| row.fetch("backend") == "rust" }
+
+if pure.nil? || rust.nil?
+  puts "Skipping threshold check: required backends unavailable (pure=#{!pure.nil?}, rust=#{!rust.nil?})."
+  exit 0
+end
+
+pure_mean = Float(pure.fetch("mean_seconds"))
+rust_mean = Float(rust.fetch("mean_seconds"))
+
+if pure_mean <= 0.0
+  warn "Unexpected pure mean runtime: #{pure_mean}"
+  exit 1
+end
+
+ratio = rust_mean / pure_mean
+
+puts format(
+  "Rust/Pure mean ratio: %.4f (rust=%.4fs pure=%.4fs threshold<=%.4f)",
+  ratio, rust_mean, pure_mean, threshold
+)
+
+if ratio > threshold
+  warn format("Benchmark guardrail failed: ratio %.4f exceeds threshold %.4f", ratio, threshold)
+  exit 1
+end
+
+puts "Benchmark guardrail passed."
