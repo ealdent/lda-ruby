@@ -36,6 +36,7 @@ module Lda
         @rust_corpus_session_id = nil
         @rust_corpus_terms = nil
         @rust_document_lengths = nil
+        @rust_corpus_session_config_signature = nil
 
         @fallback = PureRuby.new(random_seed: random_seed)
         @fallback.topic_weights_kernel = method(:rust_topic_weights_for_word)
@@ -75,6 +76,7 @@ module Lda
 
       def set_config(init_alpha, num_topics, max_iter, convergence, em_max_iter, em_convergence, est_alpha)
         @fallback.set_config(init_alpha, num_topics, max_iter, convergence, em_max_iter, em_convergence, est_alpha)
+        @rust_corpus_session_config_signature = nil
       end
 
       def em(start)
@@ -120,20 +122,31 @@ module Lda
         return false unless @rust_corpus_session_id
         return false unless @rust_corpus_terms
         return false unless @rust_document_lengths
-        return false unless ::Lda::RustBackend.respond_to?(:run_em_on_session_with_start_seed)
 
-        output = ::Lda::RustBackend.run_em_on_session_with_start_seed(
-          Integer(@rust_corpus_session_id),
-          start.to_s,
-          Integer(num_topics),
-          Integer(max_iter),
-          Float(convergence),
-          Integer(em_max_iter),
-          Float(em_convergence),
-          Float(init_alpha),
-          MIN_PROBABILITY,
-          Integer(next_random_seed)
-        )
+        random_seed = Integer(next_random_seed)
+        output =
+          if ::Lda::RustBackend.respond_to?(:run_em_on_session_start) && ensure_rust_corpus_session_config
+            ::Lda::RustBackend.run_em_on_session_start(
+              Integer(@rust_corpus_session_id),
+              start.to_s,
+              random_seed
+            )
+          else
+            return false unless ::Lda::RustBackend.respond_to?(:run_em_on_session_with_start_seed)
+
+            ::Lda::RustBackend.run_em_on_session_with_start_seed(
+              Integer(@rust_corpus_session_id),
+              start.to_s,
+              Integer(num_topics),
+              Integer(max_iter),
+              Float(convergence),
+              Integer(em_max_iter),
+              Float(em_convergence),
+              Float(init_alpha),
+              MIN_PROBABILITY,
+              random_seed
+            )
+          end
 
         return false unless valid_rust_em_output?(output, @rust_document_lengths, Integer(num_topics), Integer(@rust_corpus_terms))
 
@@ -310,6 +323,7 @@ module Lda
         @rust_corpus_session_id = nil
         @rust_corpus_terms = nil
         @rust_document_lengths = nil
+        @rust_corpus_session_config_signature = nil
 
         return unless defined?(::Lda::RustBackend)
         return unless ::Lda::RustBackend.respond_to?(:create_corpus_session)
@@ -332,6 +346,7 @@ module Lda
         @rust_corpus_session_id = nil
         @rust_corpus_terms = nil
         @rust_document_lengths = nil
+        @rust_corpus_session_config_signature = nil
       end
 
       def release_rust_corpus_session
@@ -340,6 +355,7 @@ module Lda
         @rust_corpus_session_id = nil
         @rust_corpus_terms = nil
         @rust_document_lengths = nil
+        @rust_corpus_session_config_signature = nil
 
         return unless session_id
         return unless defined?(::Lda::RustBackend)
@@ -348,6 +364,38 @@ module Lda
         ::Lda::RustBackend.drop_corpus_session(Integer(session_id))
       rescue StandardError
         nil
+      end
+
+      def ensure_rust_corpus_session_config
+        return false unless @rust_corpus_session_id
+        return false unless defined?(::Lda::RustBackend)
+        return false unless ::Lda::RustBackend.respond_to?(:configure_corpus_session)
+
+        signature = current_rust_session_config_signature
+        return true if @rust_corpus_session_config_signature == signature
+
+        configured = ::Lda::RustBackend.configure_corpus_session(
+          Integer(@rust_corpus_session_id),
+          *signature
+        )
+        return false unless configured
+
+        @rust_corpus_session_config_signature = signature
+        true
+      rescue StandardError
+        false
+      end
+
+      def current_rust_session_config_signature
+        [
+          Integer(num_topics),
+          Integer(max_iter),
+          Float(convergence),
+          Integer(em_max_iter),
+          Float(em_convergence),
+          Float(init_alpha),
+          MIN_PROBABILITY
+        ]
       end
 
       def valid_rust_em_output?(output, document_lengths, topics, terms)

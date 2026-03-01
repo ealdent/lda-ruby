@@ -43,10 +43,22 @@ fn normalize_in_place(weights: &mut [f64]) {
     }
 }
 
+#[derive(Clone)]
+struct SessionConfig {
+    topics: usize,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+}
+
 struct CorpusSession {
     document_words: Vec<Vec<usize>>,
     document_counts: Vec<Vec<f64>>,
     terms: usize,
+    config: Option<SessionConfig>,
 }
 
 static CORPUS_SESSIONS: OnceLock<Mutex<HashMap<u64, CorpusSession>>> = OnceLock::new();
@@ -54,6 +66,13 @@ static NEXT_CORPUS_SESSION_ID: AtomicU64 = AtomicU64::new(1);
 
 fn corpus_sessions() -> &'static Mutex<HashMap<u64, CorpusSession>> {
     CORPUS_SESSIONS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn corpus_session_count() -> i64 {
+    match corpus_sessions().lock() {
+        Ok(sessions) => sessions.len() as i64,
+        Err(_) => 0,
+    }
 }
 
 struct XorShift64 {
@@ -350,6 +369,7 @@ fn create_corpus_session(
         document_words,
         document_counts,
         terms,
+        config: None,
     };
 
     match corpus_sessions().lock() {
@@ -369,6 +389,43 @@ fn drop_corpus_session(session_id: i64) -> bool {
     let session_key = session_id as u64;
     match corpus_sessions().lock() {
         Ok(mut sessions) => sessions.remove(&session_key).is_some(),
+        Err(_) => false,
+    }
+}
+
+fn configure_corpus_session(
+    session_id: i64,
+    topics: usize,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+) -> bool {
+    if session_id <= 0 || topics == 0 {
+        return false;
+    }
+
+    let session_key = session_id as u64;
+    match corpus_sessions().lock() {
+        Ok(mut sessions) => {
+            let Some(session) = sessions.get_mut(&session_key) else {
+                return false;
+            };
+
+            session.config = Some(SessionConfig {
+                topics,
+                max_iter,
+                convergence,
+                em_max_iter,
+                em_convergence,
+                init_alpha,
+                min_probability,
+            });
+
+            true
+        }
         Err(_) => false,
     }
 }
@@ -417,6 +474,52 @@ fn run_em_on_session_with_start_seed(
         em_convergence,
         init_alpha,
         min_probability,
+        random_seed,
+    )
+}
+
+fn run_em_on_session_start(
+    session_id: i64,
+    start: String,
+    random_seed: i64,
+) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
+    if session_id <= 0 {
+        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    }
+
+    let session_key = session_id as u64;
+    let session_data = match corpus_sessions().lock() {
+        Ok(sessions) => sessions.get(&session_key).map(|session| {
+            (
+                session.document_words.clone(),
+                session.document_counts.clone(),
+                session.terms,
+                session.config.clone(),
+            )
+        }),
+        Err(_) => None,
+    };
+
+    let Some((document_words, document_counts, terms, config)) = session_data else {
+        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    };
+
+    let Some(config) = config else {
+        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    };
+
+    run_em_with_start_seed(
+        start,
+        document_words,
+        document_counts,
+        config.topics,
+        terms,
+        config.max_iter,
+        config.convergence,
+        config.em_max_iter,
+        config.em_convergence,
+        config.init_alpha,
+        config.min_probability,
         random_seed,
     )
 }
@@ -762,6 +865,7 @@ fn init() -> Result<(), Error> {
 
     rust_backend_module.define_singleton_method("available?", function!(available, 0))?;
     rust_backend_module.define_singleton_method("abi_version", function!(abi_version, 0))?;
+    rust_backend_module.define_singleton_method("corpus_session_count", function!(corpus_session_count, 0))?;
     rust_backend_module.define_singleton_method("before_em", function!(before_em, 3))?;
     rust_backend_module.define_singleton_method(
         "topic_weights_for_word",
@@ -798,6 +902,8 @@ fn init() -> Result<(), Error> {
         .define_singleton_method("create_corpus_session", function!(create_corpus_session, 3))?;
     rust_backend_module
         .define_singleton_method("drop_corpus_session", function!(drop_corpus_session, 1))?;
+    rust_backend_module
+        .define_singleton_method("configure_corpus_session", function!(configure_corpus_session, 8))?;
     rust_backend_module.define_singleton_method("run_em", function!(run_em, 9))?;
     rust_backend_module
         .define_singleton_method("run_em_with_start", function!(run_em_with_start, 11))?;
@@ -807,6 +913,8 @@ fn init() -> Result<(), Error> {
         "run_em_on_session_with_start_seed",
         function!(run_em_on_session_with_start_seed, 10),
     )?;
+    rust_backend_module
+        .define_singleton_method("run_em_on_session_start", function!(run_em_on_session_start, 3))?;
 
     Ok(())
 }

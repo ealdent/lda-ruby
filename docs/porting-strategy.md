@@ -59,6 +59,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Rust-side deterministic-start orchestration path added (`Lda::RustBackend.run_em_with_start`) so `seeded`/`deterministic` startup can stay in Rust while keeping Ruby fallback for compatibility.
 - Rust-side seed-controlled random-start orchestration path added (`Lda::RustBackend.run_em_with_start_seed` + `random_topic_term_probabilities`) so random initialization can stay in Rust while preserving deterministic replay from an explicit seed.
 - Rust-side corpus session lifecycle added (`create_corpus_session`/`drop_corpus_session`) and `Lda::Backends::Rust` now prefers session-based EM orchestration (`run_em_on_session_with_start_seed`) before array-based fallback paths.
+- Rust-side session settings lifecycle added (`configure_corpus_session`) and `Lda::Backends::Rust` now prefers settings-aware session orchestration (`run_em_on_session_start`) before parameter-heavy session and array-based fallbacks.
 - Dockerized rust runtime workflow added for local parity with CI (`Dockerfile.rust`, `bin/docker-test-rust`).
 - Gem packaging now excludes local Rust cargo build artifacts (`target/**`) for clean release builds.
 - Backend benchmark driver added (`bin/benchmark-backends`) to track pure/native/rust runtime deltas.

@@ -91,11 +91,12 @@ Delivered:
 - Rust-side start-aware deterministic orchestration path (`Lda::RustBackend.run_em_with_start`) for `seeded`/`deterministic` EM starts, with random-start compatibility retained via Ruby-initialized fallback path
 - Rust-side random-start orchestration path (`Lda::RustBackend.run_em_with_start_seed`) using explicit seed-controlled random initialization (`Lda::RustBackend.random_topic_term_probabilities`)
 - Rust-managed corpus session lifecycle (`Lda::RustBackend.create_corpus_session` / `drop_corpus_session`) with session-based start-aware EM orchestration (`run_em_on_session_with_start_seed`) wired in `Lda::Backends::Rust`
+- Rust-managed session settings lifecycle (`configure_corpus_session`) with settings-aware orchestration (`run_em_on_session_start`) wired in `Lda::Backends::Rust`
 - parity/compatibility test coverage and rust runtime CI
 
 Open in Phase 4:
 
-- optional deeper Rust ownership beyond session-based start-aware EM orchestration (for example settings lifecycle and additional control-plane logic)
+- optional deeper Rust ownership beyond settings-aware session orchestration (for example additional control-plane logic and lifecycle APIs)
 
 ### Phase 5 (packaging/release)
 
@@ -178,7 +179,7 @@ Performance tracking:
 Priority 1:
 
 - decide whether to keep current hybrid rust-kernel architecture or move more orchestration into Rust
-- if moving deeper into Rust beyond current session-aware start orchestration, define parity guardrails and benchmark thresholds before refactors
+- if moving deeper into Rust beyond current settings-aware session orchestration, define parity guardrails and benchmark thresholds before refactors
 
 Priority 2:
 
