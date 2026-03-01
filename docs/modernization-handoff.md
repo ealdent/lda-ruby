@@ -194,6 +194,7 @@ Priority 1:
 Priority 2:
 
 - evaluate additional precompiled targets (Windows and/or musl Linux) using `docs/precompiled-target-evaluation.md`
+- latest candidate workflow signal: Windows compile currently fails; musl candidate build succeeds with corrected artifact upload path
 
 Priority 3:
 

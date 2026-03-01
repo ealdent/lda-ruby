@@ -435,9 +435,9 @@ void infer(char* model_root, char* save, corpus* corpus) {
 int main(int argc, char* argv[]) {
 	corpus* corpus;
 
-	long t1;
+	time_t t1;
 	(void) time(&t1);
-	seedMT(t1);
+	seedMT((uint32) t1);
 		// seedMT(4357U);
 
 	if (argc > 1)

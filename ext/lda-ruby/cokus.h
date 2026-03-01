@@ -12,9 +12,9 @@
 
 typedef unsigned long uint32;
 
-#define N              (624)                 // length of state vector
-#define M              (397)                 // a period parameter
-#define K              (0x9908B0DFU)         // a magic constant
+#define COKUS_N        (624)                 // length of state vector
+#define COKUS_M        (397)                 // a period parameter
+#define COKUS_K        (0x9908B0DFU)         // a magic constant
 #define hiBit(u)       ((u) & 0x80000000U)   // mask all but highest   bit of u
 #define loBit(u)       ((u) & 0x00000001U)   // mask all but lowest    bit of u
 #define loBits(u)      ((u) & 0x7FFFFFFFU)   // mask     the highest   bit of u
