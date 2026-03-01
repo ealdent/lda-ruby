@@ -21,6 +21,13 @@ jobs:
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Resolve cargo path for bash steps
+        shell: pwsh
+        run: |
+          $cargo = (Get-Command cargo -ErrorAction Stop).Source
+          "CARGO=$cargo" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Resolved cargo executable: $cargo"
+
       - name: Install LLVM (bindgen dependency)
         uses: KyleMayes/install-llvm-action@v2
         with:
