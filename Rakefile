@@ -50,9 +50,12 @@ task test: :compile
 task default: :test
 
 def stage_rust_extension_for_ruby
-  source = File.join(RUST_EXT_DIR, "target", "release", rust_cdylib_filename)
-  unless File.exist?(source)
-    abort "Expected Rust extension artifact at #{source}, but it was not produced."
+  source = rust_cdylib_source
+  unless source
+    abort(
+      "Expected Rust extension artifact at one of: " \
+      "#{rust_cdylib_candidates.join(', ')}, but none were produced."
+    )
   end
 
   destination = File.join(
@@ -65,19 +68,35 @@ def stage_rust_extension_for_ruby
   destination
 end
 
-def rust_cdylib_filename
-  host_os = RbConfig::CONFIG.fetch("host_os")
-  extension =
-    case host_os
-    when /darwin/
-      "dylib"
-    when /mswin|mingw|cygwin/
-      "dll"
-    else
-      "so"
-    end
+def rust_cdylib_source
+  rust_cdylib_candidates.find { |path| File.exist?(path) }
+end
 
-  "liblda_ruby_rust.#{extension}"
+def rust_cdylib_candidates
+  rust_cdylib_filenames.map { |filename| File.join(RUST_EXT_DIR, "target", "release", filename) }
+end
+
+def rust_cdylib_filenames
+  host_os = RbConfig::CONFIG.fetch("host_os")
+  case host_os
+  when /mswin|mingw|cygwin/
+    # On Windows cargo may emit either prefixed or unprefixed DLL names.
+    ["lda_ruby_rust.dll", "liblda_ruby_rust.dll"]
+  else
+    extension =
+      case host_os
+      when /darwin/
+        "dylib"
+      else
+        "so"
+      end
+
+    ["liblda_ruby_rust.#{extension}"]
+  end
+end
+
+def rust_cdylib_filename
+  rust_cdylib_filenames.first
 end
 
 def rust_build_env
@@ -87,10 +106,15 @@ def rust_build_env
   dynamic_lookup_flag = "-C link-arg=-Wl,-undefined,dynamic_lookup"
   existing = ENV.fetch("RUSTFLAGS", "")
   merged =
-    if existing.include?(dynamic_lookup_flag)
-      existing
+    case host_os
+    when /darwin/
+      if existing.include?(dynamic_lookup_flag)
+        existing
+      else
+        [existing, dynamic_lookup_flag].reject(&:empty?).join(" ")
+      end
     else
-      [existing, dynamic_lookup_flag].reject(&:empty?).join(" ")
+      existing
     end
 
   { "RUSTFLAGS" => merged }

@@ -61,27 +61,39 @@ module Lda
         success or raise "cargo build --release failed"
       end
 
-      source = File.join(__dir__, "target", "release", rust_cdylib_filename)
-      raise "Rust extension artifact not found at #{source}" unless File.exist?(source)
+      source = rust_cdylib_source
+      raise "Rust extension artifact not found at #{rust_cdylib_candidates.join(', ')}" unless source
 
       destination = File.expand_path("../../lib/lda_ruby_rust.#{RbConfig::CONFIG.fetch('DLEXT')}", __dir__)
       FileUtils.cp(source, destination)
       puts("Staged Rust extension to #{destination}")
     end
 
-    def rust_cdylib_filename
-      host_os = RbConfig::CONFIG.fetch("host_os")
-      extension =
-        case host_os
-        when /darwin/
-          "dylib"
-        when /mswin|mingw|cygwin/
-          "dll"
-        else
-          "so"
-        end
+    def rust_cdylib_source
+      rust_cdylib_candidates.find { |path| File.exist?(path) }
+    end
 
-      "liblda_ruby_rust.#{extension}"
+    def rust_cdylib_candidates
+      rust_cdylib_filenames.map { |filename| File.join(__dir__, "target", "release", filename) }
+    end
+
+    def rust_cdylib_filenames
+      host_os = RbConfig::CONFIG.fetch("host_os")
+      case host_os
+      when /mswin|mingw|cygwin/
+        # On Windows cargo may emit either prefixed or unprefixed DLL names.
+        ["lda_ruby_rust.dll", "liblda_ruby_rust.dll"]
+      else
+        extension =
+          case host_os
+          when /darwin/
+            "dylib"
+          else
+            "so"
+          end
+
+        ["liblda_ruby_rust.#{extension}"]
+      end
     end
 
     def rust_build_env
