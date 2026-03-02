@@ -39,31 +39,36 @@ jobs:
         with:
           version: "18.1.8"
 
-      - name: Configure bindgen include paths for MinGW headers
+      - name: Configure bindgen include paths for Windows Ruby headers
         shell: pwsh
         run: |
-          $includeDirs = @(
-            "C:/msys64/ucrt64/include",
-            "C:/msys64/mingw64/include",
-            "C:/msys64/usr/include"
-          ) | Where-Object { Test-Path $_ } | Select-Object -Unique
+          $shimInclude = (Resolve-Path "ext/lda-ruby-rust/include").Path.Replace('\', '/')
+          $includeDirs = @($shimInclude)
 
-          if (-not $includeDirs) {
-            $discovered = Get-ChildItem -Path "C:/msys64" -Filter "strings.h" -Recurse -ErrorAction SilentlyContinue |
-              Select-Object -First 3 |
-              ForEach-Object { $_.Directory.FullName.Replace('\', '/') }
-            $includeDirs = $discovered | Select-Object -Unique
+          if ($env:RI_DEVKIT) {
+            $devkitRoot = $env:RI_DEVKIT.Replace('\', '/')
+            $candidateDirs = @(
+              "$devkitRoot/ucrt64/include",
+              "$devkitRoot/mingw64/include",
+              "$devkitRoot/usr/include"
+            )
+            $withStrings = $candidateDirs | Where-Object { Test-Path "$_/strings.h" } | Select-Object -Unique
+            if ($withStrings) {
+              $includeDirs += $withStrings
+            }
           }
 
-          if (-not $includeDirs) {
-            throw "Unable to discover MinGW include directories containing strings.h"
-          }
-
-          $bindgenArgs = ($includeDirs | ForEach-Object { "-I$_" }) -join " "
+          $bindgenArgs = ($includeDirs | Select-Object -Unique | ForEach-Object { "-I$_" }) -join " "
           "BINDGEN_EXTRA_CLANG_ARGS_x86_64-pc-windows-gnu=$bindgenArgs" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_windows_gnu=$bindgenArgs" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "BINDGEN_EXTRA_CLANG_ARGS=$bindgenArgs" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          $existingCppFlags = ruby -rrbconfig -e 'print RbConfig::CONFIG.fetch("CPPFLAGS", "")'
+          $mergedCppFlags = "$existingCppFlags $bindgenArgs".Trim()
+          "RBCONFIG_CPPFLAGS=$mergedCppFlags" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
           Write-Host "Configured bindgen extra clang args: $bindgenArgs"
+          Write-Host "Configured RBCONFIG_CPPFLAGS: $mergedCppFlags"
 
       - name: Detect local gem platform
         id: platform
