@@ -127,6 +127,7 @@ Delivered:
 - release failure alert workflow (`.github/workflows/release-failure-alert.yml`)
 - maintainer release runbook (`docs/release-runbook.md`)
 - manual precompiled candidate workflow now validated on both lanes (`precompiled-candidate-evaluation.yml` run `22556129503`)
+- manual precompiled candidate workflow now validated with runtime checks on both lanes (`precompiled-candidate-evaluation.yml` run `22556206925`)
 - Windows candidate portability hardening across native + Rust build paths:
   - C portability fixes (`cokus` macros, `time_t`, `_mkdir`)
   - Rust toolchain alignment to GNU target for RubyInstaller (`x64-mingw-ucrt`)
@@ -200,7 +201,7 @@ Priority 1:
 Priority 2:
 
 - evaluate additional precompiled targets (Windows and/or musl Linux) using `docs/precompiled-target-evaluation.md`
-- latest candidate workflow signal: both Windows and musl candidate lanes are green in run `22556129503`; remaining promotion work is packaged-gem runtime coverage + release dry-run matrix validation
+- latest candidate workflow signal: both Windows and musl candidate lanes are green with runtime checks in run `22556206925`; remaining promotion work is release dry-run matrix validation before making new targets release-blocking
 
 Priority 3:
 
