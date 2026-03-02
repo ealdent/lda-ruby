@@ -15,27 +15,27 @@ Reference implementation constraints:
 
 ## Candidate: Windows (`x64-mingw-ucrt`)
 
-Status: not yet onboarded.
+Status: candidate workflow green; not yet onboarded as release-blocking.
 
 Feasibility notes:
 
 - GitHub Actions provides Windows runners, so host-matching builds are possible in principle.
 - Existing release tooling is bash-first and assumes POSIX shell ergonomics throughout.
-- Runtime smoke and packaged-gem checks should be revalidated on RubyInstaller/Windows path and loader behavior.
-- Candidate runs (2026-03-01):
-  - [run 22555475302](https://github.com/ealdent/lda-ruby/actions/runs/22555475302): failed in native extension compile (`rake compile`) on Windows with `cokus.h` macro collision and `time_t` mismatch.
-  - [run 22555550326](https://github.com/ealdent/lda-ruby/actions/runs/22555550326): after fixes, compile progressed but still fails on Windows at `utils.c` `mkdir(name, mode)` signature mismatch (needs Windows-safe `_mkdir` path handling).
+- Runtime smoke and packaged-gem checks still need explicit Windows coverage before release-blocking promotion.
+- Candidate runs:
+  - [run 22555475302](https://github.com/ealdent/lda-ruby/actions/runs/22555475302): failed in native extension compile (`rake compile`) with `cokus.h` macro collision and `time_t` mismatch.
+  - [run 22555550326](https://github.com/ealdent/lda-ruby/actions/runs/22555550326): progressed further, failed on `utils.c` `mkdir(name, mode)` mismatch (Windows `_mkdir` required).
+  - [run 22556009214](https://github.com/ealdent/lda-ruby/actions/runs/22556009214): Rust bindgen/toolchain parsing fixed; build then failed on Windows DLL name staging expectation.
+  - [run 22556129503](https://github.com/ealdent/lda-ruby/actions/runs/22556129503): Windows candidate build + artifact upload succeeded after GNU toolchain alignment, bindgen header/sysroot setup, and dual DLL name staging support.
 
 Required validation to promote:
 
-1. Run the manual candidate workflow `.github/workflows/precompiled-candidate-evaluation.yml` (windows job) and collect artifacts/logs.
-2. Confirm produced gem platform identifier matches the intended Windows platform (`Gem::Platform.local` on runner).
-3. Add Windows-specific packaged-gem runtime checks.
-4. Run one release dry-run with the new matrix target before making it release-blocking.
+1. Add Windows-specific packaged-gem runtime checks (install + load + backend smoke).
+2. Run one release dry-run with a Windows target in the release matrix before making it release-blocking.
 
 ## Candidate: musl Linux (`x86_64-linux-musl`)
 
-Status: not yet onboarded.
+Status: candidate workflow green; not yet onboarded as release-blocking.
 
 Feasibility notes:
 
@@ -48,13 +48,16 @@ Feasibility notes:
 - Candidate workflow runs (2026-03-01):
   - [run 22555475302](https://github.com/ealdent/lda-ruby/actions/runs/22555475302): built `x86_64-linux-musl` successfully but artifact upload path was misconfigured.
   - [run 22555550326](https://github.com/ealdent/lda-ruby/actions/runs/22555550326): musl candidate built and uploaded artifacts successfully with corrected glob path (`pkg/lda-ruby-*-linux-musl.gem*`).
+  - [run 22556129503](https://github.com/ealdent/lda-ruby/actions/runs/22556129503): musl candidate build + artifact upload remained green alongside the fixed Windows lane.
 
 Required validation to promote:
 
-1. Run the manual candidate workflow `.github/workflows/precompiled-candidate-evaluation.yml` (musl job, auto-detected musl platform) and collect artifacts/logs.
-2. Verify packaged gem metadata/platform and runtime smoke checks on musl.
-3. Add the lane to release dry-run matrix before making musl release-blocking.
+1. Verify packaged gem metadata/platform and runtime smoke checks on musl (install + load + backend smoke).
+2. Add the lane to release dry-run matrix before making musl release-blocking.
 
 ## Recommendation
 
-Prioritize Windows evaluation first (lower infrastructure lift), then musl once a stable musl-native build lane exists.
+Promote both candidates in staged order:
+1. Add Windows + musl packaged-gem runtime checks.
+2. Run a release dry-run with both candidate targets included.
+3. Make each target release-blocking only after dry-run and runtime parity are stable.

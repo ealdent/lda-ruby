@@ -126,6 +126,12 @@ Delivered:
 - tag-driven release workflow (`.github/workflows/release.yml`)
 - release failure alert workflow (`.github/workflows/release-failure-alert.yml`)
 - maintainer release runbook (`docs/release-runbook.md`)
+- manual precompiled candidate workflow now validated on both lanes (`precompiled-candidate-evaluation.yml` run `22556129503`)
+- Windows candidate portability hardening across native + Rust build paths:
+  - C portability fixes (`cokus` macros, `time_t`, `_mkdir`)
+  - Rust toolchain alignment to GNU target for RubyInstaller (`x64-mingw-ucrt`)
+  - Rust bindgen header/sysroot compatibility wiring for Windows runners
+  - dual Rust DLL artifact-name staging support (`lda_ruby_rust.dll` and `liblda_ruby_rust.dll`)
 - CI jobs for packaged-gem fallback, rust-enabled checks, and manifest checks
 - CI precompiled gem build guardrail job (`precompiled-gem-build`)
 - release workflow matrix for precompiled gems:
@@ -194,7 +200,7 @@ Priority 1:
 Priority 2:
 
 - evaluate additional precompiled targets (Windows and/or musl Linux) using `docs/precompiled-target-evaluation.md`
-- latest candidate workflow signal: Windows compile currently fails; musl candidate build succeeds with corrected artifact upload path
+- latest candidate workflow signal: both Windows and musl candidate lanes are green in run `22556129503`; remaining promotion work is packaged-gem runtime coverage + release dry-run matrix validation
 
 Priority 3:
 
