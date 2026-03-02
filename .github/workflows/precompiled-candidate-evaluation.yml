@@ -84,13 +84,12 @@ jobs:
           echo "platform=${platform}" >> "${GITHUB_OUTPUT}"
           echo "Detected platform: ${platform}"
 
-      - name: Build precompiled candidate artifact (no preflight/runtime checks)
+      - name: Build precompiled candidate artifact (runtime checks enabled)
         shell: bash
         run: |
           ./bin/release-precompiled-artifacts \
             --platform "${{ steps.platform.outputs.platform }}" \
-            --skip-preflight \
-            --skip-runtime-checks
+            --skip-preflight
 
       - name: Upload candidate artifacts
         uses: actions/upload-artifact@v4
@@ -108,7 +107,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build musl precompiled candidate artifact (Alpine container)
+      - name: Build musl precompiled candidate artifact (Alpine container, runtime checks enabled)
         run: |
           docker run --rm \
             -v "${PWD}:/workspace" \
@@ -122,7 +121,7 @@ jobs:
               libclang_path="$(dirname "$(find /usr/lib -name libclang.so | head -n1)")"
               export LIBCLANG_PATH="${libclang_path}"
               bundle install
-              ./bin/release-precompiled-artifacts --platform "${platform}" --skip-preflight --skip-runtime-checks
+              ./bin/release-precompiled-artifacts --platform "${platform}" --skip-preflight
             '
 
       - name: Upload candidate artifacts
