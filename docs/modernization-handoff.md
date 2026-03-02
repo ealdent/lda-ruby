@@ -178,7 +178,7 @@ Performance tracking:
 - `./bin/benchmark-backends`
 - `./bin/check-rust-benchmark`
 - `docs/rust-orchestration-guardrails.md`
-- CI currently enforces `BENCH_RUST_TO_PURE_MAX_RATIO=0.75` in `benchmark-guardrail`
+- CI currently enforces `BENCH_RUST_TO_PURE_MAX_RATIO=0.10` in `benchmark-guardrail`
 
 ## CI Jobs Expected
 
