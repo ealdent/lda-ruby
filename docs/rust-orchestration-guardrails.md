@@ -13,6 +13,7 @@ Current parity expectations:
 
 - Rust vs pure backend fixture parity remains exact within existing tolerances used by tests.
 - Session-based orchestration paths (`run_em_on_session`, `run_em_on_session_with_start_seed`, `run_em_on_session_start`) must match direct non-session orchestration for equivalent settings/seeds.
+- `Lda::Backends::Rust` non-session fallback should prefer Rust start-aware orchestration (`run_em_with_start_seed`) before legacy beta-input orchestration (`run_em`).
 - Rust backend corpus/session lifecycle must not leak session count across corpus replacement.
 - Unknown start-mode handling in seed-aware Rust orchestration must match Ruby's non-seeded fallback behavior when given the same explicit seed.
 

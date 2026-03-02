@@ -46,6 +46,7 @@ Hot-path kernels currently executed in Rust when `backend: :rust` is active:
 - unified session-settings orchestration (`run_em_on_session`) that applies settings and executes EM in one call
 - session-based EM orchestration against Rust-managed corpus lifecycle (`create_corpus_session` + `run_em_on_session_with_start_seed`)
 - settings-aware session orchestration (`configure_corpus_session` + `run_em_on_session_start`)
+- `Lda::Backends::Rust` prefers `run_em_with_start_seed` for direct non-session orchestration when session orchestration is unavailable
 - unknown EM start modes in seed-aware orchestration follow Ruby's non-seeded fallback behavior (seeded by explicit `random_seed`)
 
 Remaining numeric LDA kernels are still provided by the pure Ruby backend and will move incrementally.

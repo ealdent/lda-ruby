@@ -88,14 +88,14 @@ Delivered:
   - topic-document probability
   - seeded initialization
 - trusted kernel-output fast path enabled in rust mode
-- Rust-side EM orchestration path (`Lda::RustBackend.run_em`) with deterministic Ruby fallback reuse via precomputed EM inputs
-- Rust-side start-aware deterministic orchestration path (`Lda::RustBackend.run_em_with_start`) for `seeded`/`deterministic` EM starts, with random-start compatibility retained via Ruby-initialized fallback path
+- Rust-side EM orchestration path (`Lda::RustBackend.run_em`) retained as a compatibility fallback for precomputed beta-input execution
+- Rust-side start-aware deterministic orchestration path (`Lda::RustBackend.run_em_with_start`) for `seeded`/`deterministic` EM starts
 - Rust-side random-start orchestration path (`Lda::RustBackend.run_em_with_start_seed`) using explicit seed-controlled random initialization (`Lda::RustBackend.random_topic_term_probabilities`)
 - Rust-managed corpus session lifecycle (`Lda::RustBackend.create_corpus_session` / `drop_corpus_session`) with session-based start-aware EM orchestration (`run_em_on_session_with_start_seed`) wired in `Lda::Backends::Rust`
 - Rust-managed session settings lifecycle (`configure_corpus_session`) with settings-aware orchestration (`run_em_on_session_start`) wired in `Lda::Backends::Rust`
 - Rust session execution refactor to shared session corpus storage + borrowed orchestration helpers, eliminating deep corpus clone overhead on each session EM run
 - unified Rust session orchestration API (`run_em_on_session`) that applies settings + runs EM in one call, now preferred by `Lda::Backends::Rust`
-- `Lda::Backends::Rust` now routes all start modes through unified session orchestration when available (`run_em_on_session`), with Ruby-side beta-input orchestration retained only as compatibility fallback
+- `Lda::Backends::Rust` now routes all start modes through unified session orchestration when available (`run_em_on_session`); when sessions are unavailable it now prefers direct Rust non-session orchestration (`run_em_with_start_seed`) before legacy Ruby-side beta-input fallback (`run_em`)
 - `Lda::Backends::Rust` now re-registers missing Rust corpus sessions before EM to preserve session-based orchestration when sessions are dropped externally
 - parity/compatibility test coverage and rust runtime CI
 

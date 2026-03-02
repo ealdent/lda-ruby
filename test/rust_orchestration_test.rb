@@ -494,6 +494,69 @@ class RustOrchestrationTest < Test::Unit::TestCase
     backend&.corpus = nil
   end
 
+  def test_rust_backend_non_session_fallback_prefers_run_em_with_start_seed
+    backend = nil
+    rust_singleton = nil
+    run_em_alias = :__test_original_run_em_for_non_session_fallback__
+    run_em_with_start_seed_alias = :__test_original_run_em_with_start_seed_for_non_session_fallback__
+
+    omit("run_em unavailable") unless Lda::RustBackend.respond_to?(:run_em)
+    omit("run_em_with_start_seed unavailable") unless Lda::RustBackend.respond_to?(:run_em_with_start_seed)
+
+    backend = Lda::Backends::Rust.new(random_seed: 1234)
+    backend.corpus = Lda::TextCorpus.new(FIXTURE_DOCUMENTS)
+    backend.verbose = false
+    backend.num_topics = @topics
+    backend.max_iter = @max_iter
+    backend.convergence = @convergence
+    backend.em_max_iter = @em_max_iter
+    backend.em_convergence = @em_convergence
+    backend.init_alpha = @init_alpha
+
+    # Force the direct non-session orchestration path.
+    backend.define_singleton_method(:ensure_rust_corpus_session) { false }
+
+    rust_singleton = Lda::RustBackend.singleton_class
+    run_em_calls = 0
+    run_em_with_start_seed_calls = 0
+
+    silence_redefinition_warnings do
+      rust_singleton.send(:alias_method, run_em_alias, :run_em)
+      rust_singleton.send(:alias_method, run_em_with_start_seed_alias, :run_em_with_start_seed)
+
+      rust_singleton.send(:define_method, :run_em) do |*args|
+        run_em_calls += 1
+        public_send(run_em_alias, *args)
+      end
+
+      rust_singleton.send(:define_method, :run_em_with_start_seed) do |*args|
+        run_em_with_start_seed_calls += 1
+        public_send(run_em_with_start_seed_alias, *args)
+      end
+    end
+
+    backend.em("random")
+    assert_equal 0, run_em_calls
+    assert_equal 1, run_em_with_start_seed_calls
+    assert_equal @topics, backend.gamma.first.size
+  ensure
+    silence_redefinition_warnings do
+      if defined?(rust_singleton) && rust_singleton.method_defined?(run_em_with_start_seed_alias)
+        rust_singleton.send(:remove_method, :run_em_with_start_seed)
+        rust_singleton.send(:alias_method, :run_em_with_start_seed, run_em_with_start_seed_alias)
+        rust_singleton.send(:remove_method, run_em_with_start_seed_alias)
+      end
+
+      if defined?(rust_singleton) && rust_singleton.method_defined?(run_em_alias)
+        rust_singleton.send(:remove_method, :run_em)
+        rust_singleton.send(:alias_method, :run_em, run_em_alias)
+        rust_singleton.send(:remove_method, run_em_alias)
+      end
+    end
+
+    backend&.corpus = nil
+  end
+
   def test_configure_corpus_session_reconfigures_topic_count
     omit("create_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:create_corpus_session)
     omit("drop_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:drop_corpus_session)
@@ -539,6 +602,14 @@ class RustOrchestrationTest < Test::Unit::TestCase
   end
 
   private
+
+  def silence_redefinition_warnings
+    previous_verbose = $VERBOSE
+    $VERBOSE = nil
+    yield
+  ensure
+    $VERBOSE = previous_verbose
+  end
 
   def assert_nested_close(left, right, tolerance)
     if left.is_a?(Array)

@@ -107,6 +107,9 @@ module Lda
         session_orchestrated = rust_orchestrated_em_with_session(start)
         return true if session_orchestrated
 
+        direct_orchestrated = rust_orchestrated_em_with_start_seed(start)
+        return true if direct_orchestrated
+
         rust_orchestrated_em_with_beta(start)
       end
 
@@ -124,6 +127,48 @@ module Lda
         )
 
         return false unless valid_rust_em_output?(output, @rust_document_lengths, Integer(num_topics), Integer(@rust_corpus_terms))
+
+        beta_probabilities, beta_log, gamma, phi = output
+        @fallback.apply_em_state(
+          beta_probabilities: beta_probabilities,
+          beta_log: beta_log,
+          gamma: gamma,
+          phi: phi
+        )
+        true
+      rescue StandardError
+        false
+      end
+
+      def rust_orchestrated_em_with_start_seed(start)
+        return false unless defined?(::Lda::RustBackend)
+        return false unless ::Lda::RustBackend.respond_to?(:run_em_with_start_seed)
+
+        em_input = rust_em_corpus_input
+        return false if em_input.nil?
+
+        random_seed = Integer(next_random_seed)
+        output = ::Lda::RustBackend.run_em_with_start_seed(
+          start.to_s,
+          em_input.fetch(:document_words),
+          em_input.fetch(:document_counts),
+          Integer(em_input.fetch(:topics)),
+          Integer(em_input.fetch(:terms)),
+          Integer(max_iter),
+          Float(convergence),
+          Integer(em_max_iter),
+          Float(em_convergence),
+          Float(init_alpha),
+          Float(em_input.fetch(:min_probability)),
+          random_seed
+        )
+
+        return false unless valid_rust_em_output?(
+          output,
+          em_input.fetch(:document_lengths),
+          em_input.fetch(:topics),
+          em_input.fetch(:terms)
+        )
 
         beta_probabilities, beta_log, gamma, phi = output
         @fallback.apply_em_state(

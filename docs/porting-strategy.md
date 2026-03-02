@@ -55,14 +55,15 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Rust runtime CI job added (compile + execute rust backend tests).
 - Rust/Pure numeric parity fixtures added for deterministic seeded runs.
 - `compile_rust` now stages a Ruby-loadable extension artifact to avoid `Init_` symbol mismatch from Cargo's `lib*` output naming.
-- Rust-side EM orchestration path added (`Lda::RustBackend.run_em`) while keeping Ruby fallback orchestration for compatibility.
-- Rust-side deterministic-start orchestration path added (`Lda::RustBackend.run_em_with_start`) so `seeded`/`deterministic` startup can stay in Rust while keeping Ruby fallback for compatibility.
+- Rust-side EM orchestration path added (`Lda::RustBackend.run_em`) and retained as legacy compatibility fallback for precomputed beta-input execution.
+- Rust-side deterministic-start orchestration path added (`Lda::RustBackend.run_em_with_start`) so `seeded`/`deterministic` startup can stay in Rust.
 - Rust-side seed-controlled random-start orchestration path added (`Lda::RustBackend.run_em_with_start_seed` + `random_topic_term_probabilities`) so random initialization can stay in Rust while preserving deterministic replay from an explicit seed.
 - Rust-side corpus session lifecycle added (`create_corpus_session`/`drop_corpus_session`) and `Lda::Backends::Rust` now prefers session-based EM orchestration (`run_em_on_session_with_start_seed`) before array-based fallback paths.
 - Rust-side session settings lifecycle added (`configure_corpus_session`) and `Lda::Backends::Rust` now prefers settings-aware session orchestration (`run_em_on_session_start`) before parameter-heavy session and array-based fallbacks.
 - Rust session orchestration now runs on shared Rust-side corpus session data via borrowed execution helpers, avoiding deep corpus array cloning on each session EM call.
-- Unified Rust session API added (`run_em_on_session`) to apply settings and execute EM in one call; `Lda::Backends::Rust` now prefers this single-call session path before legacy session fallbacks.
-- `Lda::Backends::Rust` now auto-recreates missing Rust corpus sessions before EM, reducing fallback to array-based orchestration when sessions are externally dropped.
+- Unified Rust session API added (`run_em_on_session`) to apply settings and execute EM in one call; `Lda::Backends::Rust` now prefers this single-call session path before non-session fallbacks.
+- `Lda::Backends::Rust` now prefers direct Rust non-session orchestration (`run_em_with_start_seed`) before legacy `run_em(initial_beta, ...)` compatibility fallback when a session path is unavailable.
+- `Lda::Backends::Rust` now auto-recreates missing Rust corpus sessions before EM, reducing fallback to non-session orchestration when sessions are externally dropped.
 - Dockerized rust runtime workflow added for local parity with CI (`Dockerfile.rust`, `bin/docker-test-rust`).
 - Gem packaging now excludes local Rust cargo build artifacts (`target/**`) for clean release builds.
 - Backend benchmark driver added (`bin/benchmark-backends`) to track pure/native/rust runtime deltas.
