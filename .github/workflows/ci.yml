@@ -169,13 +169,33 @@ jobs:
         run: ./bin/test-packaged-gem-manifest
 
   precompiled-gem-build:
-    name: precompiled gem build / ${{ matrix.os }}
+    name: precompiled gem build / ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-14]
+        include:
+          - os: ubuntu-latest
+            platform: x86_64-linux
+            label: linux-x86_64
+            kind: linux
+          - os: ubuntu-latest
+            platform: x86_64-linux-musl
+            label: linux-musl-x86_64
+            kind: musl
+          - os: macos-15-intel
+            platform: x86_64-darwin
+            label: macos-x86_64
+            kind: macos
+          - os: macos-14
+            platform: arm64-darwin
+            label: macos-arm64
+            kind: macos
+          - os: windows-latest
+            platform: x64-mingw-ucrt
+            label: windows-x64-mingw-ucrt
+            kind: windows
 
     steps:
       - uses: actions/checkout@v4
@@ -187,20 +207,104 @@ jobs:
           bundler-cache: true
 
       - name: Set up Rust toolchain
+        if: ${{ matrix.kind != 'musl' }}
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install Rust GNU toolchain for RubyInstaller ABI
+        if: ${{ matrix.kind == 'windows' }}
+        shell: pwsh
+        run: |
+          rustup toolchain install stable-x86_64-pc-windows-gnu
+          "RUSTUP_TOOLCHAIN=stable-x86_64-pc-windows-gnu" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Resolve cargo path for bash steps
+        if: ${{ matrix.kind == 'windows' }}
+        shell: pwsh
+        run: |
+          $cargo = (Get-Command cargo -ErrorAction Stop).Source
+          "CARGO=$cargo" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Resolved cargo executable: $cargo"
+
       - name: Install Rust bindgen dependencies (Linux)
-        if: ${{ runner.os == 'Linux' }}
+        if: ${{ matrix.kind == 'linux' }}
         run: sudo apt-get update && sudo apt-get install -y clang libclang-dev pkg-config
 
       - name: Install Rust bindgen dependencies (macOS)
-        if: ${{ runner.os == 'macOS' }}
+        if: ${{ matrix.kind == 'macos' }}
         run: |
           brew install llvm
           echo "LIBCLANG_PATH=$(brew --prefix llvm)/lib" >> "${GITHUB_ENV}"
 
+      - name: Install LLVM (bindgen dependency)
+        if: ${{ matrix.kind == 'windows' }}
+        uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: "18.1.8"
+
+      - name: Configure bindgen include paths for Windows Ruby headers
+        if: ${{ matrix.kind == 'windows' }}
+        shell: pwsh
+        run: |
+          $shimInclude = (Resolve-Path "ext/lda-ruby-rust/include").Path.Replace('\', '/')
+          $includeDirs = @($shimInclude)
+          $devkitRoot = $null
+
+          if ($env:RI_DEVKIT) {
+            $devkitRoot = $env:RI_DEVKIT.Replace('\', '/')
+            $candidateDirs = @(
+              "$devkitRoot/ucrt64/include",
+              "$devkitRoot/mingw64/include",
+              "$devkitRoot/usr/include"
+            )
+            $withStrings = $candidateDirs | Where-Object { Test-Path "$_/strings.h" } | Select-Object -Unique
+            if ($withStrings) {
+              $includeDirs += $withStrings
+            }
+          }
+
+          $bindgenArgList = @("--target=x86_64-w64-windows-gnu")
+          if ($devkitRoot) {
+            $bindgenArgList += "--sysroot=$devkitRoot/ucrt64"
+          }
+          $bindgenArgList += ($includeDirs | Select-Object -Unique | ForEach-Object { "-I$_" })
+          $bindgenArgList += @("-msse2", "-mavx")
+          $bindgenArgs = $bindgenArgList -join " "
+
+          "BINDGEN_EXTRA_CLANG_ARGS_x86_64-pc-windows-gnu=$bindgenArgs" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "BINDGEN_EXTRA_CLANG_ARGS_x86_64_pc_windows_gnu=$bindgenArgs" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "BINDGEN_EXTRA_CLANG_ARGS=$bindgenArgs" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          $existingCppFlags = ruby -rrbconfig -e 'print RbConfig::CONFIG.fetch("CPPFLAGS", "")'
+          $mergedCppFlags = "$existingCppFlags $bindgenArgs".Trim()
+          "RBCONFIG_CPPFLAGS=$mergedCppFlags" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          Write-Host "Configured bindgen extra clang args: $bindgenArgs"
+          Write-Host "Configured RBCONFIG_CPPFLAGS: $mergedCppFlags"
+
       - name: Build and verify precompiled gem
-        run: ./bin/release-precompiled-artifacts --skip-preflight
+        if: ${{ matrix.kind != 'musl' }}
+        shell: bash
+        run: ./bin/release-precompiled-artifacts --platform "${{ matrix.platform }}" --skip-preflight
+
+      - name: Build and verify musl precompiled gem (Alpine container)
+        if: ${{ matrix.kind == 'musl' }}
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          docker run --rm \
+            -e PLATFORM="${PLATFORM}" \
+            -v "${PWD}:/workspace" \
+            -w /workspace \
+            alpine:3.20 \
+            sh -lc '
+              set -euo pipefail
+              apk add --no-cache bash build-base git ruby ruby-dev ruby-bundler rust cargo clang llvm-dev clang17-libclang pkgconf
+              mkdir -p /workspace/pkg
+              libclang_path="$(dirname "$(find /usr/lib -name libclang.so | head -n1)")"
+              export LIBCLANG_PATH="${libclang_path}"
+              bundle install
+              ./bin/release-precompiled-artifacts --platform "${PLATFORM}" --skip-preflight
+            '
 
   rust-scaffold:
     name: rust scaffold / ubuntu-latest

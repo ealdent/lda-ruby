@@ -55,7 +55,7 @@ Release automation requirements:
 
 Continuous integration guardrail:
 
-- `.github/workflows/ci.yml` runs `release-precompiled-artifacts` for representative Linux/macOS targets on every branch/PR.
+- `.github/workflows/ci.yml` runs `release-precompiled-artifacts` for the full release-blocking precompiled matrix (Linux, Linux musl, macOS Intel, macOS Apple Silicon, Windows) on every branch/PR.
 - `.github/workflows/precompiled-candidate-evaluation.yml` is used for additional platform candidate checks.
 - `.github/workflows/release.yml` dry-run validates the full release-blocking matrix before publish.
 
