@@ -121,7 +121,7 @@ For an up-to-date resume snapshot (phase status + exact remaining queue), see `d
 
 - Phase 5A (source-gem release automation): complete.
 - Keep source build path available.
-- Phase 5B (precompiled/native gem publishing): complete for initial Linux/macOS targets via `bin/release-precompiled-artifacts` and release workflow matrix builds.
+- Phase 5B (precompiled/native gem publishing): complete for Linux/macOS/Windows/musl release matrix targets via `bin/release-precompiled-artifacts` and release workflow matrix builds.
 
 ## Tooling suggestions
 

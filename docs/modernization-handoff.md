@@ -4,14 +4,14 @@ This document is the canonical handoff state for continuing the Ruby 3.2+/3.3+ m
 
 ## Snapshot
 
-- Snapshot date: 2026-02-25
-- Active branch: `master`
-- Repo status at snapshot start: clean working tree on `master` (in sync with `origin/master`)
+- Snapshot date: 2026-03-02
+- Active branch: `codex/rust-orchestration-phase8`
+- Repo status at snapshot start: clean working tree on `codex/rust-orchestration-phase8` (ahead of `master`)
 - Modernization branch: `codex/modernization` merged into `master`
 - Merge commit for modernization PR: `bc11269` (`Merge pull request #18 from ealdent/codex/modernization`)
 - Latest release dry-run validation (GitHub Actions):
-  - date: 2026-02-25
-  - workflow run: `release.yml` run `22382692416` (`workflow_dispatch`, `publish=false`)
+  - date: 2026-03-02
+  - workflow run: `release.yml` run `22556487788` (`workflow_dispatch`, `publish=false`)
   - result: success (`validate release candidate`, `build release artifacts`, and all `build precompiled artifacts` matrix targets)
   - publish jobs skipped by design (`publish=false`)
 - Modernization pull request:
@@ -25,6 +25,7 @@ This document is the canonical handoff state for continuing the Ruby 3.2+/3.3+ m
 - Release status:
   - `v0.4.0` published to RubyGems (source + precompiled Linux/macOS gems)
   - GitHub release `v0.4.0` published with gem + `.sha256` assets
+  - next release dry-run matrix is validated for Linux, Linux musl, macOS Intel, macOS Apple Silicon, and Windows targets (`22556487788`)
 
 ## Project Goal
 
@@ -94,6 +95,7 @@ Delivered:
 - Rust-managed session settings lifecycle (`configure_corpus_session`) with settings-aware orchestration (`run_em_on_session_start`) wired in `Lda::Backends::Rust`
 - Rust session execution refactor to shared session corpus storage + borrowed orchestration helpers, eliminating deep corpus clone overhead on each session EM run
 - unified Rust session orchestration API (`run_em_on_session`) that applies settings + runs EM in one call, now preferred by `Lda::Backends::Rust`
+- `Lda::Backends::Rust` now routes all start modes through unified session orchestration when available (`run_em_on_session`), with Ruby-side beta-input orchestration retained only as compatibility fallback
 - `Lda::Backends::Rust` now re-registers missing Rust corpus sessions before EM to preserve session-based orchestration when sessions are dropped externally
 - parity/compatibility test coverage and rust runtime CI
 
@@ -103,7 +105,7 @@ Open in Phase 4:
 
 ### Phase 5 (packaging/release)
 
-Status: Phase 5A complete (source-gem release automation), Phase 5B complete for initial Linux/macOS precompiled gems.
+Status: Phase 5A complete (source-gem release automation), Phase 5B complete for Linux/macOS/Windows/musl precompiled release matrix.
 
 Delivered:
 
@@ -137,12 +139,15 @@ Delivered:
 - CI precompiled gem build guardrail job (`precompiled-gem-build`)
 - release workflow matrix for precompiled gems:
   - `x86_64-linux`
+  - `x86_64-linux-musl`
   - `x86_64-darwin`
   - `arm64-darwin`
+  - `x64-mingw-ucrt`
+- release dry-run validation for expanded precompiled matrix (`release.yml` run `22556487788`)
 
 Open in Phase 5:
 
-- optional expansion of precompiled targets (for example Windows and/or musl Linux)
+- optional expansion of precompiled targets beyond current Linux/macOS/Windows/musl set
 - automated alerts/notifications for release artifact publish failures
 
 ## Validation Commands
@@ -200,8 +205,8 @@ Priority 1:
 
 Priority 2:
 
-- evaluate additional precompiled targets (Windows and/or musl Linux) using `docs/precompiled-target-evaluation.md`
-- latest candidate workflow signal: both Windows and musl candidate lanes are green with runtime checks in run `22556206925`; remaining promotion work is release dry-run matrix validation before making new targets release-blocking
+- monitor expanded precompiled release lanes (Windows + musl Linux) now that release dry-run matrix validation is green in run `22556487788`
+- evaluate any additional precompiled targets beyond current release-blocking set using `docs/precompiled-target-evaluation.md`
 
 Priority 3:
 
@@ -215,8 +220,8 @@ Priority 3:
 4. Review `docs/release-runbook.md` for release flow/rollback details.
 5. Validate precompiled packaging locally for your host:
    - `./bin/release-precompiled-artifacts --tag "$(./bin/check-version-sync --print-tag)" --skip-preflight`
-6. Continue with remaining modernization queue (`Priority 2` then `Priority 3`).
+6. Continue with remaining modernization queue (`Priority 1` then `Priority 2/3`).
 
 If you want the next assistant to continue immediately, use:
 
-"Open `docs/modernization-handoff.md`, validate with `SKIP_DOCKER=1 ./bin/release-preflight`, run `./bin/release-precompiled-artifacts --skip-preflight`, and continue the `Priority 2/3` modernization queue."
+"Open `docs/modernization-handoff.md`, validate with `SKIP_DOCKER=1 ./bin/release-preflight`, run `./bin/release-precompiled-artifacts --skip-preflight`, and continue the `Priority 1/2/3` modernization queue."

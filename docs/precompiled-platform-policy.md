@@ -11,6 +11,8 @@ Each release version publishes a split package set:
   - `lda-ruby-<version>-x86_64-linux.gem`
   - `lda-ruby-<version>-x86_64-darwin.gem`
   - `lda-ruby-<version>-arm64-darwin.gem`
+  - `lda-ruby-<version>-x64-mingw-ucrt.gem`
+  - `lda-ruby-<version>-x86_64-linux-musl.gem`
 
 The source gem remains the universal fallback. Platform gems are additive and are expected to install without local build tools.
 Precompiled artifacts are built on matching host runners (no cross-compilation in current workflow).
@@ -20,8 +22,10 @@ Precompiled artifacts are built on matching host runners (no cross-compilation i
 - Supported Ruby versions: 3.2 and 3.3 (plus future versions validated by CI).
 - Release-blocking precompiled targets:
   - Linux `x86_64-linux`
+  - Linux musl `x86_64-linux-musl`
   - macOS Intel `x86_64-darwin`
   - macOS Apple Silicon `arm64-darwin`
+  - Windows `x64-mingw-ucrt`
 - Other platforms:
   - Install from source gem.
   - Runtime remains supported through native/pure fallback paths.
@@ -52,6 +56,12 @@ Release automation requirements:
 Continuous integration guardrail:
 
 - `.github/workflows/ci.yml` runs `release-precompiled-artifacts` for representative Linux/macOS targets on every branch/PR.
+- `.github/workflows/precompiled-candidate-evaluation.yml` is used for additional platform candidate checks.
+- `.github/workflows/release.yml` dry-run validates the full release-blocking matrix before publish.
+
+Latest release-matrix validation:
+
+- [release dry-run 22556487788](https://github.com/ealdent/lda-ruby/actions/runs/22556487788) succeeded for Linux, Linux musl, macOS Intel, macOS Apple Silicon, and Windows targets.
 
 ## Rollout / Expansion Rules
 

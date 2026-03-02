@@ -92,10 +92,16 @@ Behavior:
 
 Latest verified dry-run reference:
 
-- date: 2026-02-25
-- workflow run: `https://github.com/ealdent/lda-ruby/actions/runs/22382692416`
+- date: 2026-03-02
+- workflow run: `https://github.com/ealdent/lda-ruby/actions/runs/22556487788`
 - dispatch parameters: `release_tag=v0.4.0`, `publish=false`
 - result: success across `validate`, `build_artifacts`, and full `build_precompiled_artifacts` matrix
+  - verified precompiled lanes:
+    - `linux-x86_64`
+    - `linux-musl-x86_64`
+    - `macos-x86_64`
+    - `macos-arm64`
+    - `windows-x64-mingw-ucrt`
 
 Optional local dry-run equivalent:
 
@@ -106,7 +112,7 @@ Optional local dry-run equivalent:
 
 Candidate expansion workflow:
 
-- For Priority 2 platform evaluation (Windows and musl candidate artifacts), run `.github/workflows/precompiled-candidate-evaluation.yml` via `workflow_dispatch`.
+- For future platform evaluation beyond current release-blocking targets, run `.github/workflows/precompiled-candidate-evaluation.yml` via `workflow_dispatch`.
 - Record outcome artifacts/logs in `docs/precompiled-target-evaluation.md`.
 
 ## Known Publish Incident (`v0.4.0`)
@@ -134,7 +140,7 @@ Candidate expansion workflow:
 3. Monitor `.github/workflows/release.yml`:
    - `validate`
    - `build_artifacts`
-   - `build_precompiled_artifacts` (linux + macOS matrix)
+   - `build_precompiled_artifacts` (linux + linux-musl + macOS + windows matrix)
    - environment-gated `publish_rubygems`
    - environment-gated `publish_github_release`
    - `verify_published_artifacts`

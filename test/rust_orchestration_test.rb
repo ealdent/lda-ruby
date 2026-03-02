@@ -258,6 +258,48 @@ class RustOrchestrationTest < Test::Unit::TestCase
     assert_equal true, Lda::RustBackend.drop_corpus_session(session_id)
   end
 
+  def test_run_em_on_session_unknown_start_matches_random_start
+    omit("create_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:create_corpus_session)
+    omit("drop_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:drop_corpus_session)
+    omit("run_em_on_session unavailable") unless Lda::RustBackend.respond_to?(:run_em_on_session)
+    omit("run_em_with_start_seed unavailable") unless Lda::RustBackend.respond_to?(:run_em_with_start_seed)
+
+    session_id = Lda::RustBackend.create_corpus_session(@document_words, @document_counts, @terms)
+    assert_operator session_id, :>, 0
+
+    random_seed = 4545
+    direct = Lda::RustBackend.run_em_with_start_seed(
+      "random",
+      @document_words,
+      @document_counts,
+      @topics,
+      @terms,
+      @max_iter,
+      @convergence,
+      @em_max_iter,
+      @em_convergence,
+      @init_alpha,
+      @min_probability,
+      random_seed
+    )
+
+    via_session = Lda::RustBackend.run_em_on_session(
+      session_id,
+      "unknown_mode",
+      @topics,
+      @max_iter,
+      @convergence,
+      @em_max_iter,
+      @em_convergence,
+      @init_alpha,
+      @min_probability,
+      random_seed
+    )
+
+    assert_nested_close(direct, via_session, 1e-12)
+    assert_equal true, Lda::RustBackend.drop_corpus_session(session_id)
+  end
+
   def test_run_em_on_session_start_uses_configured_settings
     omit("create_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:create_corpus_session)
     omit("drop_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:drop_corpus_session)

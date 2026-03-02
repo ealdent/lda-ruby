@@ -36,7 +36,6 @@ module Lda
         @rust_corpus_session_id = nil
         @rust_corpus_terms = nil
         @rust_document_lengths = nil
-        @rust_corpus_session_config_signature = nil
 
         @fallback = PureRuby.new(random_seed: random_seed)
         @fallback.topic_weights_kernel = method(:rust_topic_weights_for_word)
@@ -76,7 +75,6 @@ module Lda
 
       def set_config(init_alpha, num_topics, max_iter, convergence, em_max_iter, em_convergence, est_alpha)
         @fallback.set_config(init_alpha, num_topics, max_iter, convergence, em_max_iter, em_convergence, est_alpha)
-        @rust_corpus_session_config_signature = nil
       end
 
       def em(start)
@@ -106,52 +104,24 @@ module Lda
       private
 
       def rust_orchestrated_em(start)
-        if rust_start_orchestration_mode?(start)
-          session_orchestrated = rust_orchestrated_em_with_session(start)
-          return true if session_orchestrated
-
-          start_orchestrated = rust_orchestrated_em_with_start(start)
-          return true if start_orchestrated
-        end
+        session_orchestrated = rust_orchestrated_em_with_session(start)
+        return true if session_orchestrated
 
         rust_orchestrated_em_with_beta(start)
       end
 
       def rust_orchestrated_em_with_session(start)
         return false unless defined?(::Lda::RustBackend)
+        return false unless ::Lda::RustBackend.respond_to?(:run_em_on_session)
         return false unless ensure_rust_corpus_session
 
         random_seed = Integer(next_random_seed)
-        output =
-          if ::Lda::RustBackend.respond_to?(:run_em_on_session)
-            ::Lda::RustBackend.run_em_on_session(
-              Integer(@rust_corpus_session_id),
-              start.to_s,
-              *current_rust_session_config_signature,
-              random_seed
-            )
-          elsif ::Lda::RustBackend.respond_to?(:run_em_on_session_start) && ensure_rust_corpus_session_config
-            ::Lda::RustBackend.run_em_on_session_start(
-              Integer(@rust_corpus_session_id),
-              start.to_s,
-              random_seed
-            )
-          else
-            return false unless ::Lda::RustBackend.respond_to?(:run_em_on_session_with_start_seed)
-
-            ::Lda::RustBackend.run_em_on_session_with_start_seed(
-              Integer(@rust_corpus_session_id),
-              start.to_s,
-              Integer(num_topics),
-              Integer(max_iter),
-              Float(convergence),
-              Integer(em_max_iter),
-              Float(em_convergence),
-              Float(init_alpha),
-              MIN_PROBABILITY,
-              random_seed
-            )
-          end
+        output = ::Lda::RustBackend.run_em_on_session(
+          Integer(@rust_corpus_session_id),
+          start.to_s,
+          *current_rust_session_config_signature,
+          random_seed
+        )
 
         return false unless valid_rust_em_output?(output, @rust_document_lengths, Integer(num_topics), Integer(@rust_corpus_terms))
 
@@ -164,78 +134,6 @@ module Lda
         )
         true
       rescue StandardError
-        false
-      end
-
-      def rust_orchestrated_em_with_start(start)
-        return false unless defined?(::Lda::RustBackend)
-
-        random_start = rust_random_start_mode?(start)
-        if random_start
-          return false unless ::Lda::RustBackend.respond_to?(:run_em_with_start_seed)
-        else
-          return false unless ::Lda::RustBackend.respond_to?(:run_em_with_start)
-        end
-
-        em_input = rust_em_corpus_input
-        return true if em_input.nil?
-
-        output =
-          if random_start
-            ::Lda::RustBackend.run_em_with_start_seed(
-              start.to_s,
-              em_input.fetch(:document_words),
-              em_input.fetch(:document_counts),
-              Integer(em_input.fetch(:topics)),
-              Integer(em_input.fetch(:terms)),
-              Integer(max_iter),
-              Float(convergence),
-              Integer(em_max_iter),
-              Float(em_convergence),
-              Float(init_alpha),
-              Float(em_input.fetch(:min_probability)),
-              Integer(next_random_seed)
-            )
-          else
-            ::Lda::RustBackend.run_em_with_start(
-              start.to_s,
-              em_input.fetch(:document_words),
-              em_input.fetch(:document_counts),
-              Integer(em_input.fetch(:topics)),
-              Integer(em_input.fetch(:terms)),
-              Integer(max_iter),
-              Float(convergence),
-              Integer(em_max_iter),
-              Float(em_convergence),
-              Float(init_alpha),
-              Float(em_input.fetch(:min_probability))
-            )
-          end
-
-        unless valid_rust_em_output?(
-          output,
-          em_input.fetch(:document_lengths),
-          em_input.fetch(:topics),
-          em_input.fetch(:terms)
-        )
-          @fallback.em(start)
-          return true
-        end
-
-        beta_probabilities, beta_log, gamma, phi = output
-        @fallback.apply_em_state(
-          beta_probabilities: beta_probabilities,
-          beta_log: beta_log,
-          gamma: gamma,
-          phi: phi
-        )
-        true
-      rescue StandardError
-        if defined?(em_input) && em_input
-          @fallback.em(start)
-          return true
-        end
-
         false
       end
 
@@ -315,20 +213,10 @@ module Lda
           .max || -1
       end
 
-      def rust_start_orchestration_mode?(start)
-        normalized = start.to_s.strip.downcase
-        normalized == "seeded" || normalized == "deterministic" || normalized == "random"
-      end
-
-      def rust_random_start_mode?(start)
-        start.to_s.strip.downcase == "random"
-      end
-
       def register_rust_corpus_session
         @rust_corpus_session_id = nil
         @rust_corpus_terms = nil
         @rust_document_lengths = nil
-        @rust_corpus_session_config_signature = nil
 
         return unless defined?(::Lda::RustBackend)
         return unless ::Lda::RustBackend.respond_to?(:create_corpus_session)
@@ -351,7 +239,6 @@ module Lda
         @rust_corpus_session_id = nil
         @rust_corpus_terms = nil
         @rust_document_lengths = nil
-        @rust_corpus_session_config_signature = nil
       end
 
       def ensure_rust_corpus_session
@@ -363,7 +250,6 @@ module Lda
             @rust_corpus_session_id = nil
             @rust_corpus_terms = nil
             @rust_document_lengths = nil
-            @rust_corpus_session_config_signature = nil
           else
             return true
           end
@@ -381,7 +267,6 @@ module Lda
         @rust_corpus_session_id = nil
         @rust_corpus_terms = nil
         @rust_document_lengths = nil
-        @rust_corpus_session_config_signature = nil
 
         return unless session_id
         return unless defined?(::Lda::RustBackend)
@@ -390,26 +275,6 @@ module Lda
         ::Lda::RustBackend.drop_corpus_session(Integer(session_id))
       rescue StandardError
         nil
-      end
-
-      def ensure_rust_corpus_session_config
-        return false unless @rust_corpus_session_id
-        return false unless defined?(::Lda::RustBackend)
-        return false unless ::Lda::RustBackend.respond_to?(:configure_corpus_session)
-
-        signature = current_rust_session_config_signature
-        return true if @rust_corpus_session_config_signature == signature
-
-        configured = ::Lda::RustBackend.configure_corpus_session(
-          Integer(@rust_corpus_session_id),
-          *signature
-        )
-        return false unless configured
-
-        @rust_corpus_session_config_signature = signature
-        true
-      rescue StandardError
-        false
       end
 
       def current_rust_session_config_signature

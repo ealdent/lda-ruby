@@ -973,14 +973,8 @@ fn run_em_with_start_seed_internal(
     } else if start_uses_random_initialization(start) {
         random_topic_term_probabilities(topics, terms, min_probability, random_seed)
     } else {
-        // Unknown start modes default to seeded initialization for a stable fallback.
-        seeded_topic_term_probabilities_internal(
-            document_words,
-            document_counts,
-            topics,
-            terms,
-            min_probability,
-        )
+        // Unknown start modes follow Ruby's non-seeded fallback behavior.
+        random_topic_term_probabilities(topics, terms, min_probability, random_seed)
     };
 
     run_em_internal(
