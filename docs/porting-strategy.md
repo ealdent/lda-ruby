@@ -68,7 +68,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Gem packaging now excludes local Rust cargo build artifacts (`target/**`) for clean release builds.
 - Backend benchmark driver added (`bin/benchmark-backends`) to track pure/native/rust runtime deltas.
 - Rust orchestration guardrail policy documented (`docs/rust-orchestration-guardrails.md`) with benchmark threshold checker (`bin/check-rust-benchmark`).
-- CI benchmark guardrail job added (`benchmark-guardrail`) to enforce Rust/pure runtime ratio on Ubuntu (currently `BENCH_RUST_TO_PURE_MAX_RATIO=0.10`).
+- CI benchmark guardrail job added (`benchmark-guardrail`) to enforce Rust/pure runtime ratio on Ubuntu (currently `BENCH_RUST_TO_PURE_MAX_RATIO=0.05`).
 - Source install path now has explicit Rust build policy via `LDA_RUBY_RUST_BUILD=auto|always|never`.
 - Docker install-policy matrix script added (`bin/docker-test-install-policies`) to verify source install behavior across environments.
 - CI now runs install-policy matrix checks on Ubuntu.
