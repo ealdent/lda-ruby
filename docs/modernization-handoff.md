@@ -127,6 +127,7 @@ Delivered:
 - macOS Rust build linker guardrail (`dynamic_lookup`) for precompiled packaging paths
 - tag-driven release workflow (`.github/workflows/release.yml`)
 - release failure alert workflow (`.github/workflows/release-failure-alert.yml`)
+  - tuned to create issues only for failed tag-triggered release runs, with failed job links in alert body
 - maintainer release runbook (`docs/release-runbook.md`)
 - manual precompiled candidate workflow now validated on both lanes (`precompiled-candidate-evaluation.yml` run `22556129503`)
 - manual precompiled candidate workflow now validated with runtime checks on both lanes (`precompiled-candidate-evaluation.yml` run `22556206925`)
@@ -210,7 +211,7 @@ Priority 2:
 
 Priority 3:
 
-- monitor and tune release-failure issue alerting (`.github/workflows/release-failure-alert.yml`)
+- monitor tuned release-failure issue alerting (`.github/workflows/release-failure-alert.yml`) and adjust signal/noise as release cadence grows
 
 ## Resume Instructions For A New Conversation
 

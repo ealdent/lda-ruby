@@ -2,7 +2,7 @@ name: release-failure-alert
 
 on:
   workflow_run:
-    workflows: ["release"]
+    workflows: ["Release"]
     types: [completed]
 
 jobs:
@@ -18,6 +18,11 @@ jobs:
         with:
           script: |
             const run = context.payload.workflow_run;
+            if (run.event !== "push") {
+              core.info(`Skipping alert issue for non-tag release run event: ${run.event}`);
+              return;
+            }
+
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const runId = String(run.id);
@@ -29,6 +34,24 @@ jobs:
               return;
             }
 
+            const jobsResponse = await github.rest.actions.listJobsForWorkflowRun({
+              owner,
+              repo,
+              run_id: run.id,
+              per_page: 100
+            });
+
+            const failedJobs = jobsResponse.data.jobs.filter((job) =>
+              ["failure", "cancelled", "timed_out", "action_required", "stale"].includes(job.conclusion)
+            );
+
+            const failedJobLines = failedJobs.length === 0
+              ? ["- Failed jobs: unavailable"]
+              : [
+                  "- Failed jobs:",
+                  ...failedJobs.map((job) => `  - ${job.name}: ${job.html_url}`)
+                ];
+
             const body = [
               "Release workflow reported a failure.",
               "",
@@ -38,6 +61,7 @@ jobs:
               `- SHA: ${run.head_sha}`,
               `- Triggered by: ${run.actor?.login || "unknown"}`,
               `- Conclusion: ${run.conclusion}`,
+              ...failedJobLines,
               "",
               "Action: inspect failed jobs (artifact build/publish/verification) and apply runbook rollback/retry steps."
             ].join("\n");
