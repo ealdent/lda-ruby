@@ -94,11 +94,11 @@ Delivered:
 - Rust-managed corpus session lifecycle (`Lda::RustBackend.create_corpus_session` / `drop_corpus_session`) with session-based start-aware EM orchestration (`run_em_on_session_with_start_seed`) wired in `Lda::Backends::Rust`
 - Rust-managed session settings lifecycle (`configure_corpus_session`) with settings-aware orchestration (`run_em_on_session_start`) wired in `Lda::Backends::Rust`
 - Rust session execution refactor to shared session corpus storage + borrowed orchestration helpers, eliminating deep corpus clone overhead on each session EM run
-- unified Rust session orchestration API (`run_em_on_session`) that applies settings + runs EM in one call, now preferred by `Lda::Backends::Rust`
-- `Lda::Backends::Rust` now routes all start modes through unified session orchestration when available (`run_em_on_session`); when sessions are unavailable it now prefers direct Rust non-session orchestration (`run_em_with_start_seed`) before legacy Ruby-side beta-input fallback (`run_em`)
+- unified Rust session orchestration API (`run_em_on_session`) that applies settings + runs EM in one call inside Rust session orchestration
+- `Lda::Backends::Rust` now routes session-path EM through managed Rust session orchestration (`run_em_on_session_with_corpus`), leaving session reuse/recovery decisions in Rust; when session orchestration is unavailable it still prefers direct Rust non-session orchestration (`run_em_with_start_seed`) before legacy Ruby-side beta-input fallback (`run_em`)
 - Rust managed-session orchestration API (`run_em_on_session_with_corpus`) added to recreate missing sessions and run EM in one Rust call
 - Rust session lifecycle replacement API (`replace_corpus_session`) added so corpus reassignment can update existing Rust sessions in place (config reset + corpus swap) instead of Ruby-side drop/recreate
-- `Lda::Backends::Rust` now retries missing-session runs through `run_em_on_session_with_corpus` to preserve session-based orchestration when sessions are dropped externally
+- `Lda::Backends::Rust` now keeps session-based orchestration on the managed Rust path (`run_em_on_session_with_corpus`) even when sessions are dropped externally
 - parity/compatibility test coverage and rust runtime CI
 
 Open in Phase 4:

@@ -117,51 +117,51 @@ module Lda
 
       def rust_orchestrated_em_with_session(start)
         return false unless defined?(::Lda::RustBackend)
-        return false unless ::Lda::RustBackend.respond_to?(:run_em_on_session)
         return false unless ensure_rust_corpus_session
 
         random_seed = Integer(next_random_seed)
-        if @rust_corpus_session_id
-          output = ::Lda::RustBackend.run_em_on_session(
-            Integer(@rust_corpus_session_id),
+        if ::Lda::RustBackend.respond_to?(:run_em_on_session_with_corpus)
+          managed_output = ::Lda::RustBackend.run_em_on_session_with_corpus(
+            Integer(@rust_corpus_session_id || 0),
+            @rust_document_words,
+            @rust_document_counts,
+            Integer(@rust_corpus_terms),
             start.to_s,
             *current_rust_session_config_signature,
             random_seed
           )
 
-          if valid_rust_em_output?(output, @rust_document_lengths, Integer(num_topics), Integer(@rust_corpus_terms))
-            beta_probabilities, beta_log, gamma, phi = output
-            @fallback.apply_em_state(
-              beta_probabilities: beta_probabilities,
-              beta_log: beta_log,
-              gamma: gamma,
-              phi: phi
-            )
-            return true
-          end
+          return false unless managed_output.is_a?(Array) && managed_output.size == 5
+
+          session_id, beta_probabilities, beta_log, gamma, phi = managed_output
+          return false unless session_id.is_a?(Numeric) && session_id.positive?
+
+          output = [beta_probabilities, beta_log, gamma, phi]
+          return false unless valid_rust_em_output?(output, @rust_document_lengths, Integer(num_topics), Integer(@rust_corpus_terms))
+
+          @rust_corpus_session_id = Integer(session_id)
+          @fallback.apply_em_state(
+            beta_probabilities: beta_probabilities,
+            beta_log: beta_log,
+            gamma: gamma,
+            phi: phi
+          )
+          return true
         end
 
-        return false unless ::Lda::RustBackend.respond_to?(:run_em_on_session_with_corpus)
+        return false unless ::Lda::RustBackend.respond_to?(:run_em_on_session)
+        return false unless @rust_corpus_session_id
 
-        managed_output = ::Lda::RustBackend.run_em_on_session_with_corpus(
-          Integer(@rust_corpus_session_id || 0),
-          @rust_document_words,
-          @rust_document_counts,
-          Integer(@rust_corpus_terms),
+        output = ::Lda::RustBackend.run_em_on_session(
+          Integer(@rust_corpus_session_id),
           start.to_s,
           *current_rust_session_config_signature,
           random_seed
         )
 
-        return false unless managed_output.is_a?(Array) && managed_output.size == 5
-
-        session_id, beta_probabilities, beta_log, gamma, phi = managed_output
-        return false unless session_id.is_a?(Numeric) && session_id.positive?
-
-        output = [beta_probabilities, beta_log, gamma, phi]
         return false unless valid_rust_em_output?(output, @rust_document_lengths, Integer(num_topics), Integer(@rust_corpus_terms))
 
-        @rust_corpus_session_id = Integer(session_id)
+        beta_probabilities, beta_log, gamma, phi = output
         @fallback.apply_em_state(
           beta_probabilities: beta_probabilities,
           beta_log: beta_log,

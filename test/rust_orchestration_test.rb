@@ -667,6 +667,66 @@ class RustOrchestrationTest < Test::Unit::TestCase
     backend&.corpus = nil
   end
 
+  def test_rust_backend_session_path_prefers_managed_session_entrypoint
+    backend = nil
+    rust_singleton = nil
+    run_em_on_session_alias = :__test_original_run_em_on_session_for_managed_preference__
+    run_em_on_session_with_corpus_alias = :__test_original_run_em_on_session_with_corpus_for_managed_preference__
+
+    omit("run_em_on_session unavailable") unless Lda::RustBackend.respond_to?(:run_em_on_session)
+    omit("run_em_on_session_with_corpus unavailable") unless Lda::RustBackend.respond_to?(:run_em_on_session_with_corpus)
+
+    backend = Lda::Backends::Rust.new(random_seed: 1234)
+    backend.corpus = Lda::TextCorpus.new(FIXTURE_DOCUMENTS)
+    backend.verbose = false
+    backend.num_topics = @topics
+    backend.max_iter = @max_iter
+    backend.convergence = @convergence
+    backend.em_max_iter = @em_max_iter
+    backend.em_convergence = @em_convergence
+    backend.init_alpha = @init_alpha
+
+    rust_singleton = Lda::RustBackend.singleton_class
+    run_em_on_session_calls = 0
+    run_em_on_session_with_corpus_calls = 0
+
+    silence_redefinition_warnings do
+      rust_singleton.send(:alias_method, run_em_on_session_alias, :run_em_on_session)
+      rust_singleton.send(:alias_method, run_em_on_session_with_corpus_alias, :run_em_on_session_with_corpus)
+
+      rust_singleton.send(:define_method, :run_em_on_session) do |*args|
+        run_em_on_session_calls += 1
+        public_send(run_em_on_session_alias, *args)
+      end
+
+      rust_singleton.send(:define_method, :run_em_on_session_with_corpus) do |*args|
+        run_em_on_session_with_corpus_calls += 1
+        public_send(run_em_on_session_with_corpus_alias, *args)
+      end
+    end
+
+    backend.em("seeded")
+    assert_equal 0, run_em_on_session_calls
+    assert_equal 1, run_em_on_session_with_corpus_calls
+    assert_equal @topics, backend.gamma.first.size
+  ensure
+    silence_redefinition_warnings do
+      if defined?(rust_singleton) && rust_singleton.method_defined?(run_em_on_session_with_corpus_alias)
+        rust_singleton.send(:remove_method, :run_em_on_session_with_corpus)
+        rust_singleton.send(:alias_method, :run_em_on_session_with_corpus, run_em_on_session_with_corpus_alias)
+        rust_singleton.send(:remove_method, run_em_on_session_with_corpus_alias)
+      end
+
+      if defined?(rust_singleton) && rust_singleton.method_defined?(run_em_on_session_alias)
+        rust_singleton.send(:remove_method, :run_em_on_session)
+        rust_singleton.send(:alias_method, :run_em_on_session, run_em_on_session_alias)
+        rust_singleton.send(:remove_method, run_em_on_session_alias)
+      end
+    end
+
+    backend&.corpus = nil
+  end
+
   def test_configure_corpus_session_reconfigures_topic_count
     omit("create_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:create_corpus_session)
     omit("drop_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:drop_corpus_session)
