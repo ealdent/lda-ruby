@@ -63,6 +63,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Rust session orchestration now runs on shared Rust-side corpus session data via borrowed execution helpers, avoiding deep corpus array cloning on each session EM call.
 - Unified Rust session API added (`run_em_on_session`) to apply settings and execute EM in one call inside Rust session orchestration.
 - `Lda::Backends::Rust` now prefers direct Rust non-session orchestration (`run_em_with_start_seed`) before legacy `run_em(initial_beta, ...)` compatibility fallback when a session path is unavailable.
+- Direct non-session Rust orchestration now reuses the backend's cached Rust corpus snapshot instead of rebuilding corpus arrays from `@corpus` on each fallback invocation.
 - Rust managed-session orchestration API added (`run_em_on_session_with_corpus`) to recreate missing sessions and execute EM in one Rust call.
 - Rust session lifecycle replacement API added (`replace_corpus_session`) so corpus reassignment can update existing Rust sessions in place (config reset + corpus swap) instead of Ruby-side drop/recreate.
 - `Lda::Backends::Rust` now routes session-path EM through `run_em_on_session_with_corpus`, leaving session reuse/recovery decisions in Rust and reducing fallback to non-session orchestration when sessions are externally dropped.

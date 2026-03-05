@@ -176,31 +176,32 @@ module Lda
       def rust_orchestrated_em_with_start_seed(start)
         return false unless defined?(::Lda::RustBackend)
         return false unless ::Lda::RustBackend.respond_to?(:run_em_with_start_seed)
+        return false unless ensure_rust_corpus_snapshot
 
-        em_input = rust_em_corpus_input
-        return false if em_input.nil?
+        topics = Integer(num_topics)
+        return false unless topics.positive?
 
         random_seed = Integer(next_random_seed)
         output = ::Lda::RustBackend.run_em_with_start_seed(
           start.to_s,
-          em_input.fetch(:document_words),
-          em_input.fetch(:document_counts),
-          Integer(em_input.fetch(:topics)),
-          Integer(em_input.fetch(:terms)),
+          @rust_document_words,
+          @rust_document_counts,
+          topics,
+          Integer(@rust_corpus_terms),
           Integer(max_iter),
           Float(convergence),
           Integer(em_max_iter),
           Float(em_convergence),
           Float(init_alpha),
-          Float(em_input.fetch(:min_probability)),
+          MIN_PROBABILITY,
           random_seed
         )
 
         return false unless valid_rust_em_output?(
           output,
-          em_input.fetch(:document_lengths),
-          em_input.fetch(:topics),
-          em_input.fetch(:terms)
+          @rust_document_lengths,
+          topics,
+          Integer(@rust_corpus_terms)
         )
 
         beta_probabilities, beta_log, gamma, phi = output
@@ -349,6 +350,12 @@ module Lda
       end
 
       def ensure_rust_corpus_session
+        ensure_rust_corpus_snapshot
+      rescue StandardError
+        false
+      end
+
+      def ensure_rust_corpus_snapshot
         has_session_data = @rust_corpus_terms && @rust_document_lengths && @rust_document_words && @rust_document_counts
         return true if has_session_data
 

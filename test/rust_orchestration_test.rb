@@ -667,6 +667,28 @@ class RustOrchestrationTest < Test::Unit::TestCase
     backend&.corpus = nil
   end
 
+  def test_rust_backend_direct_non_session_path_reuses_cached_corpus_snapshot
+    backend = Lda::Backends::Rust.new(random_seed: 1234)
+    backend.corpus = Lda::TextCorpus.new(FIXTURE_DOCUMENTS)
+    backend.verbose = false
+    backend.num_topics = @topics
+    backend.max_iter = @max_iter
+    backend.convergence = @convergence
+    backend.em_max_iter = @em_max_iter
+    backend.em_convergence = @em_convergence
+    backend.init_alpha = @init_alpha
+
+    backend.define_singleton_method(:rust_orchestrated_em_with_session) { |_start| false }
+    backend.define_singleton_method(:rust_em_corpus_input) do
+      raise "direct non-session path should reuse cached corpus snapshot"
+    end
+
+    backend.em("random")
+    assert_equal @topics, backend.gamma.first.size
+  ensure
+    backend&.corpus = nil
+  end
+
   def test_rust_backend_session_path_prefers_managed_session_entrypoint
     backend = nil
     rust_singleton = nil
