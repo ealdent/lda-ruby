@@ -341,7 +341,7 @@ jobs:
 
     env:
       BENCH_RUNS: "1"
-      BENCH_RUST_TO_PURE_MAX_RATIO: "0.05"
+      BENCH_RUST_TO_PURE_MAX_RATIO: "0.045"
 
     steps:
       - uses: actions/checkout@v4

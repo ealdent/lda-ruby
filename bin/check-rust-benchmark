@@ -16,7 +16,7 @@ def usage
       BENCH_TOPICS                    Number of topics (default: 8)
       BENCH_MAX_ITER                  Variational max iterations (default: 20)
       BENCH_EM_MAX_ITER               EM max iterations (default: 40)
-      BENCH_RUST_TO_PURE_MAX_RATIO    Maximum allowed rust_mean/pure_mean ratio (default: 0.05)
+      BENCH_RUST_TO_PURE_MAX_RATIO    Maximum allowed rust_mean/pure_mean ratio (default: 0.045)
   USAGE
 end
 
@@ -40,7 +40,7 @@ benchmark_env = {
   "BENCH_MAX_ITER" => ENV.fetch("BENCH_MAX_ITER", "20"),
   "BENCH_EM_MAX_ITER" => ENV.fetch("BENCH_EM_MAX_ITER", "40")
 }
-threshold = Float(ENV.fetch("BENCH_RUST_TO_PURE_MAX_RATIO", "0.05"))
+threshold = Float(ENV.fetch("BENCH_RUST_TO_PURE_MAX_RATIO", "0.045"))
 
 stdout, stderr, status = Open3.capture3(benchmark_env, *command, chdir: repo_root)
 unless status.success?
