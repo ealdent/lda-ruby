@@ -406,6 +406,18 @@ fn random_topic_term_probabilities(
     matrix
 }
 
+fn corpus_session_data(
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    terms: usize,
+) -> Arc<CorpusSessionData> {
+    Arc::new(CorpusSessionData {
+        document_words,
+        document_counts,
+        terms,
+    })
+}
+
 fn create_corpus_session(
     document_words: Vec<Vec<usize>>,
     document_counts: Vec<Vec<f64>>,
@@ -413,11 +425,7 @@ fn create_corpus_session(
 ) -> i64 {
     let session_id = NEXT_CORPUS_SESSION_ID.fetch_add(1, Ordering::Relaxed);
     let session = CorpusSession {
-        data: Arc::new(CorpusSessionData {
-            document_words,
-            document_counts,
-            terms,
-        }),
+        data: corpus_session_data(document_words, document_counts, terms),
         config: None,
     };
 
@@ -425,6 +433,42 @@ fn create_corpus_session(
         Ok(mut sessions) => {
             sessions.insert(session_id, session);
             session_id as i64
+        }
+        Err(_) => 0,
+    }
+}
+
+fn replace_corpus_session(
+    session_id: i64,
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    terms: usize,
+) -> i64 {
+    if terms == 0 {
+        return 0;
+    }
+
+    let replacement_data = corpus_session_data(document_words, document_counts, terms);
+    match corpus_sessions().lock() {
+        Ok(mut sessions) => {
+            if session_id > 0 {
+                let session_key = session_id as u64;
+                if let Some(session) = sessions.get_mut(&session_key) {
+                    session.data = replacement_data;
+                    session.config = None;
+                    return session_id;
+                }
+            }
+
+            let new_session_id = NEXT_CORPUS_SESSION_ID.fetch_add(1, Ordering::Relaxed);
+            sessions.insert(
+                new_session_id,
+                CorpusSession {
+                    data: replacement_data,
+                    config: None,
+                },
+            );
+            new_session_id as i64
         }
         Err(_) => 0,
     }
@@ -1146,6 +1190,8 @@ fn init() -> Result<(), Error> {
     )?;
     rust_backend_module
         .define_singleton_method("create_corpus_session", function!(create_corpus_session, 3))?;
+    rust_backend_module
+        .define_singleton_method("replace_corpus_session", function!(replace_corpus_session, 4))?;
     rust_backend_module
         .define_singleton_method("drop_corpus_session", function!(drop_corpus_session, 1))?;
     rust_backend_module

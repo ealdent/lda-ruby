@@ -56,10 +56,10 @@ module Lda
       end
 
       def corpus=(corpus)
-        release_rust_corpus_session
+        previous_session_id = @rust_corpus_session_id
         @corpus = corpus
         @fallback.corpus = corpus
-        register_rust_corpus_session
+        register_rust_corpus_session(previous_session_id)
         true
       end
 
@@ -291,31 +291,52 @@ module Lda
           .max || -1
       end
 
-      def register_rust_corpus_session
+      def register_rust_corpus_session(previous_session_id = nil)
         @rust_corpus_session_id = nil
         @rust_corpus_terms = nil
         @rust_document_lengths = nil
         @rust_document_words = nil
         @rust_document_counts = nil
 
+        if @corpus.nil?
+          drop_rust_corpus_session_by_id(previous_session_id)
+          return
+        end
+
         return unless defined?(::Lda::RustBackend)
 
         em_input = rust_em_corpus_input
-        return if em_input.nil?
+        if em_input.nil?
+          drop_rust_corpus_session_by_id(previous_session_id)
+          return
+        end
 
         @rust_corpus_terms = Integer(em_input.fetch(:terms))
         @rust_document_lengths = em_input.fetch(:document_lengths)
         @rust_document_words = em_input.fetch(:document_words)
         @rust_document_counts = em_input.fetch(:document_counts)
-        return unless ::Lda::RustBackend.respond_to?(:create_corpus_session)
 
-        session_id = ::Lda::RustBackend.create_corpus_session(
-          @rust_document_words,
-          @rust_document_counts,
-          Integer(@rust_corpus_terms)
-        )
-        return unless session_id.is_a?(Numeric)
-        return unless session_id.positive?
+        session_id =
+          if ::Lda::RustBackend.respond_to?(:replace_corpus_session)
+            ::Lda::RustBackend.replace_corpus_session(
+              Integer(previous_session_id || 0),
+              @rust_document_words,
+              @rust_document_counts,
+              Integer(@rust_corpus_terms)
+            )
+          elsif ::Lda::RustBackend.respond_to?(:create_corpus_session)
+            drop_rust_corpus_session_by_id(previous_session_id)
+            ::Lda::RustBackend.create_corpus_session(
+              @rust_document_words,
+              @rust_document_counts,
+              Integer(@rust_corpus_terms)
+            )
+          end
+
+        unless session_id.is_a?(Numeric) && session_id.positive?
+          drop_rust_corpus_session_by_id(previous_session_id)
+          return
+        end
 
         @rust_corpus_session_id = Integer(session_id)
       rescue StandardError
@@ -324,13 +345,14 @@ module Lda
         @rust_document_lengths = nil
         @rust_document_words = nil
         @rust_document_counts = nil
+        drop_rust_corpus_session_by_id(previous_session_id)
       end
 
       def ensure_rust_corpus_session
         has_session_data = @rust_corpus_terms && @rust_document_lengths && @rust_document_words && @rust_document_counts
         return true if has_session_data
 
-        register_rust_corpus_session
+        register_rust_corpus_session(@rust_corpus_session_id)
         @rust_corpus_terms && @rust_document_lengths && @rust_document_words && @rust_document_counts
       rescue StandardError
         false
@@ -345,6 +367,12 @@ module Lda
         @rust_document_words = nil
         @rust_document_counts = nil
 
+        drop_rust_corpus_session_by_id(session_id)
+      rescue StandardError
+        nil
+      end
+
+      def drop_rust_corpus_session_by_id(session_id)
         return unless session_id
         return unless defined?(::Lda::RustBackend)
         return unless ::Lda::RustBackend.respond_to?(:drop_corpus_session)

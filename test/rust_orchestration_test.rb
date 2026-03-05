@@ -508,6 +508,55 @@ class RustOrchestrationTest < Test::Unit::TestCase
     end
   end
 
+  def test_replace_corpus_session_updates_existing_session_in_place
+    omit("create_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:create_corpus_session)
+    omit("replace_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:replace_corpus_session)
+    omit("drop_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:drop_corpus_session)
+    omit("run_em_on_session unavailable") unless Lda::RustBackend.respond_to?(:run_em_on_session)
+
+    session_id = Lda::RustBackend.create_corpus_session(@document_words, @document_counts, @terms)
+    assert_operator session_id, :>, 0
+
+    replacement_words = [[0, 1, 2], [2, 3]]
+    replacement_counts = [[2.0, 1.0, 1.0], [1.0, 4.0]]
+    replacement_terms = 5
+    starting_count = Lda::RustBackend.corpus_session_count if Lda::RustBackend.respond_to?(:corpus_session_count)
+
+    replaced_session_id = Lda::RustBackend.replace_corpus_session(
+      session_id,
+      replacement_words,
+      replacement_counts,
+      replacement_terms
+    )
+
+    assert_equal session_id, replaced_session_id
+    if !starting_count.nil?
+      assert_equal starting_count, Lda::RustBackend.corpus_session_count
+    end
+
+    output = Lda::RustBackend.run_em_on_session(
+      replaced_session_id,
+      "seeded",
+      @topics,
+      @max_iter,
+      @convergence,
+      @em_max_iter,
+      @em_convergence,
+      @init_alpha,
+      @min_probability,
+      91_919
+    )
+
+    assert_equal replacement_terms, output[0].first.size
+    assert_equal replacement_words.size, output[2].size
+  ensure
+    if defined?(replaced_session_id) && replaced_session_id.is_a?(Numeric) && replaced_session_id.positive?
+      Lda::RustBackend.drop_corpus_session(replaced_session_id)
+    elsif defined?(session_id) && session_id.is_a?(Numeric) && session_id.positive?
+      Lda::RustBackend.drop_corpus_session(session_id)
+    end
+  end
+
   def test_rust_backend_corpus_session_lifecycle_no_leak
     omit("corpus_session_count unavailable") unless Lda::RustBackend.respond_to?(:corpus_session_count)
 
@@ -516,9 +565,16 @@ class RustOrchestrationTest < Test::Unit::TestCase
 
     backend.corpus = Lda::TextCorpus.new(FIXTURE_DOCUMENTS)
     assert_equal starting_count + 1, Lda::RustBackend.corpus_session_count
+    first_session_id = backend.instance_variable_get(:@rust_corpus_session_id)
+    assert_operator first_session_id, :>, 0
 
     backend.corpus = Lda::TextCorpus.new(FIXTURE_DOCUMENTS.reverse)
     assert_equal starting_count + 1, Lda::RustBackend.corpus_session_count
+    second_session_id = backend.instance_variable_get(:@rust_corpus_session_id)
+    assert_operator second_session_id, :>, 0
+    if Lda::RustBackend.respond_to?(:replace_corpus_session)
+      assert_equal first_session_id, second_session_id
+    end
 
     backend.corpus = nil
     assert_equal starting_count, Lda::RustBackend.corpus_session_count

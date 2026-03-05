@@ -97,6 +97,7 @@ Delivered:
 - unified Rust session orchestration API (`run_em_on_session`) that applies settings + runs EM in one call, now preferred by `Lda::Backends::Rust`
 - `Lda::Backends::Rust` now routes all start modes through unified session orchestration when available (`run_em_on_session`); when sessions are unavailable it now prefers direct Rust non-session orchestration (`run_em_with_start_seed`) before legacy Ruby-side beta-input fallback (`run_em`)
 - Rust managed-session orchestration API (`run_em_on_session_with_corpus`) added to recreate missing sessions and run EM in one Rust call
+- Rust session lifecycle replacement API (`replace_corpus_session`) added so corpus reassignment can update existing Rust sessions in place (config reset + corpus swap) instead of Ruby-side drop/recreate
 - `Lda::Backends::Rust` now retries missing-session runs through `run_em_on_session_with_corpus` to preserve session-based orchestration when sessions are dropped externally
 - parity/compatibility test coverage and rust runtime CI
 
