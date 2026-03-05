@@ -63,7 +63,8 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Rust session orchestration now runs on shared Rust-side corpus session data via borrowed execution helpers, avoiding deep corpus array cloning on each session EM call.
 - Unified Rust session API added (`run_em_on_session`) to apply settings and execute EM in one call; `Lda::Backends::Rust` now prefers this single-call session path before non-session fallbacks.
 - `Lda::Backends::Rust` now prefers direct Rust non-session orchestration (`run_em_with_start_seed`) before legacy `run_em(initial_beta, ...)` compatibility fallback when a session path is unavailable.
-- `Lda::Backends::Rust` now auto-recreates missing Rust corpus sessions before EM, reducing fallback to non-session orchestration when sessions are externally dropped.
+- Rust managed-session orchestration API added (`run_em_on_session_with_corpus`) to recreate missing sessions and execute EM in one Rust call.
+- `Lda::Backends::Rust` now retries missing-session runs through `run_em_on_session_with_corpus`, reducing fallback to non-session orchestration when sessions are externally dropped.
 - Dockerized rust runtime workflow added for local parity with CI (`Dockerfile.rust`, `bin/docker-test-rust`).
 - Gem packaging now excludes local Rust cargo build artifacts (`target/**`) for clean release builds.
 - Backend benchmark driver added (`bin/benchmark-backends`) to track pure/native/rust runtime deltas.

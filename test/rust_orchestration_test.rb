@@ -454,6 +454,60 @@ class RustOrchestrationTest < Test::Unit::TestCase
     assert_equal true, Lda::RustBackend.drop_corpus_session(session_id)
   end
 
+  def test_run_em_on_session_with_corpus_recreates_missing_session
+    omit("create_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:create_corpus_session)
+    omit("drop_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:drop_corpus_session)
+    omit("run_em_on_session_with_corpus unavailable") unless Lda::RustBackend.respond_to?(:run_em_on_session_with_corpus)
+    omit("run_em_with_start_seed unavailable") unless Lda::RustBackend.respond_to?(:run_em_with_start_seed)
+
+    recreated_session_id = nil
+    session_id = Lda::RustBackend.create_corpus_session(@document_words, @document_counts, @terms)
+    assert_operator session_id, :>, 0
+    assert_equal true, Lda::RustBackend.drop_corpus_session(session_id)
+
+    managed = Lda::RustBackend.run_em_on_session_with_corpus(
+      session_id,
+      @document_words,
+      @document_counts,
+      @terms,
+      "seeded",
+      @topics,
+      @max_iter,
+      @convergence,
+      @em_max_iter,
+      @em_convergence,
+      @init_alpha,
+      @min_probability,
+      6161
+    )
+
+    assert_equal 5, managed.size
+    recreated_session_id = managed[0]
+    assert_operator recreated_session_id, :>, 0
+    assert_not_equal session_id, recreated_session_id
+
+    direct = Lda::RustBackend.run_em_with_start_seed(
+      "seeded",
+      @document_words,
+      @document_counts,
+      @topics,
+      @terms,
+      @max_iter,
+      @convergence,
+      @em_max_iter,
+      @em_convergence,
+      @init_alpha,
+      @min_probability,
+      6161
+    )
+
+    assert_nested_close(direct, managed[1..], 1e-12)
+  ensure
+    if recreated_session_id && recreated_session_id.positive?
+      Lda::RustBackend.drop_corpus_session(recreated_session_id)
+    end
+  end
+
   def test_rust_backend_corpus_session_lifecycle_no_leak
     omit("corpus_session_count unavailable") unless Lda::RustBackend.respond_to?(:corpus_session_count)
 

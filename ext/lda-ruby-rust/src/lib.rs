@@ -91,6 +91,21 @@ fn corpus_session_exists(session_id: i64) -> bool {
     }
 }
 
+fn empty_em_output() -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
+    (Vec::new(), Vec::new(), Vec::new(), Vec::new())
+}
+
+fn empty_managed_session_em_output(
+) -> (
+    i64,
+    Vec<Vec<f64>>,
+    Vec<Vec<f64>>,
+    Vec<Vec<f64>>,
+    Vec<Vec<Vec<f64>>>,
+) {
+    (0, Vec::new(), Vec::new(), Vec::new(), Vec::new())
+}
+
 struct XorShift64 {
     state: u64,
 }
@@ -415,6 +430,23 @@ fn create_corpus_session(
     }
 }
 
+fn ensure_corpus_session(
+    session_id: i64,
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    terms: usize,
+) -> i64 {
+    if terms == 0 {
+        return 0;
+    }
+
+    if session_id > 0 && corpus_session_exists(session_id) {
+        return session_id;
+    }
+
+    create_corpus_session(document_words, document_counts, terms)
+}
+
 fn drop_corpus_session(session_id: i64) -> bool {
     if session_id <= 0 {
         return false;
@@ -477,7 +509,7 @@ fn run_em_on_session_with_start_seed(
     random_seed: i64,
 ) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
     if session_id <= 0 {
-        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        return empty_em_output();
     }
 
     let session_key = session_id as u64;
@@ -489,7 +521,7 @@ fn run_em_on_session_with_start_seed(
     };
 
     let Some(session_data) = session_data else {
-        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        return empty_em_output();
     };
 
     run_em_with_start_seed_internal(
@@ -521,7 +553,7 @@ fn run_em_on_session(
     random_seed: i64,
 ) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
     if session_id <= 0 || topics == 0 {
-        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        return empty_em_output();
     }
 
     let desired_config = SessionConfig {
@@ -538,7 +570,7 @@ fn run_em_on_session(
     let session_data = match corpus_sessions().lock() {
         Ok(mut sessions) => {
             let Some(session) = sessions.get_mut(&session_key) else {
-                return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+                return empty_em_output();
             };
 
             if session.config.as_ref() != Some(&desired_config) {
@@ -547,7 +579,7 @@ fn run_em_on_session(
 
             Arc::clone(&session.data)
         }
-        Err(_) => return (Vec::new(), Vec::new(), Vec::new(), Vec::new()),
+        Err(_) => return empty_em_output(),
     };
 
     run_em_with_start_seed_internal(
@@ -566,13 +598,64 @@ fn run_em_on_session(
     )
 }
 
+fn run_em_on_session_with_corpus(
+    session_id: i64,
+    document_words: Vec<Vec<usize>>,
+    document_counts: Vec<Vec<f64>>,
+    terms: usize,
+    start: String,
+    topics: usize,
+    max_iter: i64,
+    convergence: f64,
+    em_max_iter: i64,
+    em_convergence: f64,
+    init_alpha: f64,
+    min_probability: f64,
+    random_seed: i64,
+) -> (
+    i64,
+    Vec<Vec<f64>>,
+    Vec<Vec<f64>>,
+    Vec<Vec<f64>>,
+    Vec<Vec<Vec<f64>>>,
+) {
+    if topics == 0 || terms == 0 {
+        return empty_managed_session_em_output();
+    }
+
+    let active_session_id =
+        ensure_corpus_session(session_id, document_words, document_counts, terms);
+    if active_session_id <= 0 {
+        return empty_managed_session_em_output();
+    }
+
+    let (beta_probabilities, beta_log, gamma, phi) = run_em_on_session(
+        active_session_id,
+        start,
+        topics,
+        max_iter,
+        convergence,
+        em_max_iter,
+        em_convergence,
+        init_alpha,
+        min_probability,
+        random_seed,
+    );
+
+    if beta_probabilities.is_empty() && beta_log.is_empty() && gamma.is_empty() && phi.is_empty() {
+        return empty_managed_session_em_output();
+    }
+
+    (active_session_id, beta_probabilities, beta_log, gamma, phi)
+}
+
 fn run_em_on_session_start(
     session_id: i64,
     start: String,
     random_seed: i64,
 ) -> (Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<f64>>, Vec<Vec<Vec<f64>>>) {
     if session_id <= 0 {
-        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        return empty_em_output();
     }
 
     let session_key = session_id as u64;
@@ -587,11 +670,11 @@ fn run_em_on_session_start(
     };
 
     let Some((session_data, config)) = session_data else {
-        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        return empty_em_output();
     };
 
     let Some(config) = config else {
-        return (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        return empty_em_output();
     };
 
     run_em_with_start_seed_internal(
@@ -1077,6 +1160,8 @@ fn init() -> Result<(), Error> {
         function!(run_em_on_session_with_start_seed, 10),
     )?;
     rust_backend_module.define_singleton_method("run_em_on_session", function!(run_em_on_session, 10))?;
+    rust_backend_module
+        .define_singleton_method("run_em_on_session_with_corpus", function!(run_em_on_session_with_corpus, 13))?;
     rust_backend_module
         .define_singleton_method("run_em_on_session_start", function!(run_em_on_session_start, 3))?;
 
