@@ -85,7 +85,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - RubyGems credential preflight helper added (`bin/verify-rubygems-api-key`) for CI-safe publish key validation.
 - Post-publish verification helper added (`bin/verify-release-publish`) to validate RubyGems + GitHub release artifacts by tag.
 - CI precompiled guardrail job added (`precompiled-gem-build`) for full release-blocking platform packaging checks (Linux, Linux musl, macOS Intel, macOS Apple Silicon, Windows).
-- macOS precompiled CI/release lanes now pin LLVM `18.1.8` (`install-llvm-action`) and derive `LIBCLANG_PATH` from `llvm-config` to avoid bindgen breakage from Homebrew LLVM drift.
+- macOS precompiled CI/release lanes now pin Homebrew `llvm@18` (with fallback to `llvm`) and export `LIBCLANG_PATH` from the selected prefix to avoid bindgen breakage from Homebrew LLVM drift.
 - Release workflow post-publish verification job added (`verify_published_artifacts`).
 - Release failure alert workflow added (`.github/workflows/release-failure-alert.yml`) to open issue alerts for failed tag-triggered `release.yml` runs and auto-close matching alerts when reruns succeed.
 - Maintainer release runbook added (`docs/release-runbook.md`) with publish and rollback/yank procedures.

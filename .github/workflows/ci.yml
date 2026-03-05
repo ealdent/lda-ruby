@@ -229,19 +229,23 @@ jobs:
         if: ${{ matrix.kind == 'linux' }}
         run: sudo apt-get update && sudo apt-get install -y clang libclang-dev pkg-config
 
-      - name: Install LLVM (bindgen dependency)
-        if: ${{ matrix.kind == 'windows' || matrix.kind == 'macos' }}
-        uses: KyleMayes/install-llvm-action@v2
-        with:
-          version: "18.1.8"
-
-      - name: Export LIBCLANG_PATH (macOS)
+      - name: Install Rust bindgen dependencies (macOS)
         if: ${{ matrix.kind == 'macos' }}
         shell: bash
         run: |
-          llvm_bin="$(dirname "$(command -v llvm-config)")"
-          llvm_root="$(cd "${llvm_bin}/.." && pwd)"
-          echo "LIBCLANG_PATH=${llvm_root}/lib" >> "${GITHUB_ENV}"
+          if brew install llvm@18; then
+            llvm_prefix="$(brew --prefix llvm@18)"
+          else
+            brew install llvm
+            llvm_prefix="$(brew --prefix llvm)"
+          fi
+          echo "LIBCLANG_PATH=${llvm_prefix}/lib" >> "${GITHUB_ENV}"
+
+      - name: Install LLVM (bindgen dependency)
+        if: ${{ matrix.kind == 'windows' }}
+        uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: "18.1.8"
 
       - name: Configure bindgen include paths for Windows Ruby headers
         if: ${{ matrix.kind == 'windows' }}
