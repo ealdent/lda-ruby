@@ -145,6 +145,7 @@ Candidate expansion workflow:
    - environment-gated `publish_github_release`
    - `verify_published_artifacts`
    - on failed tag-triggered `release.yml` runs, `.github/workflows/release-failure-alert.yml` opens a triage issue with failed job links
+   - if the same release run later succeeds (for example via rerun), the alert issue is auto-closed by `.github/workflows/release-failure-alert.yml`
 4. Approve the protected `release` environment when prompted.
 5. Confirm published outputs:
    - RubyGems shows `lda-ruby` `0.4.0` source gem and platform gems

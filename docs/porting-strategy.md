@@ -86,7 +86,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Post-publish verification helper added (`bin/verify-release-publish`) to validate RubyGems + GitHub release artifacts by tag.
 - CI precompiled guardrail job added (`precompiled-gem-build`) for full release-blocking platform packaging checks (Linux, Linux musl, macOS Intel, macOS Apple Silicon, Windows).
 - Release workflow post-publish verification job added (`verify_published_artifacts`).
-- Release failure alert workflow added (`.github/workflows/release-failure-alert.yml`) to open issue alerts for failed tag-triggered `release.yml` runs.
+- Release failure alert workflow added (`.github/workflows/release-failure-alert.yml`) to open issue alerts for failed tag-triggered `release.yml` runs and auto-close matching alerts when reruns succeed.
 - Maintainer release runbook added (`docs/release-runbook.md`) with publish and rollback/yank procedures.
 - Precompiled platform support policy added (`docs/precompiled-platform-policy.md`).
 

@@ -128,6 +128,7 @@ Delivered:
 - tag-driven release workflow (`.github/workflows/release.yml`)
 - release failure alert workflow (`.github/workflows/release-failure-alert.yml`)
   - tuned to create issues only for failed tag-triggered release runs, with failed job links in alert body
+  - now auto-closes matching alert issues when the same release run later reports success
 - maintainer release runbook (`docs/release-runbook.md`)
 - manual precompiled candidate workflow now validated on both lanes (`precompiled-candidate-evaluation.yml` run `22556129503`)
 - manual precompiled candidate workflow now validated with runtime checks on both lanes (`precompiled-candidate-evaluation.yml` run `22556206925`)
@@ -149,7 +150,6 @@ Delivered:
 Open in Phase 5:
 
 - optional expansion of precompiled targets beyond current Linux/macOS/Windows/musl set
-- automated alerts/notifications for release artifact publish failures
 
 ## Validation Commands
 
@@ -211,7 +211,7 @@ Priority 2:
 
 Priority 3:
 
-- monitor tuned release-failure issue alerting (`.github/workflows/release-failure-alert.yml`) and adjust signal/noise as release cadence grows
+- monitor release-failure auto-alert and auto-close behavior (`.github/workflows/release-failure-alert.yml`) and adjust signal/noise as release cadence grows
 
 ## Resume Instructions For A New Conversation
 
