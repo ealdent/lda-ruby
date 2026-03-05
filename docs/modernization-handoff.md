@@ -139,6 +139,7 @@ Delivered:
   - dual Rust DLL artifact-name staging support (`lda_ruby_rust.dll` and `liblda_ruby_rust.dll`)
 - CI jobs for packaged-gem fallback, rust-enabled checks, and manifest checks
 - CI precompiled gem build guardrail job (`precompiled-gem-build`) aligned to the full release-blocking precompiled matrix
+- macOS precompiled CI/release lanes now pin LLVM `18.1.8` (`install-llvm-action`) and derive `LIBCLANG_PATH` from `llvm-config` to avoid bindgen breakage from Homebrew LLVM drift
 - release workflow matrix for precompiled gems:
   - `x86_64-linux`
   - `x86_64-linux-musl`
