@@ -221,7 +221,32 @@ module Lda
         return false unless defined?(::Lda::RustBackend)
         return false unless ::Lda::RustBackend.respond_to?(:run_em)
 
-        em_input = @fallback.rust_em_input(start)
+        em_input =
+          if ensure_rust_corpus_snapshot && @fallback.respond_to?(:rust_initial_beta_probabilities)
+            topics = Integer(num_topics)
+            terms = Integer(@rust_corpus_terms)
+            initial_beta_probabilities = @fallback.rust_initial_beta_probabilities(
+              start,
+              @rust_document_words,
+              @rust_document_counts,
+              topics,
+              terms
+            )
+
+            {
+              topics: topics,
+              terms: terms,
+              document_words: @rust_document_words,
+              document_counts: @rust_document_counts,
+              document_totals: @rust_document_counts.map { |counts| counts.sum.to_f },
+              document_lengths: @rust_document_lengths,
+              initial_beta_probabilities: initial_beta_probabilities,
+              min_probability: MIN_PROBABILITY
+            }
+          else
+            @fallback.rust_em_input(start)
+          end
+
         return true if em_input.nil?
 
         output = ::Lda::RustBackend.run_em(

@@ -97,6 +97,7 @@ Delivered:
 - unified Rust session orchestration API (`run_em_on_session`) that applies settings + runs EM in one call inside Rust session orchestration
 - `Lda::Backends::Rust` now routes cached-corpus EM through managed Rust orchestration (`run_em_on_session_with_corpus`), leaving session reuse/recovery decisions in Rust and preferring that managed path even when no active session id is cached locally; when the managed API is unavailable it still prefers direct Rust non-session orchestration (`run_em_with_start_seed`) before legacy Ruby-side beta-input fallback (`run_em`)
 - direct non-session Rust orchestration now reuses the backend's cached Rust corpus snapshot instead of rebuilding corpus arrays from `@corpus` on each fallback invocation
+- legacy Rust beta-input compatibility fallback now also reuses the backend's cached Rust corpus snapshot, only asking the pure-Ruby backend to synthesize the initial beta matrix
 - Rust managed-session orchestration API (`run_em_on_session_with_corpus`) added to recreate missing sessions and run EM in one Rust call, and now directly falls back to start-aware array execution inside Rust if session-backed execution cannot be used
 - Rust session lifecycle replacement API (`replace_corpus_session`) added so corpus reassignment can update existing Rust sessions in place (config reset + corpus swap) instead of Ruby-side drop/recreate
 - `Lda::Backends::Rust` now keeps session-based orchestration on the managed Rust path (`run_em_on_session_with_corpus`) even when sessions are dropped externally

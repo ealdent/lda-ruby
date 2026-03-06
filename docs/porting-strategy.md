@@ -68,6 +68,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Rust session lifecycle replacement API added (`replace_corpus_session`) so corpus reassignment can update existing Rust sessions in place (config reset + corpus swap) instead of Ruby-side drop/recreate.
 - `Lda::Backends::Rust` now routes cached-corpus EM through `run_em_on_session_with_corpus`, leaving session reuse/recovery decisions in Rust, preferring that managed path even when no active session id is cached locally, and reducing Ruby-side fallback branching when sessions are externally dropped.
 - `run_em_on_session_with_corpus` now acts as a unified Rust managed-corpus entrypoint: it attempts session-backed execution first, then falls back to direct start-aware array execution inside Rust when a managed session cannot be used.
+- Legacy `run_em(initial_beta, ...)` compatibility fallback now reuses the Rust backend's cached corpus snapshot and only relies on the pure-Ruby backend to synthesize the initial beta matrix.
 - Dockerized rust runtime workflow added for local parity with CI (`Dockerfile.rust`, `bin/docker-test-rust`).
 - Gem packaging now excludes local Rust cargo build artifacts (`target/**`) for clean release builds.
 - Backend benchmark driver added (`bin/benchmark-backends`) to track pure/native/rust runtime deltas.

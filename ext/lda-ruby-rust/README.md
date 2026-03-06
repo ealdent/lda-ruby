@@ -21,6 +21,7 @@ Current scope:
   - `Lda::RustBackend.seeded_topic_term_probabilities(document_words, document_counts, topics, terms, min_probability)`
   - `Lda::RustBackend.random_topic_term_probabilities(topics, terms, min_probability, random_seed)`
   - `Lda::RustBackend.create_corpus_session(document_words, document_counts, terms)`
+  - `Lda::RustBackend.replace_corpus_session(session_id, document_words, document_counts, terms)`
   - `Lda::RustBackend.drop_corpus_session(session_id)`
   - `Lda::RustBackend.configure_corpus_session(session_id, topics, max_iter, convergence, em_max_iter, em_convergence, init_alpha, min_probability)`
   - `Lda::RustBackend.run_em(initial_beta, document_words, document_counts, max_iter, convergence, em_max_iter, em_convergence, init_alpha, min_probability)`
@@ -29,6 +30,7 @@ Current scope:
   - `Lda::RustBackend.run_em_on_session(session_id, start, topics, max_iter, convergence, em_max_iter, em_convergence, init_alpha, min_probability, random_seed)`
   - `Lda::RustBackend.run_em_on_session_start(session_id, start, random_seed)`
   - `Lda::RustBackend.run_em_on_session_with_start_seed(session_id, start, topics, max_iter, convergence, em_max_iter, em_convergence, init_alpha, min_probability, random_seed)`
+  - `Lda::RustBackend.run_em_on_session_with_corpus(session_id, document_words, document_counts, terms, start, topics, max_iter, convergence, em_max_iter, em_convergence, init_alpha, min_probability, random_seed)`
 
 Hot-path kernels currently executed in Rust when `backend: :rust` is active:
 - topic weights for a word across topics
@@ -46,7 +48,9 @@ Hot-path kernels currently executed in Rust when `backend: :rust` is active:
 - unified session-settings orchestration (`run_em_on_session`) that applies settings and executes EM in one call
 - session-based EM orchestration against Rust-managed corpus lifecycle (`create_corpus_session` + `run_em_on_session_with_start_seed`)
 - settings-aware session orchestration (`configure_corpus_session` + `run_em_on_session_start`)
-- `Lda::Backends::Rust` prefers `run_em_with_start_seed` for direct non-session orchestration when session orchestration is unavailable
+- managed corpus orchestration (`run_em_on_session_with_corpus`) that can recreate missing sessions and, if session-backed execution cannot be used, falls back internally to direct start-aware execution inside Rust
+- `Lda::Backends::Rust` prefers `run_em_on_session_with_corpus` whenever a cached Rust corpus snapshot is available, even if no session id is currently cached locally
+- direct and legacy beta-input compatibility fallbacks both reuse the backend's cached Rust corpus snapshot instead of rebuilding corpus arrays in Ruby
 - unknown EM start modes in seed-aware orchestration follow Ruby's non-seeded fallback behavior (seeded by explicit `random_seed`)
 
 Remaining numeric LDA kernels are still provided by the pure Ruby backend and will move incrementally.

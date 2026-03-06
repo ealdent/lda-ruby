@@ -16,6 +16,7 @@ Current parity expectations:
 - `Lda::Backends::Rust` cached-corpus EM should prefer the managed Rust session entrypoint (`run_em_on_session_with_corpus`) even when no active session id is cached locally, rather than branching in Ruby between session-only, recovery, and direct paths.
 - `Lda::Backends::Rust` non-session fallback should prefer Rust start-aware orchestration (`run_em_with_start_seed`) before legacy beta-input orchestration (`run_em`).
 - Direct non-session fallback should reuse the backend's cached Rust corpus snapshot rather than rebuilding corpus arrays from `@corpus` for each invocation.
+- Legacy beta-input compatibility fallback should also reuse the backend's cached Rust corpus snapshot rather than rebuilding full EM corpus input in Ruby.
 - Rust backend corpus/session lifecycle must not leak session count across corpus replacement.
 - Missing-session recovery in managed session orchestration (`run_em_on_session_with_corpus`) must recreate a usable session and keep parity with direct orchestration.
 - Managed Rust corpus orchestration (`run_em_on_session_with_corpus`) must keep parity with direct orchestration even when it falls back internally from session-backed execution to start-seeded array execution.

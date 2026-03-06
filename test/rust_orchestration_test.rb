@@ -689,6 +689,74 @@ class RustOrchestrationTest < Test::Unit::TestCase
     backend&.corpus = nil
   end
 
+  def test_rust_backend_beta_fallback_reuses_cached_corpus_snapshot
+    backend = nil
+    fallback = nil
+    fallback_singleton = nil
+    rust_em_input_alias = :__test_original_rust_em_input_for_beta_snapshot__
+    rust_initial_beta_alias = :__test_original_rust_initial_beta_for_beta_snapshot__
+
+    backend = Lda::Backends::Rust.new(random_seed: 1234)
+    backend.corpus = Lda::TextCorpus.new(FIXTURE_DOCUMENTS)
+    backend.verbose = false
+    backend.num_topics = @topics
+    backend.max_iter = @max_iter
+    backend.convergence = @convergence
+    backend.em_max_iter = @em_max_iter
+    backend.em_convergence = @em_convergence
+    backend.init_alpha = @init_alpha
+
+    backend.define_singleton_method(:rust_orchestrated_em_with_managed_corpus) { |_start| false }
+    backend.define_singleton_method(:rust_orchestrated_em_with_start_seed) { |_start| false }
+
+    cached_document_words = backend.instance_variable_get(:@rust_document_words)
+    cached_document_counts = backend.instance_variable_get(:@rust_document_counts)
+    cached_terms = backend.instance_variable_get(:@rust_corpus_terms)
+    expected_topics = @topics
+
+    fallback = backend.instance_variable_get(:@fallback)
+    fallback_singleton = fallback.singleton_class
+    used_cached_snapshot = false
+
+    silence_redefinition_warnings do
+      fallback_singleton.send(:alias_method, rust_em_input_alias, :rust_em_input)
+      fallback_singleton.send(:alias_method, rust_initial_beta_alias, :rust_initial_beta_probabilities)
+
+      fallback_singleton.send(:define_method, :rust_em_input) do |_start|
+        raise "beta fallback should not rebuild full rust_em_input when snapshot is cached"
+      end
+
+      fallback_singleton.send(:define_method, :rust_initial_beta_probabilities) do |start, document_words, document_counts, topics, terms|
+        used_cached_snapshot =
+          document_words.equal?(cached_document_words) &&
+          document_counts.equal?(cached_document_counts) &&
+          topics == expected_topics &&
+          terms == cached_terms
+        public_send(rust_initial_beta_alias, start, document_words, document_counts, topics, terms)
+      end
+    end
+
+    backend.em("random")
+    assert_equal true, used_cached_snapshot
+    assert_equal @topics, backend.gamma.first.size
+  ensure
+    silence_redefinition_warnings do
+      if defined?(fallback_singleton) && fallback_singleton.method_defined?(rust_initial_beta_alias)
+        fallback_singleton.send(:remove_method, :rust_initial_beta_probabilities)
+        fallback_singleton.send(:alias_method, :rust_initial_beta_probabilities, rust_initial_beta_alias)
+        fallback_singleton.send(:remove_method, rust_initial_beta_alias)
+      end
+
+      if defined?(fallback_singleton) && fallback_singleton.method_defined?(rust_em_input_alias)
+        fallback_singleton.send(:remove_method, :rust_em_input)
+        fallback_singleton.send(:alias_method, :rust_em_input, rust_em_input_alias)
+        fallback_singleton.send(:remove_method, rust_em_input_alias)
+      end
+    end
+
+    backend&.corpus = nil
+  end
+
   def test_rust_backend_prefers_managed_corpus_entrypoint_without_active_session
     backend = nil
     rust_singleton = nil

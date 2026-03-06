@@ -59,6 +59,23 @@ module Lda
         build_em_input(start)
       end
 
+      # Returns only the initial beta matrix for Rust compatibility paths that
+      # already hold a cached corpus snapshot.
+      def rust_initial_beta_probabilities(start, document_words, document_counts, topics, terms)
+        start_mode = start.to_s
+
+        if start_mode.strip.casecmp("seeded").zero? || start_mode.strip.casecmp("deterministic").zero?
+          seeded_topic_term_probabilities(
+            Integer(topics),
+            Integer(terms),
+            document_words,
+            document_counts
+          )
+        else
+          initial_topic_term_probabilities(Integer(topics), Integer(terms))
+        end
+      end
+
       def em_from_input(em_input)
         return nil if em_input.nil?
 
@@ -129,13 +146,6 @@ module Lda
         document_words = @corpus.documents.map { |document| document.words.map(&:to_i) }
         document_counts = @corpus.documents.map { |document| document.counts.map(&:to_f) }
 
-        initial_beta_probabilities =
-          if start.to_s.strip.casecmp("seeded").zero? || start.to_s.strip.casecmp("deterministic").zero?
-            seeded_topic_term_probabilities(topics, terms, document_words, document_counts)
-          else
-            initial_topic_term_probabilities(topics, terms)
-          end
-
         {
           topics: topics,
           terms: terms,
@@ -143,7 +153,13 @@ module Lda
           document_counts: document_counts,
           document_totals: document_counts.map { |counts| counts.sum.to_f },
           document_lengths: document_words.map(&:length),
-          initial_beta_probabilities: initial_beta_probabilities,
+          initial_beta_probabilities: rust_initial_beta_probabilities(
+            start,
+            document_words,
+            document_counts,
+            topics,
+            terms
+          ),
           min_probability: MIN_PROBABILITY
         }
       end
