@@ -407,20 +407,20 @@ fn random_topic_term_probabilities(
 }
 
 fn corpus_session_data(
-    document_words: Vec<Vec<usize>>,
-    document_counts: Vec<Vec<f64>>,
+    document_words: &[Vec<usize>],
+    document_counts: &[Vec<f64>],
     terms: usize,
 ) -> Arc<CorpusSessionData> {
     Arc::new(CorpusSessionData {
-        document_words,
-        document_counts,
+        document_words: document_words.to_vec(),
+        document_counts: document_counts.to_vec(),
         terms,
     })
 }
 
-fn create_corpus_session(
-    document_words: Vec<Vec<usize>>,
-    document_counts: Vec<Vec<f64>>,
+fn create_corpus_session_internal(
+    document_words: &[Vec<usize>],
+    document_counts: &[Vec<f64>],
     terms: usize,
 ) -> i64 {
     let session_id = NEXT_CORPUS_SESSION_ID.fetch_add(1, Ordering::Relaxed);
@@ -438,10 +438,18 @@ fn create_corpus_session(
     }
 }
 
-fn replace_corpus_session(
-    session_id: i64,
+fn create_corpus_session(
     document_words: Vec<Vec<usize>>,
     document_counts: Vec<Vec<f64>>,
+    terms: usize,
+) -> i64 {
+    create_corpus_session_internal(document_words.as_slice(), document_counts.as_slice(), terms)
+}
+
+fn replace_corpus_session_internal(
+    session_id: i64,
+    document_words: &[Vec<usize>],
+    document_counts: &[Vec<f64>],
     terms: usize,
 ) -> i64 {
     if terms == 0 {
@@ -474,10 +482,24 @@ fn replace_corpus_session(
     }
 }
 
-fn ensure_corpus_session(
+fn replace_corpus_session(
     session_id: i64,
     document_words: Vec<Vec<usize>>,
     document_counts: Vec<Vec<f64>>,
+    terms: usize,
+) -> i64 {
+    replace_corpus_session_internal(
+        session_id,
+        document_words.as_slice(),
+        document_counts.as_slice(),
+        terms,
+    )
+}
+
+fn ensure_corpus_session(
+    session_id: i64,
+    document_words: &[Vec<usize>],
+    document_counts: &[Vec<f64>],
     terms: usize,
 ) -> i64 {
     if terms == 0 {
@@ -488,7 +510,7 @@ fn ensure_corpus_session(
         return session_id;
     }
 
-    create_corpus_session(document_words, document_counts, terms)
+    create_corpus_session_internal(document_words, document_counts, terms)
 }
 
 fn drop_corpus_session(session_id: i64) -> bool {
@@ -667,16 +689,42 @@ fn run_em_on_session_with_corpus(
         return empty_managed_session_em_output();
     }
 
-    let active_session_id =
-        ensure_corpus_session(session_id, document_words, document_counts, terms);
-    if active_session_id <= 0 {
-        return empty_managed_session_em_output();
+    let active_session_id = ensure_corpus_session(
+        session_id,
+        document_words.as_slice(),
+        document_counts.as_slice(),
+        terms,
+    );
+
+    if active_session_id > 0 {
+        let (beta_probabilities, beta_log, gamma, phi) = run_em_on_session(
+            active_session_id,
+            start.clone(),
+            topics,
+            max_iter,
+            convergence,
+            em_max_iter,
+            em_convergence,
+            init_alpha,
+            min_probability,
+            random_seed,
+        );
+
+        if !(beta_probabilities.is_empty()
+            && beta_log.is_empty()
+            && gamma.is_empty()
+            && phi.is_empty())
+        {
+            return (active_session_id, beta_probabilities, beta_log, gamma, phi);
+        }
     }
 
-    let (beta_probabilities, beta_log, gamma, phi) = run_em_on_session(
-        active_session_id,
-        start,
+    let (beta_probabilities, beta_log, gamma, phi) = run_em_with_start_seed_internal(
+        start.as_str(),
+        document_words.as_slice(),
+        document_counts.as_slice(),
         topics,
+        terms,
         max_iter,
         convergence,
         em_max_iter,

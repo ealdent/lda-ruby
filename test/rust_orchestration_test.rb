@@ -623,8 +623,8 @@ class RustOrchestrationTest < Test::Unit::TestCase
     backend.em_convergence = @em_convergence
     backend.init_alpha = @init_alpha
 
-    # Force the direct non-session orchestration path.
-    backend.define_singleton_method(:ensure_rust_corpus_session) { false }
+    # Force the direct non-managed orchestration path.
+    backend.define_singleton_method(:rust_orchestrated_em_with_managed_corpus) { |_start| false }
 
     rust_singleton = Lda::RustBackend.singleton_class
     run_em_calls = 0
@@ -678,7 +678,7 @@ class RustOrchestrationTest < Test::Unit::TestCase
     backend.em_convergence = @em_convergence
     backend.init_alpha = @init_alpha
 
-    backend.define_singleton_method(:rust_orchestrated_em_with_session) { |_start| false }
+    backend.define_singleton_method(:rust_orchestrated_em_with_managed_corpus) { |_start| false }
     backend.define_singleton_method(:rust_em_corpus_input) do
       raise "direct non-session path should reuse cached corpus snapshot"
     end
@@ -689,14 +689,17 @@ class RustOrchestrationTest < Test::Unit::TestCase
     backend&.corpus = nil
   end
 
-  def test_rust_backend_session_path_prefers_managed_session_entrypoint
+  def test_rust_backend_prefers_managed_corpus_entrypoint_without_active_session
     backend = nil
     rust_singleton = nil
     run_em_on_session_alias = :__test_original_run_em_on_session_for_managed_preference__
     run_em_on_session_with_corpus_alias = :__test_original_run_em_on_session_with_corpus_for_managed_preference__
+    run_em_with_start_seed_alias = :__test_original_run_em_with_start_seed_for_managed_preference__
 
     omit("run_em_on_session unavailable") unless Lda::RustBackend.respond_to?(:run_em_on_session)
     omit("run_em_on_session_with_corpus unavailable") unless Lda::RustBackend.respond_to?(:run_em_on_session_with_corpus)
+    omit("run_em_with_start_seed unavailable") unless Lda::RustBackend.respond_to?(:run_em_with_start_seed)
+    omit("drop_corpus_session unavailable") unless Lda::RustBackend.respond_to?(:drop_corpus_session)
 
     backend = Lda::Backends::Rust.new(random_seed: 1234)
     backend.corpus = Lda::TextCorpus.new(FIXTURE_DOCUMENTS)
@@ -708,13 +711,20 @@ class RustOrchestrationTest < Test::Unit::TestCase
     backend.em_convergence = @em_convergence
     backend.init_alpha = @init_alpha
 
+    dropped_session_id = backend.instance_variable_get(:@rust_corpus_session_id)
+    assert_operator dropped_session_id, :>, 0
+    assert_equal true, Lda::RustBackend.drop_corpus_session(dropped_session_id)
+    backend.instance_variable_set(:@rust_corpus_session_id, nil)
+
     rust_singleton = Lda::RustBackend.singleton_class
     run_em_on_session_calls = 0
     run_em_on_session_with_corpus_calls = 0
+    run_em_with_start_seed_calls = 0
 
     silence_redefinition_warnings do
       rust_singleton.send(:alias_method, run_em_on_session_alias, :run_em_on_session)
       rust_singleton.send(:alias_method, run_em_on_session_with_corpus_alias, :run_em_on_session_with_corpus)
+      rust_singleton.send(:alias_method, run_em_with_start_seed_alias, :run_em_with_start_seed)
 
       rust_singleton.send(:define_method, :run_em_on_session) do |*args|
         run_em_on_session_calls += 1
@@ -725,14 +735,30 @@ class RustOrchestrationTest < Test::Unit::TestCase
         run_em_on_session_with_corpus_calls += 1
         public_send(run_em_on_session_with_corpus_alias, *args)
       end
+
+      rust_singleton.send(:define_method, :run_em_with_start_seed) do |*args|
+        run_em_with_start_seed_calls += 1
+        public_send(run_em_with_start_seed_alias, *args)
+      end
     end
 
     backend.em("seeded")
     assert_equal 0, run_em_on_session_calls
     assert_equal 1, run_em_on_session_with_corpus_calls
+    assert_equal 0, run_em_with_start_seed_calls
     assert_equal @topics, backend.gamma.first.size
+
+    recreated_session_id = backend.instance_variable_get(:@rust_corpus_session_id)
+    assert_operator recreated_session_id, :>, 0
+    assert_not_equal dropped_session_id, recreated_session_id
   ensure
     silence_redefinition_warnings do
+      if defined?(rust_singleton) && rust_singleton.method_defined?(run_em_with_start_seed_alias)
+        rust_singleton.send(:remove_method, :run_em_with_start_seed)
+        rust_singleton.send(:alias_method, :run_em_with_start_seed, run_em_with_start_seed_alias)
+        rust_singleton.send(:remove_method, run_em_with_start_seed_alias)
+      end
+
       if defined?(rust_singleton) && rust_singleton.method_defined?(run_em_on_session_with_corpus_alias)
         rust_singleton.send(:remove_method, :run_em_on_session_with_corpus)
         rust_singleton.send(:alias_method, :run_em_on_session_with_corpus, run_em_on_session_with_corpus_alias)

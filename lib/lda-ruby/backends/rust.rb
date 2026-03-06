@@ -106,8 +106,8 @@ module Lda
       private
 
       def rust_orchestrated_em(start)
-        session_orchestrated = rust_orchestrated_em_with_session(start)
-        return true if session_orchestrated
+        managed_orchestrated = rust_orchestrated_em_with_managed_corpus(start)
+        return true if managed_orchestrated
 
         direct_orchestrated = rust_orchestrated_em_with_start_seed(start)
         return true if direct_orchestrated
@@ -115,9 +115,9 @@ module Lda
         rust_orchestrated_em_with_beta(start)
       end
 
-      def rust_orchestrated_em_with_session(start)
+      def rust_orchestrated_em_with_managed_corpus(start)
         return false unless defined?(::Lda::RustBackend)
-        return false unless ensure_rust_corpus_session
+        return false unless ensure_rust_corpus_snapshot
 
         random_seed = Integer(next_random_seed)
         if ::Lda::RustBackend.respond_to?(:run_em_on_session_with_corpus)
@@ -134,12 +134,13 @@ module Lda
           return false unless managed_output.is_a?(Array) && managed_output.size == 5
 
           session_id, beta_probabilities, beta_log, gamma, phi = managed_output
-          return false unless session_id.is_a?(Numeric) && session_id.positive?
-
           output = [beta_probabilities, beta_log, gamma, phi]
           return false unless valid_rust_em_output?(output, @rust_document_lengths, Integer(num_topics), Integer(@rust_corpus_terms))
 
-          @rust_corpus_session_id = Integer(session_id)
+          @rust_corpus_session_id =
+            if session_id.is_a?(Numeric) && session_id.positive?
+              Integer(session_id)
+            end
           @fallback.apply_em_state(
             beta_probabilities: beta_probabilities,
             beta_log: beta_log,
@@ -347,12 +348,6 @@ module Lda
         @rust_document_words = nil
         @rust_document_counts = nil
         drop_rust_corpus_session_by_id(previous_session_id)
-      end
-
-      def ensure_rust_corpus_session
-        ensure_rust_corpus_snapshot
-      rescue StandardError
-        false
       end
 
       def ensure_rust_corpus_snapshot
