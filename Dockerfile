@@ -8,7 +8,7 @@ RUN apt-get update \
 
 WORKDIR /workspace
 
-COPY Gemfile lda-ruby.gemspec README.md CHANGELOG.md VERSION.yml ./
+COPY Gemfile* lda-ruby.gemspec README.md CHANGELOG.md VERSION.yml ./
 COPY lib ./lib
 
 RUN bundle install

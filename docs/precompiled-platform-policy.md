@@ -60,9 +60,10 @@ Continuous integration guardrail:
 - `.github/workflows/precompiled-candidate-evaluation.yml` is used for additional platform candidate checks.
 - `.github/workflows/release.yml` dry-run validates the full release-blocking matrix before publish.
 
-Latest release-matrix validation:
+Latest release validation:
 
-- [release dry-run 22556487788](https://github.com/ealdent/lda-ruby/actions/runs/22556487788) succeeded for Linux, Linux musl, macOS Intel, macOS Apple Silicon, and Windows targets.
+- [release run 25323387230](https://github.com/ealdent/lda-ruby/actions/runs/25323387230) published `v0.5.0` with source, Linux, Linux musl, macOS Intel, macOS Apple Silicon, and Windows artifacts.
+- [release dry-run 22556487788](https://github.com/ealdent/lda-ruby/actions/runs/22556487788) validated the expanded Linux, Linux musl, macOS Intel, macOS Apple Silicon, and Windows matrix before `v0.5.0`.
 
 ## Rollout / Expansion Rules
 

@@ -17,7 +17,7 @@ Reference implementation constraints:
 
 ## Candidate: Windows (`x64-mingw-ucrt`)
 
-Status: promoted to release-blocking after release dry-run matrix success.
+Status: promoted to release-blocking and published in `v0.5.0`.
 
 Feasibility notes:
 
@@ -31,6 +31,7 @@ Feasibility notes:
   - [run 22556129503](https://github.com/ealdent/lda-ruby/actions/runs/22556129503): Windows candidate build + artifact upload succeeded after GNU toolchain alignment, bindgen header/sysroot setup, and dual DLL name staging support.
   - [run 22556206925](https://github.com/ealdent/lda-ruby/actions/runs/22556206925): Windows candidate remained green with packaged-gem runtime smoke checks enabled.
   - [run 22556487788](https://github.com/ealdent/lda-ruby/actions/runs/22556487788): release workflow dry-run succeeded with `windows-x64-mingw-ucrt` included in release matrix.
+  - [run 25323387230](https://github.com/ealdent/lda-ruby/actions/runs/25323387230): `v0.5.0` release workflow published the `x64-mingw-ucrt` platform gem.
 
 Required validation to promote:
 
@@ -38,7 +39,7 @@ Required validation to promote:
 
 ## Candidate: musl Linux (`x86_64-linux-musl`)
 
-Status: promoted to release-blocking after release dry-run matrix success.
+Status: promoted to release-blocking and published in `v0.5.0`.
 
 Feasibility notes:
 
@@ -54,6 +55,7 @@ Feasibility notes:
   - [run 22556129503](https://github.com/ealdent/lda-ruby/actions/runs/22556129503): musl candidate build + artifact upload remained green alongside the fixed Windows lane.
   - [run 22556206925](https://github.com/ealdent/lda-ruby/actions/runs/22556206925): musl candidate remained green with packaged-gem runtime smoke checks enabled.
   - [run 22556487788](https://github.com/ealdent/lda-ruby/actions/runs/22556487788): release workflow dry-run succeeded with `linux-musl-x86_64` included in release matrix.
+  - [run 25323387230](https://github.com/ealdent/lda-ruby/actions/runs/25323387230): `v0.5.0` release workflow published the `x86_64-linux-musl` platform gem.
 
 Required validation to promote:
 

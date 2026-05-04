@@ -46,7 +46,7 @@ GitHub Actions environment:
 1. Prepare and update release files:
 
    ```bash
-   ./bin/release-prepare 0.4.0
+   ./bin/release-prepare X.Y.Z
    ```
 
 2. Review changes:
@@ -64,7 +64,7 @@ GitHub Actions environment:
 4. Validate local precompiled gem flow for your current host platform:
 
    ```bash
-   ./bin/release-precompiled-artifacts --tag v0.4.0 --skip-preflight
+   ./bin/release-precompiled-artifacts --tag vX.Y.Z --skip-preflight
    ```
 
    Note: `release-precompiled-artifacts` only supports building for the current host platform (no cross-compilation).
@@ -90,6 +90,19 @@ Behavior:
 - does not push to RubyGems
 - does not create a GitHub release
 
+Latest full publish reference:
+
+- date: 2026-05-04
+- workflow run: `https://github.com/ealdent/lda-ruby/actions/runs/25323387230`
+- release tag: `v0.5.0`
+- result: success across validation, source artifact build, full precompiled matrix, RubyGems publish, GitHub release publish, and post-publish verification.
+- published precompiled lanes:
+  - `linux-x86_64`
+  - `linux-musl-x86_64`
+  - `macos-x86_64`
+  - `macos-arm64`
+  - `windows-x64-mingw-ucrt`
+
 Latest verified dry-run reference:
 
 - date: 2026-03-02
@@ -106,8 +119,8 @@ Latest verified dry-run reference:
 Optional local dry-run equivalent:
 
 ```bash
-./bin/release-artifacts --tag v0.4.0
-./bin/release-precompiled-artifacts --tag v0.4.0 --skip-preflight
+./bin/release-artifacts --tag vX.Y.Z
+./bin/release-precompiled-artifacts --tag vX.Y.Z --skip-preflight
 ```
 
 Candidate expansion workflow:
@@ -133,8 +146,8 @@ Candidate expansion workflow:
    ```bash
    git checkout master
    git pull --ff-only
-   git tag -a v0.4.0 -m "Release v0.4.0"
-   git push origin v0.4.0
+   git tag -a vX.Y.Z -m "Release vX.Y.Z"
+   git push origin vX.Y.Z
    ```
 
 3. Monitor `.github/workflows/release.yml`:
@@ -148,8 +161,8 @@ Candidate expansion workflow:
    - if the same release run later succeeds (for example via rerun), the alert issue is auto-closed by `.github/workflows/release-failure-alert.yml`
 4. Approve the protected `release` environment when prompted.
 5. Confirm published outputs:
-   - RubyGems shows `lda-ruby` `0.4.0` source gem and platform gems
-   - GitHub release `v0.4.0` exists with all gem and `.sha256` attachments
+   - RubyGems shows `lda-ruby` `X.Y.Z` source gem and all supported platform gems
+   - GitHub release `vX.Y.Z` exists with all gem and `.sha256` attachments
    - workflow job `verify_published_artifacts` succeeds
 
 ## Rollback and Recovery

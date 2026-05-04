@@ -4,9 +4,9 @@ This document is the canonical handoff state for continuing the Ruby 3.2+/3.3+ m
 
 ## Snapshot
 
-- Snapshot date: 2026-03-02
-- Active branch: `codex/rust-orchestration-phase8`
-- Repo status at snapshot start: clean working tree on `codex/rust-orchestration-phase8` (ahead of `master`)
+- Snapshot date: 2026-05-04
+- Active branch: `master`
+- Repo status at snapshot start: clean working tree on `master`
 - Modernization branch: `codex/modernization` merged into `master`
 - Merge commit for modernization PR: `bc11269` (`Merge pull request #18 from ealdent/codex/modernization`)
 - Latest release dry-run validation (GitHub Actions):
@@ -23,9 +23,9 @@ This document is the canonical handoff state for continuing the Ruby 3.2+/3.3+ m
   - rerun attempt (`22383849236`, attempt 2): failed at RubyGems publish (`OTP code required`)
   - rerun attempt (`22383849236`, attempt 3): success (RubyGems publish + GitHub release publish complete)
 - Release status:
-  - `v0.4.0` published to RubyGems (source + precompiled Linux/macOS gems)
-  - GitHub release `v0.4.0` published with gem + `.sha256` assets
-  - next release dry-run matrix is validated for Linux, Linux musl, macOS Intel, macOS Apple Silicon, and Windows targets (`22556487788`)
+  - `v0.5.0` published to RubyGems (source + Linux, Linux musl, macOS Intel, macOS Apple Silicon, and Windows platform gems)
+  - GitHub release `v0.5.0` published with gem + `.sha256` assets
+  - latest full release workflow succeeded on 2026-05-04 (`release.yml` run `25323387230`)
 
 ## Project Goal
 
@@ -151,6 +151,7 @@ Delivered:
   - `arm64-darwin`
   - `x64-mingw-ucrt`
 - release dry-run validation for expanded precompiled matrix (`release.yml` run `22556487788`)
+- `v0.5.0` release published the expanded precompiled matrix (`release.yml` run `25323387230`)
 
 Open in Phase 5:
 
@@ -167,13 +168,13 @@ Packaging/release checks:
 
 - `./bin/check-version-sync`
 - `./bin/verify-rubygems-api-key`
-- `./bin/verify-release-publish --tag v0.4.0`
+- `./bin/verify-release-publish --tag v0.5.0`
 - `./bin/test-packaged-gem-manifest`
 - `./bin/test-packaged-gem-fallback`
 - `./bin/test-packaged-gem-rust-enabled`
 - `SKIP_DOCKER=1 ./bin/release-preflight`
-- `./bin/release-artifacts --tag v0.4.0`
-- `./bin/release-precompiled-artifacts --tag v0.4.0 --skip-preflight`
+- `./bin/release-artifacts --tag v0.5.0`
+- `./bin/release-precompiled-artifacts --tag v0.5.0 --skip-preflight`
 
 Optional full Docker matrix:
 
@@ -211,7 +212,7 @@ Priority 1:
 
 Priority 2:
 
-- monitor expanded precompiled release lanes (Windows + musl Linux) now that release dry-run matrix validation is green in run `22556487788`
+- monitor expanded precompiled release lanes (Windows + musl Linux) now that `v0.5.0` has published the full matrix
 - evaluate any additional precompiled targets beyond current release-blocking set using `docs/precompiled-target-evaluation.md`
 
 Priority 3:

@@ -36,7 +36,7 @@ Suggested backend selection:
 
 ### Current status
 
-Completed in `codex/experiment-ruby3-modernization`:
+Completed on `master` through `v0.5.0`:
 
 - Phase 1 baseline test capture expanded with backend compatibility fixtures.
 - Phase 2 backend boundary extraction (`Lda::Lda` now delegates through backend adapters).
@@ -95,6 +95,7 @@ Completed in `codex/experiment-ruby3-modernization`:
 - Release failure alert workflow added (`.github/workflows/release-failure-alert.yml`) to open issue alerts for failed tag-triggered `release.yml` runs and auto-close matching alerts when reruns succeed.
 - Maintainer release runbook added (`docs/release-runbook.md`) with publish and rollback/yank procedures.
 - Precompiled platform support policy added (`docs/precompiled-platform-policy.md`).
+- Windows (`x64-mingw-ucrt`) and Linux musl (`x86_64-linux-musl`) precompiled targets promoted to release-blocking and published in `v0.5.0`.
 
 For an up-to-date resume snapshot (phase status + exact remaining queue), see `docs/modernization-handoff.md`.
 
@@ -135,7 +136,7 @@ For an up-to-date resume snapshot (phase status + exact remaining queue), see `d
 - Ruby test framework: Minitest (already present).
 - Native extension: `magnus` + `rb_sys`.
 - Performance checks: benchmark script comparing legacy behavior vs pure Ruby vs Rust.
-- CI: GitHub Actions with matrix (`ubuntu`, `macos`) and Ruby 3.2/3.3/latest.
+- CI: GitHub Actions with Ruby 3.2/3.3 test coverage plus release-blocking precompiled packaging lanes for Linux, Linux musl, macOS Intel, macOS Apple Silicon, and Windows.
 
 ## What not to do first
 

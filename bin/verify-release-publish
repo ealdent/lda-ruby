@@ -43,7 +43,7 @@ verify_rubygems() {
   [[ -n "${platforms}" ]] || fail "RubyGems has no entries for ${gem_name} ${version}"
 
   local expected_platforms
-  expected_platforms=(ruby x86_64-linux x86_64-darwin arm64-darwin)
+  expected_platforms=(ruby x86_64-linux x86_64-linux-musl x86_64-darwin arm64-darwin x64-mingw-ucrt)
 
   local missing=()
   local platform
@@ -107,10 +107,14 @@ verify_github_release() {
     "${gem_name}-${version}.gem.sha256"
     "${gem_name}-${version}-x86_64-linux.gem"
     "${gem_name}-${version}-x86_64-linux.gem.sha256"
+    "${gem_name}-${version}-x86_64-linux-musl.gem"
+    "${gem_name}-${version}-x86_64-linux-musl.gem.sha256"
     "${gem_name}-${version}-x86_64-darwin.gem"
     "${gem_name}-${version}-x86_64-darwin.gem.sha256"
     "${gem_name}-${version}-arm64-darwin.gem"
     "${gem_name}-${version}-arm64-darwin.gem.sha256"
+    "${gem_name}-${version}-x64-mingw-ucrt.gem"
+    "${gem_name}-${version}-x64-mingw-ucrt.gem.sha256"
   )
 
   local missing=()
