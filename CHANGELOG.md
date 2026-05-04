@@ -1,3 +1,11 @@
+version 0.5.0
+=============
+
+- Expanded Rust-side EM orchestration with cached corpus snapshots, managed corpus sessions, and start-aware fallback paths.
+- Added Rust benchmark guardrails and deeper pure/Rust orchestration parity coverage.
+- Added release-blocking precompiled gem targets for Windows (`x64-mingw-ucrt`) and Linux musl (`x86_64-linux-musl`).
+- Hardened precompiled release workflows with full-matrix CI, post-publish verification, and release failure alerts.
+
 version 0.4.0
 =============
 
